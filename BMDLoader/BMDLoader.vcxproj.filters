@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="inc">
+      <UniqueIdentifier>{9e6eee52-d731-4325-bb38-8db1c2e44622}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{4912aa78-d953-4bd6-8c8c-c88beafb767e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Framework3">
+      <UniqueIdentifier>{62f0efbd-7dc3-4064-8e35-f74f847e4fa7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Framework3\Math">
+      <UniqueIdentifier>{74ae67cc-90cb-42f3-9a50-4c4c2ca7c702}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BMDLoader.cpp" />
+    <ClCompile Include="mat3.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="mdl3.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="shp1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="tex1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="vtx1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="drw1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="evp1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="inf1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="jnt1.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="common.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\Framework3\Math\Vector.cpp">
+      <Filter>Framework3\Math</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="BMDLoader.h" />
+    <ClInclude Include="mat3.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="mdl3.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="shp1.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="tex1.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="vtx1.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="drw1.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="evp1.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="inf1.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="jnt1.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\gccommon.h" />
+    <ClInclude Include="..\..\Framework3\Platform.h">
+      <Filter>Framework3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\gcio.h" />
+    <ClInclude Include="..\Common\Framework3\Math\Vector.h">
+      <Filter>Framework3\Math</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

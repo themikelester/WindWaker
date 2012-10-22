@@ -1,0 +1,190 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>Wind Waker</ProjectName>
+    <ProjectGuid>{68656DD1-4F19-4218-9C9E-9753408FC95F}</ProjectGuid>
+    <RootNamespace>Wind Waker</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>NotSet</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>NotSet</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>11.0.50727.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+    <EmbedManifest>false</EmbedManifest>
+    <TargetName>$(ProjectName)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <AdditionalIncludeDirectories>C:\Users\Michael\Dropbox\Code\Wind Waker\Common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <IgnoreSpecificDefaultLibraries>libc;msvcrt;libcmt;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX86</TargetMachine>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <AdditionalDependencies>%DXSDK_DIR%/Lib/x64/d3dx11.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MinSpace</Optimization>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;NO_PNG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <ExceptionHandling />
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(ProjectName).exe</OutputFile>
+      <IgnoreSpecificDefaultLibraries>libc;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="App.cpp" />
+    <ClCompile Include="AssMan.cpp" />
+    <ClCompile Include="Common\Framework3\BaseApp.cpp" />
+    <ClCompile Include="Common\Framework3\Config.cpp" />
+    <ClCompile Include="Common\Framework3\CPU.cpp" />
+    <ClCompile Include="Common\Framework3\Direct3D10\D3D10App.cpp" />
+    <ClCompile Include="Common\Framework3\Direct3D10\Direct3D10Renderer.cpp" />
+    <ClCompile Include="Common\Framework3\GUI\Button.cpp" />
+    <ClCompile Include="Common\Framework3\GUI\CheckBox.cpp" />
+    <ClCompile Include="Common\Framework3\GUI\Dialog.cpp" />
+    <ClCompile Include="Common\Framework3\GUI\DropDownList.cpp" />
+    <ClCompile Include="Common\Framework3\GUI\Label.cpp" />
+    <ClCompile Include="Common\Framework3\GUI\Slider.cpp" />
+    <ClCompile Include="Common\Framework3\GUI\Widget.cpp" />
+    <ClCompile Include="Common\Framework3\Imaging\Image.cpp" />
+    <ClCompile Include="Common\Framework3\Math\Vector.cpp" />
+    <ClCompile Include="Common\Framework3\Platform.cpp" />
+    <ClCompile Include="Common\Framework3\Renderer.cpp" />
+    <ClCompile Include="Common\Framework3\Util\Model.cpp" />
+    <ClCompile Include="Common\Framework3\Util\String.cpp" />
+    <ClCompile Include="Common\Framework3\Util\Tokenizer.cpp" />
+    <ClCompile Include="Common\Framework3\Windows\WindowsBase.cpp" />
+    <ClCompile Include="GCModel.cpp" />
+    <ClCompile Include="Package.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App.h" />
+    <ClInclude Include="Asset.h" />
+    <ClInclude Include="AssMan.h" />
+    <ClInclude Include="Common\common.h" />
+    <ClInclude Include="Common\Framework3\BaseApp.h" />
+    <ClInclude Include="Common\Framework3\Config.h" />
+    <ClInclude Include="Common\Framework3\CPU.h" />
+    <ClInclude Include="Common\Framework3\Direct3D10\D3D10App.h" />
+    <ClInclude Include="Common\Framework3\Direct3D10\Direct3D10Renderer.h" />
+    <ClInclude Include="Common\Framework3\GUI\Button.h" />
+    <ClInclude Include="Common\Framework3\GUI\CheckBox.h" />
+    <ClInclude Include="Common\Framework3\GUI\Dialog.h" />
+    <ClInclude Include="Common\Framework3\GUI\DropDownList.h" />
+    <ClInclude Include="Common\Framework3\GUI\Label.h" />
+    <ClInclude Include="Common\Framework3\GUI\Slider.h" />
+    <ClInclude Include="Common\Framework3\GUI\Widget.h" />
+    <ClInclude Include="Common\Framework3\Imaging\Image.h" />
+    <ClInclude Include="Common\Framework3\Imaging\jconfig.h" />
+    <ClInclude Include="Common\Framework3\Imaging\jmorecfg.h" />
+    <ClInclude Include="Common\Framework3\Imaging\jpeglib.h" />
+    <ClInclude Include="Common\Framework3\Imaging\png.h" />
+    <ClInclude Include="Common\Framework3\Imaging\pngconf.h" />
+    <ClInclude Include="Common\Framework3\Imaging\zconf.h" />
+    <ClInclude Include="Common\Framework3\Imaging\zlib.h" />
+    <ClInclude Include="Common\Framework3\Math\Vector.h" />
+    <ClInclude Include="Common\Framework3\Platform.h" />
+    <ClInclude Include="Common\Framework3\Renderer.h" />
+    <ClInclude Include="Common\Framework3\Util\Array.h" />
+    <ClInclude Include="Common\Framework3\Util\Model.h" />
+    <ClInclude Include="Common\Framework3\Util\String.h" />
+    <ClInclude Include="Common\Framework3\Util\Tokenizer.h" />
+    <ClInclude Include="Common\Framework3\Windows\resource.h" />
+    <ClInclude Include="Common\gccommon.h" />
+    <ClInclude Include="Common\gcio.h" />
+    <ClInclude Include="GCModel.h" />
+    <ClInclude Include="Package.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="BMDLoader\BMDLoader.vcxproj">
+      <Project>{c380adb0-a077-44d7-875e-9fed58505723}</Project>
+    </ProjectReference>
+    <ProjectReference Include="RARCReader\RARCReader.vcxproj">
+      <Project>{327f3f6a-0dd2-4214-a419-7ba9c50273b4}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Common\Framework3\Windows\Resources.aps" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Common\Framework3\Windows\Resources.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Common\Framework3\Windows\mainicon.ico" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
