@@ -46,9 +46,6 @@ struct Batch1
 
   vec3 bbMin, bbMax; //experimental
   u8 matrixType; //experimental
-
-  //Internal use only
-  u8 batchID;
 };
 
 struct Shp1

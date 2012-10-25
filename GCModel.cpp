@@ -54,8 +54,8 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 
 	// Vertex format and buffer are uniform for an entire batch
 	renderer->changeVertexFormat( VERTEX_FORMAT(batch.attribs) );
-	renderer->changeVertexBuffer(0, m_VertBuffers[batch.batchID]);
-	renderer->changeIndexBuffer(m_IndexBuffers[batch.batchID]);
+	renderer->changeVertexBuffer(0, m_VertBuffers[batchIndex]);
+	renderer->changeIndexBuffer(m_IndexBuffers[batchIndex]);
 
 	// TODO: Make a shader for each vertex format
 	//renderer->setShader( SHADER( currBatch.attribs ) );
@@ -158,18 +158,20 @@ static RESULT buildVertex(ubyte* dst, Index &point, Attributes &attribs, BModel*
 
 RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 {
-	// A UID for batches so that we can access the right batch data when drawing a specific batch
-	// The scenegraph may be traversed in different order between init and draw time, so we can't trust the natural order
-	// Hence we use this UID
-	int batchID = 0;
+	int numBatches = m_BDL->shp1.batches.size();
+
+	m_VertexData.resize(numBatches);
+	m_IndexData.resize(numBatches);
+	m_VertBuffers.resize(numBatches);
+	m_IndexBuffers.resize(numBatches);
 
 	// Create a vertex and index buffer for every batch in this model
 	STL_FOR_EACH(node, m_BDL->inf1.scenegraph)
 	{
 		if (node->type != SG_PRIM) continue;
 
-		Batch1& batch = m_BDL->shp1.batches[node->index];
-		batch.batchID = batchID++;
+		int batchIndex = node->index;
+		Batch1& batch = m_BDL->shp1.batches[batchIndex];
 
 		int vertexCount = 0; 
 		int pointCount = 0;
@@ -226,10 +228,10 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 		IndexBufferID IBID =  renderer->addIndexBuffer(pointCount, 2, STATIC, indexBuffer);
 
 		// Save data so that we can use/free it later
-		m_VertexData.push_back(vertexBuffer);
-		m_IndexData.push_back(indexBuffer);
-		m_VertBuffers.push_back(VBID);
-		m_IndexBuffers.push_back(IBID);
+		m_VertexData[batchIndex] = vertexBuffer;
+		m_IndexData[batchIndex] = indexBuffer;
+		m_VertBuffers[batchIndex] = VBID;
+		m_IndexBuffers[batchIndex] = IBID;
 	}
 
 	return S_OK;
