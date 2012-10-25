@@ -63,7 +63,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <AdditionalIncludeDirectories>C:\Users\Michael\Dropbox\Code\Wind Waker\Common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <IgnoreSpecificDefaultLibraries>libc;msvcrt;libcmt;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -122,7 +122,6 @@
     <ClCompile Include="Common\Framework3\Math\Vector.cpp" />
     <ClCompile Include="Common\Framework3\Platform.cpp" />
     <ClCompile Include="Common\Framework3\Renderer.cpp" />
-    <ClCompile Include="Common\Framework3\Util\Model.cpp" />
     <ClCompile Include="Common\Framework3\Util\String.cpp" />
     <ClCompile Include="Common\Framework3\Util\Tokenizer.cpp" />
     <ClCompile Include="Common\Framework3\Windows\WindowsBase.cpp" />
@@ -158,14 +157,15 @@
     <ClInclude Include="Common\Framework3\Platform.h" />
     <ClInclude Include="Common\Framework3\Renderer.h" />
     <ClInclude Include="Common\Framework3\Util\Array.h" />
-    <ClInclude Include="Common\Framework3\Util\Model.h" />
     <ClInclude Include="Common\Framework3\Util\String.h" />
     <ClInclude Include="Common\Framework3\Util\Tokenizer.h" />
     <ClInclude Include="Common\Framework3\Windows\resource.h" />
     <ClInclude Include="Common\gccommon.h" />
     <ClInclude Include="Common\gcio.h" />
+    <ClInclude Include="GCD3D.h" />
     <ClInclude Include="GCModel.h" />
     <ClInclude Include="Package.h" />
+    <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="BMDLoader\BMDLoader.vcxproj">
@@ -177,6 +177,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Common\Framework3\Windows\Resources.aps" />
+    <None Include="Vertices.shd" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Common\Framework3\Windows\Resources.rc" />
