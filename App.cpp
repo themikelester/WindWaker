@@ -48,7 +48,7 @@ bool App::load()
 	RESULT r;
 
 	char* filename = "C:\\Users\\Michael\\Dropbox\\Code\\Wind Waker Assets\\Link.rarc";
-	char* nodeName = "/bdl/boomerang.bdl";
+	char* nodeName = "/bdl/bow.bdl";
 	m_Model = new GCModel;
 	int numAssets;
 

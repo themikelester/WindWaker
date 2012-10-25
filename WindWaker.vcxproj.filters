@@ -20,9 +20,6 @@
     <ClCompile Include="Common\Framework3\Util\Tokenizer.cpp">
       <Filter>Framework3\Util</Filter>
     </ClCompile>
-    <ClCompile Include="Common\Framework3\Util\Model.cpp">
-      <Filter>Framework3\Util</Filter>
-    </ClCompile>
     <ClCompile Include="Common\Framework3\Util\String.cpp">
       <Filter>Framework3\Util</Filter>
     </ClCompile>
@@ -93,9 +90,6 @@
       <Filter>Framework3\Util</Filter>
     </ClInclude>
     <ClInclude Include="Common\Framework3\Util\Array.h">
-      <Filter>Framework3\Util</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\Framework3\Util\Model.h">
       <Filter>Framework3\Util</Filter>
     </ClInclude>
     <ClInclude Include="Common\Framework3\Util\String.h">
@@ -179,6 +173,10 @@
     <ClInclude Include="Asset.h">
       <Filter>Assets</Filter>
     </ClInclude>
+    <ClInclude Include="GCD3D.h" />
+    <ClInclude Include="util.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Framework3">
@@ -208,10 +206,16 @@
     <Filter Include="Assets">
       <UniqueIdentifier>{dfa51ade-28f6-4cb5-8ccc-0fc74755e68e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{c755a62b-2fee-40ca-8bb4-e7ad0f18c973}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="Common\Framework3\Windows\Resources.aps">
       <Filter>Framework3\Windows</Filter>
+    </None>
+    <None Include="Vertices.shd">
+      <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

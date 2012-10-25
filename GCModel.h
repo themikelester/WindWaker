@@ -10,10 +10,15 @@ class Renderer;
 class GCModel : public Asset
 {
 private:
-	BModel* model;
-	size_t m_NumVerts;
-	VertexFormatID m_VertFormat;
-	VertexBufferID m_VertBuffer;
+	SceneGraph		m_Scenegraph;
+	BModel*			m_BDL;
+
+	VertexFormatID m_VertexFormat;
+
+	std::vector<IndexBufferID>	m_IndexBuffers;
+	std::vector<VertexBufferID>	m_VertBuffers;
+	std::vector<void*>			m_VertexData;
+	std::vector<void*>			m_IndexData;
 
 protected:
 	RESULT GCModel::Load(Chunk* data);
@@ -21,6 +26,21 @@ protected:
 	RESULT GCModel::Unload();
 
 public:
+	~GCModel() 
+	{
+		for (uint i = 0; i < m_VertexData.size(); i++) {	free(m_VertexData[i]); }
+		for (uint i = 0; i < m_IndexData.size(); i++) {	free(m_IndexData[i]); }
+	}
+
 	RESULT Init(Renderer *renderer, VertexFormatID vertFormat);
 	RESULT Draw(Renderer *renderer, ID3D10Device *device);
+
+private:
+	RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph);
+
+	void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& s, const mat4& p = identity4(), bool onDown = true, int matIndex = 0);
+	void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex, const mat4 &parentMatrix);
+	
+	RESULT GCModel::findMatchingIndex(Index &point, int* index);
+
 };

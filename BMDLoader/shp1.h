@@ -15,16 +15,16 @@ struct Index
   u16 texCoordIndex[8];
 };
 
-struct Primitive
+enum PrimType_t
 {
-  u8 type;
-  std::vector<Index> points;
+  PRIM_TRI_STRIP = 0x98,
+  PRIM_TRI_FAN = 0xa0
 };
 
-enum
+struct Primitive
 {
-  GX_TRIANGLE_STRIP = 0x98,
-  GX_TRIANGLE_FAN = 0xa0
+  u8 type; //See enum PrimType_t
+  std::vector<Index> points;
 };
 
 struct Packet
@@ -46,6 +46,9 @@ struct Batch1
 
   vec3 bbMin, bbMax; //experimental
   u8 matrixType; //experimental
+
+  //Internal use only
+  u8 batchID;
 };
 
 struct Shp1

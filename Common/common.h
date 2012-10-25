@@ -27,4 +27,7 @@
 #define ISC(x) if( !FAILED((r = x))) {goto cleanup;}	// If Success Cleanup
 #define GTC(x) { r = x; goto cleanup; }					// Go To Cleanup
 
+// Math
+#define DEGTORAD(x) (x/360.f*2*PI)
+
 typedef int RESULT;
