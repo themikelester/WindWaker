@@ -177,6 +177,18 @@
     <ClInclude Include="util.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Common\Configuration.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Types.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Random.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Debug.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Framework3">

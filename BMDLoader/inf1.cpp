@@ -95,7 +95,7 @@ int buildSceneGraph(const Inf1& inf1, SceneGraph& sg, int j)
       sg.children.push_back(t);
     }
     else
-      warn("buildSceneGraph(): unexpected node type %d", n.type);
+      WARN("buildSceneGraph(): unexpected node type %d", n.type);
 
   }
 
@@ -108,7 +108,7 @@ int buildSceneGraph(const Inf1& inf1, SceneGraph& sg, int j)
   else
   {
     sg.type = sg.index = -1;
-    warn("buildSceneGraph(): Unexpected size %d", sg.children.size());
+    WARN("buildSceneGraph(): Unexpected size %d", sg.children.size());
   }
 
   return 0;

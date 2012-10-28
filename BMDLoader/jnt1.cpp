@@ -91,7 +91,7 @@ void dumpJnt1(Chunk* f, Jnt1& dst)
   readStringtable(jnt1Offset + h.stringTableOffset, f, stringtable);
 
   if(stringtable.size() != h.count)
-    warn("jnt1: number of strings doesn't match number of joints");
+    WARN("jnt1: number of strings doesn't match number of joints");
 
   //read joints
   DSeek(f, jnt1Offset + h.jntEntryOffset, SEEK_SET);

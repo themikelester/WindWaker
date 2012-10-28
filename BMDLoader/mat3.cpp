@@ -402,7 +402,7 @@ void displayTevStage(ostream& out, Chunk* f, int offset, int size)
 {
   if(size%20 != 0)
   {
-    warn("TevStage has wrong size");
+    WARN("TevStage has wrong size");
     return;
   }
 
@@ -724,7 +724,7 @@ void computeSectionLengths(const bmd::Mat3Header& h, vector<size_t>& lengths)
 
 void dumpMat3(Chunk* f, Mat3& dst)
 {
-  //warn("Mat3 section support is incomplete");
+  //WARN("Mat3 section support is incomplete");
 
   assert(sizeof(bmd::MatEntry) == 332);
 
@@ -737,13 +737,13 @@ void dumpMat3(Chunk* f, Mat3& dst)
 
   bool isMat2 = strncmp(h.tag, "MAT2", 4) == 0;
   if(isMat2)
-    warn("Model contains MAT2 block instead of MAT3");
+    WARN("Model contains MAT2 block instead of MAT3");
 
   //read stringtable
   //vector<string> stringtable;
   readStringtable(mat3Offset + h.offsets[2], f, dst.stringtable);
   if(h.count != dst.stringtable.size())
-    warn("mat3: number of strings (%d) doesn't match number of elements (%d)",
+    WARN("mat3: number of strings (%d) doesn't match number of elements (%d)",
          dst.stringtable.size(), h.count);
 
   //compute max length of each subsection
@@ -885,10 +885,14 @@ void dumpMat3(Chunk* f, Mat3& dst)
   assert(sizeof(bmd::MatIndirectTexturingEntry) == 312);
   DSeek(f, mat3Offset + h.offsets[3], SEEK_SET);
   if(lengths[3]%312 != 0)
-    warn("mat3: indirect texturing block size no multiple of 312: %d", lengths[3]);
+  {
+    WARN("mat3: indirect texturing block size no multiple of 312: %d", lengths[3]);
+  }
   else if(lengths[3]/312 != h.count)
-    warn("mat3: number of ind texturing blocks (%d) doesn't match number of materials (%d)",
+  {
+    WARN("mat3: number of ind texturing blocks (%d) doesn't match number of materials (%d)",
       lengths[3]/312, h.count);
+  }
   else
   {
     for(i = 0; i < h.count; ++i)
@@ -897,7 +901,7 @@ void dumpMat3(Chunk* f, Mat3& dst)
       readMatIndirectTexturingEntry(f, indEntry);
       //...
       if(memcmp(&g_defaultIndirectEntry, &indEntry, sizeof(indEntry)) != 0)
-        warn("found different ind tex block");
+        WARN("found different ind tex block");
     }
   }
 
@@ -924,7 +928,9 @@ void dumpMat3(Chunk* f, Mat3& dst)
 
   //offset[13] (texmtxinfo debug)
   if(lengths[13]%(100) != 0)
-    warn("ARGH: unexpected texmtxinfo lengths[13]: %d", lengths[13]);
+  {
+    WARN("ARGH: unexpected texmtxinfo lengths[13]: %d", lengths[13]);
+  }
   else
   {
     DSeek(f, mat3Offset + h.offsets[13], SEEK_SET);
@@ -935,13 +941,13 @@ void dumpMat3(Chunk* f, Mat3& dst)
       readTexMtxInfo(f, info);
 
       if(info.unk != 0x0100) //sometimes violated
-        warn("(mat3texmtx) %x instead of 0x0100", info.unk);
+        WARN("(mat3texmtx) %x instead of 0x0100", info.unk);
       if(info.pad != 0xffff)
-        warn("(mat3texmtx) %x instead of 0xffff", info.pad);
+        WARN("(mat3texmtx) %x instead of 0xffff", info.pad);
       if(info.unk2 != 0x0000)
-        warn("(mat3texmtx) %x instead of 0x0000", info.unk2);
+        WARN("(mat3texmtx) %x instead of 0x0000", info.unk2);
       if(info.pad2 != 0xffff)
-        warn("(mat3texmtx) %x instead of 2nd 0xffff", info.pad2);
+        WARN("(mat3texmtx) %x instead of 2nd 0xffff", info.pad2);
     }
   }
 

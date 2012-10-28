@@ -91,7 +91,7 @@ void readVertexArray(Vtx1& arrays, const bmd::ArrayFormat& af, int length,
     }break;
 
     default:
-      warn("vtx1: unknown array data type %d", af.dataType);
+      WARN("vtx1: unknown array data type %d", af.dataType);
       return;
   }
 
@@ -113,7 +113,7 @@ void readVertexArray(Vtx1& arrays, const bmd::ArrayFormat& af, int length,
           arrays.positions[j] = vec3(data[k], data[k + 1], data[k + 2]);
       }
       else
-        warn("vtx1: unsupported componentCount for positions array: %d",
+        WARN("vtx1: unsupported componentCount for positions array: %d",
           af.componentCount);
     }break;
 
@@ -126,7 +126,7 @@ void readVertexArray(Vtx1& arrays, const bmd::ArrayFormat& af, int length,
           arrays.normals[j] = vec3(data[k], data[k + 1], data[k + 2]);
       }
       else
-        warn("vtx1: unsupported componentCount for normals array: %d",
+        WARN("vtx1: unsupported componentCount for normals array: %d",
           af.componentCount);
     }break;
 
@@ -149,7 +149,7 @@ void readVertexArray(Vtx1& arrays, const bmd::ArrayFormat& af, int length,
             data[k + 3]);
       }
       else
-        warn("vtx1: unsupported componentCount for colors array %d: %d",
+        WARN("vtx1: unsupported componentCount for colors array %d: %d",
           index, af.componentCount);
 
     }break;
@@ -178,13 +178,13 @@ void readVertexArray(Vtx1& arrays, const bmd::ArrayFormat& af, int length,
           arrays.texCoords[index][j].setST(data[k], data[k + 1]);
       }
       else
-        warn("vtx1: unsupported componentCount for texcoords array %d: %d",
+        WARN("vtx1: unsupported componentCount for texcoords array %d: %d",
           index, af.componentCount);
     }break;
 
 
     default:
-      warn("vtx1: unknown array type %d", af.arrayType);
+      WARN("vtx1: unknown array type %d", af.arrayType);
   }
 }
 

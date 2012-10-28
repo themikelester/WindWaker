@@ -130,6 +130,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
+    <ClInclude Include="Common\Configuration.h" />
+    <ClInclude Include="Common\Debug.h" />
+    <ClInclude Include="Common\Random.h" />
+    <ClInclude Include="Common\Types.h" />
     <ClInclude Include="Asset.h" />
     <ClInclude Include="AssMan.h" />
     <ClInclude Include="Common\common.h" />

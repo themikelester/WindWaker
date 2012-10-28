@@ -57,7 +57,7 @@ void dumpDrw1(Chunk* f, Drw1& dst)
     else if(v == 1)
       dst.isWeighted[i] = true;
     else
-      warn("drw1: unexpected value in isWeighted array: %d", v);
+      WARN("drw1: unexpected value in isWeighted array: %d", v);
   }
 
   //read data array

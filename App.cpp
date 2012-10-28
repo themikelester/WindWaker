@@ -50,7 +50,6 @@ bool App::load()
 	char* filename = "C:\\Users\\Michael\\Dropbox\\Code\\Wind Waker Assets\\Link.rarc";
 	char* nodeName = "/bdl/bow.bdl";
 	m_Model = new GCModel;
-	int numAssets;
 
 	IFC( assMan.OpenPkg(filename, &m_Pkg) );
 	IFC( assMan.Load(m_Pkg, nodeName, m_Model) );
@@ -116,7 +115,7 @@ void App::drawFrame()
 	view.translate(-camPos);
 	float4x4 view_proj = projection * view;
 
-	float clearColor[4] = {0.5, 0.1, 0.2};
+	float clearColor[4] = {0.5f, 0.1f, 0.2f};
 	renderer->clear(true, true, true, clearColor);
 
 	renderer->reset();

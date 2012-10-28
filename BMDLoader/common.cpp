@@ -73,7 +73,7 @@ void splitPath(const std::string& filename, std::string& folder,
   else if(b == std::string::npos)
     c = a;
   else
-    c = std::min(a, b);
+    c = min(a, b);
   if(c != std::string::npos)
   {
     folder = filename.substr(0, c + 1);

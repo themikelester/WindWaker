@@ -7,17 +7,7 @@
 #include <cstdio>
 #include <iosfwd>
 #include <cstdarg> //va_list
-#include <assert.h>
-
-// debugging macros so we can pin down message origin at a glance
-#define WHERESTR  "[file %s, line %d]: "
-#define WHEREARG  __FILE__, __LINE__
-#define DEBUGPRINT(...)       fprintf(stderr, __VA_ARGS__)
-#define _LOG DEBUGPRINT("LOG" WHERESTR, WHEREARG)
-#define _WARN DEBUGPRINT("WARN" WHERESTR, WHEREARG)
-
-#define log(...)  DEBUGPRINT("LOG: " __VA_ARGS__)
-#define warn(...) DEBUGPRINT("WARN: " __VA_ARGS__)
+#include <common.h>
 
 void setTextColor3f(float r, float g, float b);
 void drawText(const char* s, ...);

@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gccommon.h>
+#include <common.h>
 
 struct Chunk {
 	Chunk(int psize) : size(psize)

@@ -252,7 +252,7 @@ void dumpTex1(Chunk* f, Tex1& dst)
   readStringtable(tex1Offset + h.stringTableOffset, f, stringtable);
 
   if(stringtable.size() != h.numImages)
-    warn("tex1: number of strings (%d) doesn't match number of images (%d)",
+    WARN("tex1: number of strings (%d) doesn't match number of images (%d)",
       stringtable.size(), h.numImages);
 
   //read all image headers before loading the actual image
@@ -277,7 +277,7 @@ void dumpTex1(Chunk* f, Tex1& dst)
         || a.mipmapCount != b.mipmapCount
         //|| a.wrapS != b.wrapS || a.wrapT != b.wrapT //this is a per-header value (see ji.bdl in zelda)
         )
-        warn("tex1: two headers refering to same data have different formats");
+        WARN("tex1: two headers refering to same data have different formats");
         //TODO: what if effective palette offsets differ?
     }
   }
@@ -786,7 +786,7 @@ u8 readImage(Chunk* f, int w, int h, u8 format, u8* palette, u8 paletteFormat, u
         case bmd::PAL_A3_RGB5:
           return RGBA8;
         default:
-          warn("tex1: unsupported palette format %d", paletteFormat);
+          WARN("tex1: unsupported palette format %d", paletteFormat);
           return 0xff; //TODO: ?
       }
     }
@@ -797,7 +797,7 @@ u8 readImage(Chunk* f, int w, int h, u8 format, u8* palette, u8 paletteFormat, u
       return DXT1;
 
     default:
-      warn("unsupported image format %d", format);
+      WARN("unsupported image format %d", format);
       return 0xff; //TODO: ?
   }
 }
@@ -814,7 +814,7 @@ void loadAndConvertImage(Chunk* f, const bmd::TextureHeader& h, long baseOffset,
   if((h.format == 8 || h.format == 9 || h.format == 10)
     && (h.paletteFormat != 1 && h.paletteFormat != 2)) //never tested such an image,
                                                        //but yagcd says theres also a palette format 0
-    warn("found format %d, palette format %d", h.format, h.paletteFormat);
+    WARN("found format %d, palette format %d", h.format, h.paletteFormat);
 
 
   vector<u8> palette;
@@ -839,7 +839,7 @@ void loadAndConvertImage(Chunk* f, const bmd::TextureHeader& h, long baseOffset,
   //get memory for image, set mipmap pointers and load image
 
   if(h.dataOffset == 0) //TODO: twilight princess does that
-    warn("What to do, what to do? (data offset in image is 0)\n");
+    WARN("What to do, what to do? (data offset in image is 0)\n");
 
   DSeek(f, baseOffset + h.dataOffset, SEEK_SET);
   curr.imageData.resize(totalRequiredSize);

@@ -234,7 +234,7 @@ void dumpPacketPrimitives(const bmd::BatchAttribs& attribs, int dataSize, Chunk*
             //assert(false && "shp1: got invalid attrib in packet. should never happen because "
             //"dumpBatch() should check this before calling dumpPacket()");
 
-            ; //ignore unknown types, it's enough to warn() in dumpBatch
+            ; //ignore unknown types, it's enough to WARN() in dumpBatch
         }
       }
     }
@@ -260,7 +260,7 @@ void dumpBatch(Batch1& dst, const bmd::Batch1& Batch1, const bmd::Shp1Header& h,
   {
     if(attribs[i].dataType != 1 && attribs[i].dataType != 3)
     {
-      warn("shp1, dumpBatch(): unknown attrib data type %d, skipping Batch1", attribs[i].dataType);
+      WARN("shp1, dumpBatch(): unknown attrib data type %d, skipping Batch1", attribs[i].dataType);
       return;
     }
 
@@ -295,7 +295,7 @@ void dumpBatch(Batch1& dst, const bmd::Batch1& Batch1, const bmd::Shp1Header& h,
         break;
 
       default:
-        warn("shp1, dumpBatch(): unknown attrib %d in Batch1, it might not display correctly", attribs[i].attrib);
+        WARN("shp1, dumpBatch(): unknown attrib %d in Batch1, it might not display correctly", attribs[i].attrib);
         //return; //it's enough to warn
     }
   }

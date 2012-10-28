@@ -42,18 +42,13 @@ void readArray8(Chunk* f, vector<int>& arr)
   }
 }
 
-void readMatrix(Chunk* f, mat4& m)
+void readMatrix(Chunk* c, mat4& m)
 {
 	assert(sizeof(vec4) == 16);
 	for(int j = 0; j < 3; ++j)
-		DRead(&(m.rows[j]), 4, 4, f);
-
-#ifdef DEBUG
-	float f = m.rows[0][0];
-	float f2 = f;
-	toFLOAT(f);
-	ASSERT( f == f2 );
-#endif
+		DRead(&(m.rows[j]), 4, 4, c);
+	// This isn't flipping endianness (GC is big-endian, PC's are little-endian)
+	// But it doesn't seem to matter, we must flip when we read it later
 }
 
 void dumpEvp1(Chunk* f, Evp1& dst)

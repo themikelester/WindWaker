@@ -56,7 +56,7 @@ void readBmd(Chunk* d, BModel* dst)
     else if(strncmp(tag, "TEX1", 4) == 0)
       dumpTex1(d, dst->tex1);
     else
-      warn("readBmd(): Unsupported section \'%c%c%c%c\'",
+      WARN("readBmd(): Unsupported section \'%c%c%c%c\'",
         tag[0], tag[1], tag[2], tag[3]);
 
     DSeek(d, t, SEEK_SET);

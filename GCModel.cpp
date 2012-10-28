@@ -70,9 +70,9 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 			switch(prim->type)
 			{
 				case PRIM_TRI_STRIP: device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP); break;
-				case PRIM_TRI_FAN: warn("Triangle fans have been deprecated in D3D10. Won't draw!"); return;
+				case PRIM_TRI_FAN: WARN("Triangle fans have been deprecated in D3D10. Won't draw!"); return;
 				default:
-					warn("unknown primitive type %x", prim->type);
+					WARN("unknown primitive type %x", prim->type);
 					continue;
 			}
 			
@@ -141,7 +141,8 @@ RESULT GCModel::findMatchingIndex(Index &point, int* index)
 static RESULT buildVertex(ubyte* dst, Index &point, Attributes &attribs, BModel* bdl)
 {
 	// For now, only use position and normal
-	ASSERT(attribs.hasPositions && attribs.hasNormals);
+	if (!attribs.hasPositions || !attribs.hasNormals)
+		WARN("Model is missing required attribute");
 
 	if(attribs.hasPositions) {
 		memcpy(dst, bdl->vtx1.positions[point.posIndex], sizeof(float3));
