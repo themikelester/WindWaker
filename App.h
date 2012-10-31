@@ -22,6 +22,7 @@
 #include <Framework3/Direct3D10/D3D10App.h>
 #include "GCModel.h"
 #include "AssMan.h"
+#include "Mem.h"
 
 class App : public D3D10App
 {
@@ -43,6 +44,7 @@ public:
 
 protected:
 	AssetManager assMan;
+	MemManager memMan;
 
 	VertexFormatID m_GCVertFormat;
 

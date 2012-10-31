@@ -68,6 +68,8 @@
     <ClCompile Include="Package.cpp">
       <Filter>Assets</Filter>
     </ClCompile>
+    <ClCompile Include="Allocators.cpp" />
+    <ClCompile Include="Mem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -189,6 +191,10 @@
     <ClInclude Include="Common\Debug.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Mem.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Allocators.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Framework3">

@@ -5,9 +5,6 @@
 #include "Types.h"
 #include <Framework3\Platform.h>
 
-// Assorted definitions
-#define NULL 0
-
 // RESULT Enum and related functions
 #define IFC(x) if( FAILED((r = x)) ) {goto cleanup;}	// If Failed Cleanup
 #define IFE(x) if( FAILED((r = x)) ) {goto error;}		// If Failed Error

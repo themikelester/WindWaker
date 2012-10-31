@@ -20,12 +20,13 @@
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "App.h"
-#include "AssMan.h"
 
 BaseApp *app = new App();
 
 bool App::init()
 {
+	memMan.init();
+
 	return true;
 }
 

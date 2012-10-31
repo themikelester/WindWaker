@@ -1,5 +1,7 @@
 #pragma once
 
+#define NULL 0
+
 #ifdef _MSC_VER
 	typedef unsigned __int8		u8;
 	typedef unsigned __int16	u16;

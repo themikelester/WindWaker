@@ -126,9 +126,12 @@
     <ClCompile Include="Common\Framework3\Util\Tokenizer.cpp" />
     <ClCompile Include="Common\Framework3\Windows\WindowsBase.cpp" />
     <ClCompile Include="GCModel.cpp" />
+    <ClCompile Include="Allocators.cpp" />
+    <ClCompile Include="Mem.cpp" />
     <ClCompile Include="Package.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Allocators.h" />
     <ClInclude Include="App.h" />
     <ClInclude Include="Common\Configuration.h" />
     <ClInclude Include="Common\Debug.h" />
@@ -168,6 +171,7 @@
     <ClInclude Include="Common\gcio.h" />
     <ClInclude Include="GCD3D.h" />
     <ClInclude Include="GCModel.h" />
+    <ClInclude Include="Mem.h" />
     <ClInclude Include="Package.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
