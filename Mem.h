@@ -19,13 +19,20 @@ enum MemPools {
 	MEM_PERMANENT,
 };
 
+namespace Mem {
+	extern Allocator* tempAllocator;
+	extern Allocator* smallBlockAllocator;
+	extern Allocator* singleFrameAllocator;
+	extern Allocator* doubleFrameAllocator;
+	extern Allocator* permanentAllocator;
+
+	extern Allocator* defaultAllocator;
+}
+
 class MemManager
 {
 public:
 	void init();
 	void shutdown();
-
-private:
-	void* tempAllocation;
 };
 

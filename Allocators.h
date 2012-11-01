@@ -1,17 +1,27 @@
 #pragma once
 
-#include <Types.h>
+#include <common.h>
 
 class Allocator
 {
 protected:
-	const char* m_Name;
+	const char* m_Name; // Name of this allocator (for memory tracking)
+	
+	Allocator* m_ParentAllocator;
+
+	/* For error checking */
+	u32 m_Size;			// Total size (in bytes) of all allocations made by this allocator
+	u32 m_Allocations;	// Number of unfreed allocations made by this allocator
 
 public:
 	// TODO: Add alignment parameter to alloc
 	virtual void*  Alloc (u32 size)	 = 0;
 	virtual void   Free	 (void* ptr) = 0;
 	virtual u32	   Size  (void* ptr) = 0;
+
+	virtual ~Allocator() { 
+		ASSERT(m_Size == 0 && m_Allocations == 0);
+	};
 
 	template <class T, class P1> T *make_new(const char* name, const P1 &p1) 
 	{
@@ -31,7 +41,7 @@ public:
 	{
         if (p) {
             p->~T();
-            deallocate(p);
+            Free(p);
         }
     }
 };
@@ -50,8 +60,13 @@ public: // Allocator methods
 	u32 Size(void* marker);
 
 public: 
-	// Constructs a stack allocator with the given size
+	// Constructs a stack allocator whose memory starts at base and is stackSize_bytes long
 	explicit StackAllocator(const char* name, void* base, u32 stackSize_bytes);
+
+	// Constructs a stack allocator and uses allocator to allocate stackSize_bytes for its use
+	explicit StackAllocator(const char* name, u32 stackSize_bytes, Allocator* allocator);
+
+	~StackAllocator();
 
 	// Clears the entire stack (rolls back to zero)
 	void Clear();
@@ -79,6 +94,8 @@ public:
 	
 protected:
 	typedef void* Ptr;
+
+	u32 m_ElementSize;	// Size of each block in bytes
 
 	void* m_pBase;		// pointer to base of allocated memory
 	void* m_pLLHead;	// pointer to the first free block (Linked List Head)

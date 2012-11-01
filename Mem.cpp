@@ -1,29 +1,34 @@
 #include "Mem.h"
 #include <new>
 
-// Global buffer from which all dynamic allocations are made
-u8 __buffer[BUFFER_SIZE];
+// Buffer from which all dynamic allocations are made
+static u8 __buffer[BUFFER_SIZE];
 
-static StackAllocator* _bufAllocator = 0;
+static StackAllocator* _rootAllocator = 0;
 
 // Global allocators
-StackAllocator* _tempAllocator = 0;
-PoolAllocator*	_smallBlockAllocator = 0;
-StackAllocator* _singleFrameAllocator = 0;
-StackAllocator* _doubleFrameAllocator = 0;
-StackAllocator* _permanentAllocator = 0;
+namespace Mem {
+	Allocator* tempAllocator = 0;
+	Allocator* smallBlockAllocator = 0;
+	Allocator* singleFrameAllocator = 0;
+	Allocator* doubleFrameAllocator = 0;
+	Allocator* permanentAllocator = 0;
+
+	Allocator* defaultAllocator = 0;
+}
 
 void MemManager::init()
 {
-	_bufAllocator = new (__buffer) StackAllocator("root_allocator", __buffer + sizeof(StackAllocator), BUFFER_SIZE - sizeof(StackAllocator));
+	_rootAllocator = new (__buffer) StackAllocator("root_allocator", __buffer + sizeof(StackAllocator), BUFFER_SIZE - sizeof(StackAllocator));
             
-	tempAllocation = _bufAllocator->Alloc( MB(16) );
-    _tempAllocator = _bufAllocator->make_new<StackAllocator>("temp_allocator", tempAllocation, MB(16));
+    Mem::tempAllocator = _rootAllocator->make_new<StackAllocator>("temp_allocator", MB(16), _rootAllocator);
+
+	Mem::defaultAllocator = Mem::tempAllocator;
 }
 
 void MemManager::shutdown()
 {
-	_bufAllocator->Free(tempAllocation);
-	_tempAllocator->~StackAllocator();
-	_bufAllocator->~StackAllocator();
+	_rootAllocator->make_delete(Mem::tempAllocator);
+
+	_rootAllocator->~StackAllocator();
 }

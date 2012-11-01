@@ -32,6 +32,7 @@ bool App::init()
 
 void App::exit()
 {
+	memMan.shutdown();
 }
 
 bool App::initAPI()
@@ -68,9 +69,13 @@ bool App::load()
 	if ( m_GCVertFormat == VF_NONE) 
 			return false;
 
+	void* test = Mem::defaultAllocator->Alloc(16);
+
 	defaultFont = renderer->addFont("../Fonts/Future.dds", "../Fonts/Future.font", linearClamp);
 
 	m_Model->Init(renderer, m_GCVertFormat);
+
+	Mem::defaultAllocator->Free(test);
 
 cleanup:
 	return true;
