@@ -46,8 +46,6 @@ protected:
 	AssetManager assMan;
 	MemManager memMan;
 
-	VertexFormatID m_GCVertFormat;
-
 	Package *m_Pkg;
 	GCModel* m_Model;
 	ShaderID m_VerticesShader;
