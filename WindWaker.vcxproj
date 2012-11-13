@@ -73,7 +73,9 @@
       <DataExecutionPrevention />
       <TargetMachine>MachineX86</TargetMachine>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
-      <AdditionalDependencies>%DXSDK_DIR%/Lib/x64/d3dx11.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -169,7 +171,7 @@
     <ClInclude Include="Common\Framework3\Windows\resource.h" />
     <ClInclude Include="Common\gccommon.h" />
     <ClInclude Include="Common\gcio.h" />
-    <ClInclude Include="GCD3D.h" />
+    <ClInclude Include="GC3D.h" />
     <ClInclude Include="GCModel.h" />
     <ClInclude Include="Mem.h" />
     <ClInclude Include="Package.h" />

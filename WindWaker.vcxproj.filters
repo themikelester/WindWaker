@@ -175,7 +175,6 @@
     <ClInclude Include="Asset.h">
       <Filter>Assets</Filter>
     </ClInclude>
-    <ClInclude Include="GCD3D.h" />
     <ClInclude Include="util.h">
       <Filter>Headers</Filter>
     </ClInclude>
@@ -195,6 +194,7 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="Allocators.h" />
+    <ClInclude Include="GC3D.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Framework3">
