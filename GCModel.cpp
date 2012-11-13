@@ -249,17 +249,6 @@ RESULT GCModel::Init(Renderer *renderer)
 	// First things first
 	buildSceneGraph(m_BDL->inf1, m_Scenegraph);
 	initBatches(renderer, m_Scenegraph);
-	
-	struct Vertex
-	{
-		float3 Position;
-		float3 Normal;
-	};
-	
-	//if ((m_VertBuffer = renderer->addVertexBuffer(sizeof(Vertex) * m_NumVerts, STATIC, vertices)) == VB_NONE) return false;
-
-Cleanup:
-	return S_OK;
 }
 
 RESULT GCModel::Draw(Renderer *renderer, ID3D10Device *device)
