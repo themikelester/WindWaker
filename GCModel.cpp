@@ -248,7 +248,7 @@ RESULT GCModel::Init(Renderer *renderer)
 {	
 	// First things first
 	buildSceneGraph(m_BDL->inf1, m_Scenegraph);
-	initBatches(renderer, m_Scenegraph);
+	return initBatches(renderer, m_Scenegraph);
 }
 
 RESULT GCModel::Draw(Renderer *renderer, ID3D10Device *device)
