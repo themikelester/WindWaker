@@ -1,8 +1,96 @@
+#define HAS_POSITIONS
+
+#ifdef HAS_POSITIONS
+	#define IF_POSITION(x) x
+#else
+	#define IF_POSITION(x)
+#endif
+
+#ifdef HAS_NORMALS
+	#define IF_NORMAL(x) x
+#else
+	#define IF_NORMAL(x)
+#endif
+
+#ifdef HAS_COLORS0
+	#define IF_COLOR0(x) x
+#else		   
+	#define IF_COLOR0(x)
+#endif
+
+#ifdef HAS_COLORS1
+	#define IF_COLOR1(x) x
+#else		   
+	#define IF_COLOR1(x)
+#endif
+
+#ifdef HAS_TEXCOORDS0
+	#define IF_TEXCOORD0(x) x
+#else		   
+	#define IF_TEXCOORD0(x)
+#endif
+
+#ifdef HAS_TEXCOORDS1
+	#define IF_TEXCOORD1(x) x
+#else		   
+	#define IF_TEXCOORD1(x)
+#endif
+
+#ifdef HAS_TEXCOORDS2
+	#define IF_TEXCOORD2(x) x
+#else		   
+	#define IF_TEXCOORD2(x)
+#endif
+
+#ifdef HAS_TEXCOORDS3
+	#define IF_TEXCOORD3(x) x
+#else		   
+	#define IF_TEXCOORD3(x)
+#endif
+
+#ifdef HAS_TEXCOORDS4
+	#define IF_TEXCOORD4(x) x
+#else		   
+	#define IF_TEXCOORD4(x)
+#endif
+
+#ifdef HAS_TEXCOORDS5
+	#define IF_TEXCOORD5(x) x
+#else		   
+	#define IF_TEXCOORD5(x)
+#endif
+
+#ifdef HAS_TEXCOORDS6
+	#define IF_TEXCOORD6(x) x
+#else		   
+	#define IF_TEXCOORD6(x)
+#endif
+
+#ifdef HAS_TEXCOORDS7
+	#define IF_TEXCOORD7(x) x
+#else		   
+	#define IF_TEXCOORD7(x)
+#endif
+
+cbuffer Globals : register(b0)
+{
+	float4x4 WorldViewProj;
+}
 
 struct VsIn
 {
-	float3 Position : Position;
-	float3 Normal   : Normal;
+	IF_POSITION(	float3 Position : Position	;)
+	IF_NORMAL(		float3 Normal	: Normal	;)
+	IF_COLOR0(		uint4  Color0	: Color0	;)
+	IF_COLOR1(		uint4  Color1	: Color1	;)
+	IF_TEXCOORD0(	float2 TexCoord0: Texcoord0	;)
+	IF_TEXCOORD1(	float2 TexCoord1: Texcoord1	;)
+	IF_TEXCOORD2(	float2 TexCoord2: Texcoord2	;)
+	IF_TEXCOORD3(	float2 TexCoord3: Texcoord3	;)
+	IF_TEXCOORD4(	float2 TexCoord4: Texcoord4	;)
+	IF_TEXCOORD5(	float2 TexCoord5: Texcoord5	;)
+	IF_TEXCOORD6(	float2 TexCoord6: Texcoord6	;)
+	IF_TEXCOORD7(	float2 TexCoord7: Texcoord7	;)
 };
 
 struct PsIn
@@ -12,13 +100,31 @@ struct PsIn
 
 [Vertex shader]
 
-float4x4 WorldViewProj;
+float4 Position(float3 position)
+{
+	return mul(WorldViewProj, float4(position, 1.0f));
+}
+
+float3 Normal(float3 normal)
+{
+	return normal;
+}
+
+float4 Color(uint4 rgba)
+{
+	return rgba;
+}
+
+float4 TexCoord(float2 uv)
+{
+	return 1.0;
+}
 
 PsIn main(VsIn In)
 {
 	PsIn Out;
 
-	Out.Position = mul(WorldViewProj, float4(In.Position, 1.0f));
+	Out.Position = Position(In.Position);
 
 	return Out;
 }

@@ -57,23 +57,12 @@ bool App::load()
 	IFC( assMan.Load(m_Pkg, nodeName, m_Model) );
 	
 	m_VerticesShader = renderer->addShader("../Vertices.shd");
-	
-	//TODO: Should only be done once when the renderer is init
-	FormatDesc GCformat[] =
-	{
-		{ 0, TYPE_VERTEX,   FORMAT_FLOAT, 3 },
-		{ 0, TYPE_NORMAL,   FORMAT_FLOAT, 3 },
-	};
-
-	m_GCVertFormat = renderer->addVertexFormat(GCformat, elementsOf(GCformat), m_VerticesShader); 
-	if ( m_GCVertFormat == VF_NONE) 
-			return false;
 
 	void* test = Mem::defaultAllocator->Alloc(16);
 
 	defaultFont = renderer->addFont("../Fonts/Future.dds", "../Fonts/Future.font", linearClamp);
 
-	m_Model->Init(renderer, m_GCVertFormat);
+	m_Model->Init(renderer);
 
 	Mem::defaultAllocator->Free(test);
 
@@ -97,7 +86,7 @@ bool App::onKey(const uint key, const bool pressed)
 			++curModel;
 		} while( (assMan.Load(m_Pkg, (curModel % numAssets), (Asset**)&m_Model) != S_OK) );
 		
-		m_Model->Init(renderer, m_GCVertFormat);
+		m_Model->Init(renderer);
 	}
 
 	if (pressed && key == KEY_LEFT)
@@ -105,7 +94,7 @@ bool App::onKey(const uint key, const bool pressed)
 		do {
 			if(--curModel == -1) curModel = 92;		
 		} while( (assMan.Load(m_Pkg, curModel, (Asset**)&m_Model) != S_OK) );
-		m_Model->Init(renderer, m_GCVertFormat);
+		m_Model->Init(renderer);
 	}
 
 	return BaseApp::onKey(key, pressed);

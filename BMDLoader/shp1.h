@@ -6,6 +6,23 @@
 #include "common.h"
 #include <Framework3/Math/Vector.h>
 
+enum BatchAttributeFlags
+{
+	HAS_MATRIX_INDICES	= 1 << 0,
+	HAS_POSITIONS		= 1 << 1,
+	HAS_NORMALS			= 1 << 2,
+	HAS_COLORS0			= 1 << 3,
+	HAS_COLORS1			= 1 << 4,
+	HAS_TEXCOORDS0		= 1 << 5,
+	HAS_TEXCOORDS1		= 1 << 6,
+	HAS_TEXCOORDS2		= 1 << 7,
+	HAS_TEXCOORDS3		= 1 << 8,
+	HAS_TEXCOORDS4		= 1 << 9,
+	HAS_TEXCOORDS5		= 1 << 10,
+	HAS_TEXCOORDS6		= 1 << 11,
+	HAS_TEXCOORDS7		= 1 << 12,
+};
+
 struct Index
 {
   u16 matrixIndex;
@@ -34,14 +51,9 @@ struct Packet
   std::vector<u16> matrixTable; //maps attribute matrix index to draw array index
 };
 
-struct Attributes
-{
-  bool hasMatrixIndices, hasPositions, hasNormals, hasColors[2], hasTexCoords[8];
-};
-
 struct Batch1
 {
-  Attributes attribs;
+  u16 attribs; //BatchAttributeFlags
   std::vector<Packet> packets;
 
   vec3 bbMin, bbMax; //experimental

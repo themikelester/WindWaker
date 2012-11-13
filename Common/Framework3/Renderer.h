@@ -163,7 +163,8 @@ struct TexVertex {
 #define USE_MIPGEN    0x40
 
 // Shader flags
-#define ASSEMBLY 0x1
+#define ASSEMBLY	 0x1
+#define SHADER_DEBUG 0x2
 
 // Mask constants
 #define RED   0x1
@@ -211,6 +212,7 @@ enum AttributeType {
 	TYPE_NORMAL   = 3,
 	TYPE_TANGENT  = 4,
 	TYPE_BINORMAL = 5,
+	TYPE_COLOR	  = 6,
 };
 
 enum AttributeFormat {

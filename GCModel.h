@@ -2,10 +2,22 @@
 
 #include "Asset.h"
 #include "BMDLoader\BMDLoader.h"
-#include <Framework3\Util\Model.h>
+#include "Mem.h"
 #include <Framework3\Direct3D10\Direct3D10Renderer.h>
 
 class Renderer;
+
+class ModelManager
+{
+public:
+	void init();
+	void shutdown();
+
+	static Allocator* getAllocator() {return _allocator;}
+
+protected:
+	static Allocator* _allocator;
+};
 
 class GCModel : public Asset
 {
@@ -13,12 +25,12 @@ private:
 	SceneGraph		m_Scenegraph;
 	BModel*			m_BDL;
 
-	VertexFormatID m_VertexFormat;
-
 	std::vector<IndexBufferID>	m_IndexBuffers;
 	std::vector<VertexBufferID>	m_VertBuffers;
 	std::vector<void*>			m_VertexData;
 	std::vector<void*>			m_IndexData;
+	std::vector<ShaderID>		m_Shaders;
+	std::vector<VertexFormatID>	m_VertFormats;
 
 protected:
 	RESULT GCModel::Load(Chunk* data);
@@ -32,7 +44,7 @@ public:
 		for (uint i = 0; i < m_IndexData.size(); i++) {	free(m_IndexData[i]); }
 	}
 
-	RESULT Init(Renderer *renderer, VertexFormatID vertFormat);
+	RESULT Init(Renderer *renderer);
 	RESULT Draw(Renderer *renderer, ID3D10Device *device);
 
 private:

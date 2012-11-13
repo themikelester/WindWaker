@@ -2,6 +2,10 @@
 
 #define NULL 0
 
+typedef unsigned char ubyte;
+typedef unsigned short ushort;
+typedef unsigned int uint;
+
 #ifdef _MSC_VER
 	typedef unsigned __int8		u8;
 	typedef unsigned __int16	u16;

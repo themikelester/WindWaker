@@ -1,5 +1,7 @@
 #include "GCModel.h"
 #include "util.h"
+#include "Mem.h"
+#include "GC3D.h"
 
 RESULT GCModel::Load(Chunk* data) 
 {
@@ -45,15 +47,13 @@ mat4 frameMatrix(const Frame& f)
   */
 }
 
-#define VERTEX_SIZE(x) 2*sizeof(float3);
-#define VERTEX_FORMAT(x) m_VertexFormat
-
 void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex, const mat4 &parentMatrix)
 {
 	Batch1& batch = m_BDL->shp1.batches[batchIndex];
 
 	// Vertex format and buffer are uniform for an entire batch
-	renderer->changeVertexFormat( VERTEX_FORMAT(batch.attribs) );
+	renderer->changeShader( m_Shaders[batchIndex] );
+	renderer->changeVertexFormat( m_VertFormats[batchIndex] );
 	renderer->changeVertexBuffer(0, m_VertBuffers[batchIndex]);
 	renderer->changeIndexBuffer(m_IndexBuffers[batchIndex]);
 
@@ -138,18 +138,18 @@ RESULT GCModel::findMatchingIndex(Index &point, int* index)
 	return S_FALSE;
 }
 
-static RESULT buildVertex(ubyte* dst, Index &point, Attributes &attribs, BModel* bdl)
+static RESULT buildVertex(ubyte* dst, Index &point, u16 attribs, BModel* bdl)
 {
 	// For now, only use position and normal
-	if (!attribs.hasPositions || !attribs.hasNormals)
+	if ( !(attribs & HAS_POSITIONS) || !(attribs & HAS_NORMALS) )
 		WARN("Model is missing required attribute");
 
-	if(attribs.hasPositions) {
+	if (attribs & HAS_POSITIONS) {
 		memcpy(dst, bdl->vtx1.positions[point.posIndex], sizeof(float3));
 		dst += sizeof(float3);
 	}
 
-	if(attribs.hasNormals) {
+	if (attribs & HAS_NORMALS) {
 		memcpy(dst, bdl->vtx1.normals[point.normalIndex], sizeof(float3));
 		dst += sizeof(float3);
 	}
@@ -165,6 +165,8 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 	m_IndexData.resize(numBatches);
 	m_VertBuffers.resize(numBatches);
 	m_IndexBuffers.resize(numBatches);
+	m_Shaders.resize(numBatches);
+	m_VertFormats.resize(numBatches);
 
 	// Create a vertex and index buffer for every batch in this model
 	STL_FOR_EACH(node, m_BDL->inf1.scenegraph)
@@ -190,7 +192,7 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 		}
 
 		// Create vertex buffer for this batch based on available attributes
-		int vertexSize = VERTEX_SIZE(currBatch.attribs);
+		int vertexSize = GC3D::GetVertexSize(renderer, batch.attribs);
 		int bufferSize = pointCount * vertexSize; // we may not need all this space, see pointCount above
 		
 		ubyte* vertexBuffer = (ubyte*)malloc( bufferSize );
@@ -233,15 +235,17 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 		m_IndexData[batchIndex] = indexBuffer;
 		m_VertBuffers[batchIndex] = VBID;
 		m_IndexBuffers[batchIndex] = IBID;
+
+		// Load the vertex format and shader for this vertex type (so it doesn't have to load at draw time)
+		m_Shaders[batchIndex] = GC3D::GetShader(renderer, batch.attribs);
+		m_VertFormats[batchIndex] = GC3D::GetVertexFormat(renderer, batch.attribs, m_Shaders[batchIndex]);
 	}
 
 	return S_OK;
 }
 
-RESULT GCModel::Init(Renderer *renderer, VertexFormatID vertFormat)
-{
-	m_VertexFormat = vertFormat;
-	
+RESULT GCModel::Init(Renderer *renderer)
+{	
 	// First things first
 	buildSceneGraph(m_BDL->inf1, m_Scenegraph);
 	initBatches(renderer, m_Scenegraph);

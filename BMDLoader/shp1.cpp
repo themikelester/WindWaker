@@ -252,10 +252,8 @@ void dumpBatch(Batch1& dst, const bmd::Batch1& Batch1, const bmd::Shp1Header& h,
   //read and interpret Batch1 vertex attribs
   bmd::BatchAttribs attribs = getBatchAttribs(f,
     baseOffset + h.offsetToBatchAttribs + Batch1.offsetToAttribs);
-
-  dst.attribs.hasMatrixIndices = dst.attribs.hasPositions = dst.attribs.hasNormals = false;
-  for(i = 0; i < 2; ++i) dst.attribs.hasColors[i] = false;
-  for(i = 0; i < 8; ++i) dst.attribs.hasTexCoords[i] = false;
+  
+  dst.attribs = 0;
   for(i = 0; i < attribs.size(); ++i)
   {
     if(attribs[i].dataType != 1 && attribs[i].dataType != 3)
@@ -266,33 +264,19 @@ void dumpBatch(Batch1& dst, const bmd::Batch1& Batch1, const bmd::Shp1Header& h,
 
     switch(attribs[i].attrib)
     {
-      case 0:
-        dst.attribs.hasMatrixIndices = true;
-        break;
-
-      case 9:
-        dst.attribs.hasPositions = true;
-        break;
-
-      case 0xa:
-        dst.attribs.hasNormals = true;
-        break;
-
-      case 0xb:
-      case 0xc:
-        dst.attribs.hasColors[attribs[i].attrib - 0xb] = true;
-        break;
-
-      case 0xd:
-      case 0xe:
-      case 0xf:
-      case 0x10:
-      case 0x11:
-      case 0x12:
-      case 0x13:
-      case 0x14:
-        dst.attribs.hasTexCoords[attribs[i].attrib - 0xd] = true;
-        break;
+      case 0x00: dst.attribs |= HAS_MATRIX_INDICES;	break;
+	  case 0x09: dst.attribs |= HAS_POSITIONS;		break;
+      case 0x0a: dst.attribs |= HAS_NORMALS;		break;
+      case 0x0b: dst.attribs |= HAS_COLORS0;		break;
+      case 0x0c: dst.attribs |= HAS_COLORS1;		break;
+	  case 0x0d: dst.attribs |= HAS_TEXCOORDS0;		break;
+      case 0x0e: dst.attribs |= HAS_TEXCOORDS1;		break;
+      case 0x0f: dst.attribs |= HAS_TEXCOORDS2;		break;
+      case 0x10: dst.attribs |= HAS_TEXCOORDS3;		break;
+      case 0x11: dst.attribs |= HAS_TEXCOORDS4;		break;
+      case 0x12: dst.attribs |= HAS_TEXCOORDS5;		break;
+      case 0x13: dst.attribs |= HAS_TEXCOORDS6;		break;
+      case 0x14: dst.attribs |= HAS_TEXCOORDS7;		break;
 
       default:
         WARN("shp1, dumpBatch(): unknown attrib %d in Batch1, it might not display correctly", attribs[i].attrib);
