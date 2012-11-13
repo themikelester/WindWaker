@@ -64,9 +64,12 @@ public:
 	explicit StackAllocator(const char* name, void* base, u32 stackSize_bytes);
 
 	// Constructs a stack allocator and uses allocator to allocate stackSize_bytes for its use
-	explicit StackAllocator(const char* name, u32 stackSize_bytes, Allocator* allocator);
+	explicit StackAllocator(const char* name, u32 stackSize_bytes, StackAllocator* allocator);
 
 	~StackAllocator();
+
+	// Return a marker that can be used as an argument to Free()
+	void* GetMarker();
 
 	// Clears the entire stack (rolls back to zero)
 	void Clear();
@@ -75,6 +78,9 @@ protected:
 	u8* m_pBase;
 	u8* m_pTop;
 	u8* m_pEnd;
+
+	void* m_ParentMarker;
+	void* m_PrevMarker;
 };
 
 class PoolAllocator : public Allocator
@@ -83,9 +89,10 @@ public: // Allocator methods
 	// Allocates a new block from the pool
 	void* Alloc(u32 unnused);
 
-	// Rolls the stack back to a previous marker
+	// Free a particular block of memory
 	void Free(void* ptr);
 
+	// Return the allocated size of this block (always equal to m_ElementSize);
 	u32 Size(void* ptr);
 
 public:
@@ -97,6 +104,30 @@ protected:
 
 	u32 m_ElementSize;	// Size of each block in bytes
 
+	void* m_pBase;		// pointer to base of allocated memory
+	void* m_pLLHead;	// pointer to the first free block (Linked List Head)
+};
+
+class HeapAllocator : public Allocator
+{
+public: // Allocator methods
+	// Allocates a new block from the heap
+	void* Alloc(u32 size_bytes);
+
+	// Free the given block of memory
+	void Free(void* ptr);
+	
+	// Return the allocated size of this block
+	u32 Size(void* ptr);
+
+public:
+	// Constructs a pool allocator with the given size
+	explicit HeapAllocator(const char* name, void* base, u32 size_bytes);
+	
+	// Constructs a stack allocator and uses allocator to allocate stackSize_bytes for its use
+	explicit HeapAllocator(const char* name, u32 size_bytes, Allocator* allocator);
+
+protected:
 	void* m_pBase;		// pointer to base of allocated memory
 	void* m_pLLHead;	// pointer to the first free block (Linked List Head)
 };
