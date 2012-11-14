@@ -55,7 +55,7 @@ namespace GC3D
 		int vertSize = 0;
 		for (int i = 0; i < MAX_VERTEX_ATTRIBS; ++i) 
 		{
-			if ( attribFlags | (1 << i) )
+			if ( attribFlags & (1 << i) )
 			{
 				vertSize += __GCformat[i].size * renderer->getFormatSize(__GCformat[i].format);
 			}
