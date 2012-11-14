@@ -54,8 +54,14 @@ public:
 	unsigned int getCount() const { return count; }
 
 	void setCount(const unsigned int newCount){
-		capacity = count = newCount;
-		list = (TYPE *) realloc(list, capacity * sizeof(TYPE));
+		if (newCount <= capacity)
+			count = newCount;
+		else
+		{
+			count = newCount;
+			capacity = 2*count;
+			list = (TYPE *) realloc(list, capacity * sizeof(TYPE));
+		}
 	}
 
 	unsigned int add(const TYPE object){

@@ -140,9 +140,9 @@ RESULT GCModel::findMatchingIndex(Index &point, int* index)
 
 static RESULT buildVertex(ubyte* dst, Index &point, u16 attribs, BModel* bdl)
 {
-	// For now, only use position and normal
-	if ( !(attribs & HAS_POSITIONS) || !(attribs & HAS_NORMALS) )
-		WARN("Model is missing required attribute");
+	// For now, only use position
+	if ( attribs != HAS_POSITIONS )
+		WARN("Model does not have required attributes");
 
 	if (attribs & HAS_POSITIONS) {
 		memcpy(dst, bdl->vtx1.positions[point.posIndex], sizeof(float3));
@@ -175,6 +175,9 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 
 		int batchIndex = node->index;
 		Batch1& batch = m_BDL->shp1.batches[batchIndex];
+		
+		// FORCE BATCH ATTRIBUTES TO BE ONLY VERTICES RIGHT NOW
+		batch.attribs = HAS_POSITIONS;
 
 		int vertexCount = 0; 
 		int pointCount = 0;

@@ -72,7 +72,13 @@
 	#define IF_TEXCOORD7(x)
 #endif
 
-cbuffer Globals : register(b0)
+// Global constant that can be accessed from many shaders
+cbuffer g_Test
+{
+	float anotherConstantInSeperateCBuffer;
+}
+
+cbuffer g_PerFrame
 {
 	float4x4 WorldViewProj;
 }
@@ -102,7 +108,7 @@ struct PsIn
 
 float4 Position(float3 position)
 {
-	return mul(WorldViewProj, float4(position, 1.0f));
+	return anotherConstantInSeperateCBuffer * mul(WorldViewProj, float4(position, 1.0f));
 }
 
 float3 Normal(float3 normal)

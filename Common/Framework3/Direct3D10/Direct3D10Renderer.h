@@ -22,7 +22,8 @@
 #ifndef _DIRECT3D10RENDERER_H_
 #define _DIRECT3D10RENDERER_H_
 
-
+#include <hash_map>
+#include <string>
 #include "../Renderer.h"
 #ifdef USE_D3D10_1
 #include <d3d10_1.h>
@@ -55,6 +56,8 @@ public:
 
 //	bool resetDevice();
 
+	ConstantBufferID addConstantBuffer(const char* name, const int size, const uint flags = 0);
+
 	TextureID addTexture(ID3D10Resource *resource, uint flags = 0);
 	TextureID addTexture(Image &img, const SamplerStateID samplerState = SS_NONE, uint flags = 0);
 
@@ -78,6 +81,8 @@ public:
 		const int stencilFuncFront, const int stencilFuncBack, const int stencilFailFront, const int stencilFailBack,
 		const int depthFailFront, const int depthFailBack, const int stencilPassFront, const int stencilPassBack);
 	RasterizerStateID addRasterizerState(const int cullMode, const int fillMode = SOLID, const bool multiSample = true, const bool scissor = false, const float depthBias = 0.0f, const float slopeDepthBias = 0.0f);
+
+	void setConstantBuffer(ConstantBufferID constantBuffer, const void *data);
 
 	void setTexture(const char *textureName, const TextureID texture);
 	void setTexture(const char *textureName, const TextureID texture, const SamplerStateID samplerState);
@@ -138,6 +143,9 @@ protected:
 #endif
 	ID3D10RenderTargetView *backBufferRTV;
 	ID3D10DepthStencilView *depthBufferDSV;
+
+	Array <ID3D10Buffer*> globalCBuffers;
+	std::hash_map <std::string, ConstantBufferID> nameBufferMap;
 
 	TextureID currentTexturesVS[MAX_TEXTUREUNIT], selectedTexturesVS[MAX_TEXTUREUNIT];
 	TextureID currentTexturesGS[MAX_TEXTUREUNIT], selectedTexturesGS[MAX_TEXTUREUNIT];

@@ -32,6 +32,7 @@
 typedef int TextureID;
 typedef int ShaderID;
 typedef int VertexBufferID;
+typedef int ConstantBufferID;
 typedef int IndexBufferID;
 typedef int VertexFormatID;
 typedef int SamplerStateID;
@@ -43,6 +44,7 @@ typedef int FontID;
 struct Texture;
 struct Shader;
 struct VertexBuffer;
+struct ConstantBuffer;
 struct IndexBuffer;
 struct VertexFormat;
 struct SamplerState;
@@ -135,6 +137,7 @@ struct TexVertex {
 	vec2(x0 + lw, y0 + lw),
 
 
+#define BUFFER_NONE   (-1)
 #define TEXTURE_NONE  (-1)
 #define SHADER_NONE   (-1)
 #define BLENDING_NONE (-1)
@@ -291,6 +294,8 @@ public:
 	virtual void reset(const uint flags = RESET_ALL);
 	void apply();
 
+	virtual ConstantBufferID addConstantBuffer(const char* name, const int size, const uint flags = 0) = 0;
+
 	TextureID addTexture(const char *fileName, const bool useMipMaps, const SamplerStateID samplerState = SS_NONE, uint flags = 0);
 	virtual TextureID addTexture(Image &img, const SamplerStateID samplerState = SS_NONE, uint flags = 0) = 0;
 	TextureID addCubemap(const char **fileNames, const bool useMipMaps, const SamplerStateID samplerState = SS_NONE, const int nArraySlices = 1, uint flags = 0);
@@ -358,6 +363,8 @@ public:
 
 //	virtual int getTextureUnit(const ShaderID shader, const char *textureName) const = 0;
 //	virtual int getSamplerUnit(const ShaderID shader, const char *samplerName) const = 0;
+	
+	virtual void setConstantBuffer(ConstantBufferID, const void *data) = 0;
 
 	virtual void setTexture(const char *textureName, const TextureID texture) = 0;
 	virtual void setTexture(const char *textureName, const TextureID texture, const SamplerStateID samplerState) = 0;
@@ -507,6 +514,7 @@ protected:
 	Array <Shader> shaders;
 	Array <VertexBuffer> vertexBuffers;
 	Array <IndexBuffer> indexBuffers;
+	Array <ConstantBuffer> constBuffers;
 	Array <TexFont> fonts;
 	Array <VertexFormat> vertexFormats;
 	Array <SamplerState> samplerStates;

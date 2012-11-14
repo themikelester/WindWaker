@@ -110,6 +110,13 @@ struct IndexBuffer {
 	uint indexSize;
 };
 
+struct ConstantBuffer {
+	ID3D10Buffer *constBuffer;
+	uint size;
+	void* mem;
+	bool dirty;
+};
+
 struct SamplerState {
 	ID3D10SamplerState *samplerState;
 };
@@ -513,6 +520,34 @@ void Direct3D10Renderer::setD3Ddefaults(){
 
 	return true;
 }*/
+
+ConstantBufferID Direct3D10Renderer::addConstantBuffer(const char* name, const int size, 
+													   const uint flags)
+{
+	ConstantBuffer cb;
+
+	D3D10_BUFFER_DESC cbDesc;
+	cbDesc.Usage = D3D10_USAGE_DEFAULT;//D3D10_USAGE_DYNAMIC;
+	cbDesc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
+	cbDesc.CPUAccessFlags = 0;//D3D10_CPU_ACCESS_WRITE;
+	cbDesc.MiscFlags = 0;
+	cbDesc.ByteWidth = size;
+
+	// D3D10 requires that size be a multiple of 16
+	ASSERT( (size & 0xF) == 0);
+
+	if( FAILED(device->CreateBuffer(&cbDesc, NULL, &cb.constBuffer)) )
+		return BUFFER_NONE;
+
+	cb.dirty = false;
+	cb.size = size;
+	cb.mem = NULL;
+
+	uint cbID = constBuffers.add(cb);
+	nameBufferMap.insert( std::pair<std::string, ConstantBufferID>(name, cbID) );
+
+	return cbID;
+}	
 
 TextureID Direct3D10Renderer::addTexture(ID3D10Resource *resource, uint flags){
 	Texture tex;
@@ -1136,14 +1171,40 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 	cbDesc.MiscFlags = 0;
 
 	Array <Constant> constants;
-
+	
 	for (uint i = 0; i < shader.nVSCBuffers; i++){
 		vsRefl->GetConstantBufferByIndex(i)->GetDesc(&sbDesc);
-
+		
+		ConstantBuffer cb;
 		cbDesc.ByteWidth = sbDesc.Size;
-		device->CreateBuffer(&cbDesc, NULL, &shader.vsConstants[i]);
 
-		shader.vsConstMem[i] = new ubyte[sbDesc.Size];
+		// NOTE: This is currently broken
+		// FXC seems to always set $Global to CB index 0, regardless of what slot it is bound to
+		// Since we use the CB index as the binding slot, this does not work. 
+
+		// Is this a shared constant buffer?
+		// A shared or "global" buffer is denoted by prefixing its name with "g_" (e.g. "cbuffer g_Globals")
+		if ( strstr(sbDesc.Name, "g_") )
+		{
+			// Search for the buffer in our globalCBuffer list
+			auto iter = nameBufferMap.find( sbDesc.Name );
+
+			// This shader is going to use an unitialized constant buffer!
+			// Call Renderer::addConstantBuffer first with sbDesc.Name as the name parameter
+			ASSERT(iter != nameBufferMap.end());
+				
+			ConstantBufferID cbID = iter->second;
+			cb = constBuffers[cbID];
+	
+			shader.vsConstants[i] = cb.constBuffer;
+			shader.vsConstMem[i] = (ubyte*)cb.mem;
+		}
+		else
+		{
+			device->CreateBuffer(&cbDesc, NULL, &shader.vsConstants[i]);
+			shader.vsConstMem[i] = new ubyte[sbDesc.Size];
+		}
+		
 		for (uint k = 0; k < sbDesc.Variables; k++){
 			D3D10_SHADER_VARIABLE_DESC vDesc;
 			vsRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
@@ -1646,6 +1707,13 @@ const Sampler *getSampler(const Sampler *samplers, const int count, const char *
 
 	return NULL;
 }
+
+void Direct3D10Renderer::setConstantBuffer(ConstantBufferID constantBuffer, const void *data)
+{
+	ConstantBuffer cb = constBuffers[constantBuffer];
+
+	device->UpdateSubresource(cb.constBuffer, 0, 0, data, 0, 0);
+}	
 
 void Direct3D10Renderer::setTexture(const char *textureName, const TextureID texture){
 	ASSERT(selectedShader != SHADER_NONE);
