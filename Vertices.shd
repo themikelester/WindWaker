@@ -82,6 +82,7 @@ cbuffer g_PerFrame
 cbuffer g_Test
 {
 	float anotherConstantInSeperateCBuffer;
+	float4 globalColor;
 }
 
 float scale;
@@ -143,6 +144,5 @@ PsIn main(VsIn In)
 
 float4 main(PsIn In) : SV_Target
 {
-	float4 color = float4(1.0, 1.0, 1.0, 1.0);
-	return color;
+	return globalColor;
 }

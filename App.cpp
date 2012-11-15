@@ -115,6 +115,7 @@ void App::drawFrame()
 	renderer->reset();
 		renderer->setGlobalConstant4x4f("WorldViewProj", view_proj);
 		renderer->setGlobalConstant1f("anotherConstantInSeperateCBuffer", 1.0f);
+		renderer->setGlobalConstant4f("globalColor", float4(0, 1, 1, 1));
 	renderer->apply();
 
 	m_Model->Draw(renderer, device);
