@@ -53,6 +53,10 @@ int constantComp(const void *s0, const void *s1){
 	return strcmp(((Constant *) s0)->name, ((Constant *) s1)->name);
 }
 
+int constantComp(const Constant& s0, const Constant& s1){
+	return strcmp(s0.name, s1.name);
+}
+
 struct Sampler {
 	char *name;
 	int vsIndex;
@@ -111,6 +115,7 @@ struct IndexBuffer {
 };
 
 struct ConstantBuffer {
+	char *name;
 	ID3D10Buffer *constBuffer;
 	uint size;
 	void* mem;
@@ -343,6 +348,12 @@ Direct3D10Renderer::~Direct3D10Renderer(){
 		delete shaders[i].psDirty;
 	}
 
+	// Delete global constants
+	for (uint i = 0; i < constBuffers.getCount(); i++){
+		free(constBuffers[i].name);
+		free(constBuffers[i].mem);
+	}
+
     // Delete vertex formats
 	for (uint i = 0; i < vertexFormats.getCount(); i++){
 		if (vertexFormats[i].inputLayout) vertexFormats[i].inputLayout->Release();
@@ -521,33 +532,6 @@ void Direct3D10Renderer::setD3Ddefaults(){
 	return true;
 }*/
 
-ConstantBufferID Direct3D10Renderer::addConstantBuffer(const char* name, const int size, 
-													   const uint flags)
-{
-	ConstantBuffer cb;
-
-	D3D10_BUFFER_DESC cbDesc;
-	cbDesc.Usage = D3D10_USAGE_DEFAULT;//D3D10_USAGE_DYNAMIC;
-	cbDesc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
-	cbDesc.CPUAccessFlags = 0;//D3D10_CPU_ACCESS_WRITE;
-	cbDesc.MiscFlags = 0;
-	cbDesc.ByteWidth = size;
-
-	// D3D10 requires that size be a multiple of 16
-	ASSERT( (size & 0xF) == 0);
-
-	if( FAILED(device->CreateBuffer(&cbDesc, NULL, &cb.constBuffer)) )
-		return BUFFER_NONE;
-
-	cb.dirty = false;
-	cb.size = size;
-	cb.mem = NULL;
-
-	uint cbID = constBuffers.add(cb);
-	nameBufferMap.insert( std::pair<std::string, ConstantBufferID>(name, cbID) );
-
-	return cbID;
-}	
 
 TextureID Direct3D10Renderer::addTexture(ID3D10Resource *resource, uint flags){
 	Texture tex;
@@ -1175,53 +1159,85 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 	for (uint i = 0; i < shader.nVSCBuffers; i++){
 		vsRefl->GetConstantBufferByIndex(i)->GetDesc(&sbDesc);
 		
-		ConstantBuffer cb;
 		cbDesc.ByteWidth = sbDesc.Size;
-
-		// NOTE: This is currently broken
-		// FXC seems to always set $Global to CB index 0, regardless of what slot it is bound to
-		// Since we use the CB index as the binding slot, this does not work. 
-
-		// Is this a shared constant buffer?
+		
 		// A shared or "global" buffer is denoted by prefixing its name with "g_" (e.g. "cbuffer g_Globals")
-		if ( strstr(sbDesc.Name, "g_") )
-		{
-			// Search for the buffer in our globalCBuffer list
-			auto iter = nameBufferMap.find( sbDesc.Name );
+		bool globalBuffer = (strstr(sbDesc.Name, "g_") != NULL);
 
-			// This shader is going to use an unitialized constant buffer!
-			// Call Renderer::addConstantBuffer first with sbDesc.Name as the name parameter
-			ASSERT(iter != nameBufferMap.end());
+		if ( globalBuffer )
+		{
+			ConstantBuffer cb;
+			uint cbID;
+
+			// If this CBuffer doesn't exist yet, create it and allocate memory for CPU storage			
+			auto iter = nameBufferMap.find( sbDesc.Name );
+			if (iter == nameBufferMap.end())
+			{
+				ASSERT( (cbDesc.ByteWidth & 0xF) == 0); // D3D10 requires that size be a multiple of 16
+
+				if( FAILED(device->CreateBuffer(&cbDesc, NULL, &cb.constBuffer)) )
+					return SHADER_NONE;
 				
-			ConstantBufferID cbID = iter->second;
-			cb = constBuffers[cbID];
+				cb.name = (char*) malloc(strlen(sbDesc.Name) * sizeof(char) + 1);
+				strcpy(cb.name, sbDesc.Name);
+
+				cb.dirty = false;
+				cb.size = cbDesc.ByteWidth;
+				cb.mem = malloc(cb.size);
+
+				cbID = constBuffers.add(cb);
+				cb = constBuffers[cbID];
+				nameBufferMap.insert( std::pair<std::string, uint>(sbDesc.Name, cbID) );
+			}
+			else
+			{
+				cbID = iter->second;
+				cb = constBuffers[cbID];
+			}
 	
 			shader.vsConstants[i] = cb.constBuffer;
-			shader.vsConstMem[i] = (ubyte*)cb.mem;
+			shader.vsConstMem[i] = NULL;
+
+			for (uint k = 0; k < sbDesc.Variables; k++){
+				D3D10_SHADER_VARIABLE_DESC vDesc;
+				vsRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
+
+				Constant constant;
+				size_t length = strlen(vDesc.Name);
+				constant.name = new char[length + 1];
+				strcpy(constant.name, vDesc.Name);
+				constant.vsData = (ubyte*)cb.mem + vDesc.StartOffset;
+				constant.gsData = NULL;
+				constant.psData = NULL;
+				constant.vsBuffer = cbID;
+				constant.gsBuffer = -1;
+				constant.psBuffer = -1;
+				globalConstants.add(constant);
+			}
 		}
 		else
 		{
 			device->CreateBuffer(&cbDesc, NULL, &shader.vsConstants[i]);
 			shader.vsConstMem[i] = new ubyte[sbDesc.Size];
-		}
 		
-		for (uint k = 0; k < sbDesc.Variables; k++){
-			D3D10_SHADER_VARIABLE_DESC vDesc;
-			vsRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
+			for (uint k = 0; k < sbDesc.Variables; k++){
+				D3D10_SHADER_VARIABLE_DESC vDesc;
+				vsRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
 
-			Constant constant;
-			size_t length = strlen(vDesc.Name);
-			constant.name = new char[length + 1];
-			strcpy(constant.name, vDesc.Name);
-			constant.vsData = shader.vsConstMem[i] + vDesc.StartOffset;
-			constant.gsData = NULL;
-			constant.psData = NULL;
-			constant.vsBuffer = i;
-			constant.gsBuffer = -1;
-			constant.psBuffer = -1;
-			constants.add(constant);
+				Constant constant;
+				size_t length = strlen(vDesc.Name);
+				constant.name = new char[length + 1];
+				strcpy(constant.name, vDesc.Name);
+				constant.vsData = shader.vsConstMem[i] + vDesc.StartOffset;
+				constant.gsData = NULL;
+				constant.psData = NULL;
+				constant.vsBuffer = i;
+				constant.gsBuffer = -1;
+				constant.psBuffer = -1;
+				constants.add(constant);
+			}
 		}
-
+			
 		shader.vsDirty[i] = false;
 	}
 	uint maxConst = constants.getCount();
@@ -1305,10 +1321,14 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 		shader.psDirty[i] = false;
 	}
 
+	// Sort shader constants
 	shader.nConstants = constants.getCount();
 	shader.constants = new Constant[shader.nConstants];
 	memcpy(shader.constants, constants.getArray(), shader.nConstants * sizeof(Constant));
 	qsort(shader.constants, shader.nConstants, sizeof(Constant), constantComp);
+
+	// Sort global constants
+	globalConstants.sort(constantComp);
 
 	uint nMaxVSRes = vsRefl? vsDesc.BoundResources : 0;
 	uint nMaxGSRes = gsRefl? gsDesc.BoundResources : 0;
@@ -1708,13 +1728,6 @@ const Sampler *getSampler(const Sampler *samplers, const int count, const char *
 	return NULL;
 }
 
-void Direct3D10Renderer::setConstantBuffer(ConstantBufferID constantBuffer, const void *data)
-{
-	ConstantBuffer cb = constBuffers[constantBuffer];
-
-	device->UpdateSubresource(cb.constBuffer, 0, 0, data, 0, 0);
-}	
-
 void Direct3D10Renderer::setTexture(const char *textureName, const TextureID texture){
 	ASSERT(selectedShader != SHADER_NONE);
 
@@ -1903,6 +1916,52 @@ void Direct3D10Renderer::applySamplerStates(){
 	}
 }
 
+void Direct3D10Renderer::setGlobalConstantRaw(const char *name, const void *data, const int size){
+	int minConstant = 0;
+	int maxConstant = globalConstants.getCount() - 1;
+	Constant *constants = globalConstants.getArray();
+
+	// Do a quick lookup in the sorted table with a binary search
+	while (minConstant <= maxConstant){
+		int currConstant = (minConstant + maxConstant) >> 1;
+		int res = strcmp(name, constants[currConstant].name);
+		if (res == 0){
+			Constant *c = constants + currConstant;
+
+			if (c->vsData){
+				if (memcmp(c->vsData, data, size)){
+					memcpy(c->vsData, data, size);
+					constBuffers[c->vsBuffer].dirty = true;
+				}
+			}
+			if (c->gsData){
+				if (memcmp(c->gsData, data, size)){
+					memcpy(c->gsData, data, size);
+					constBuffers[c->gsBuffer].dirty = true;
+				}
+			}
+			if (c->psData){
+				if (memcmp(c->psData, data, size)){
+					memcpy(c->psData, data, size);
+					constBuffers[c->psBuffer].dirty = true;
+				}
+			}
+			return;
+
+		} else if (res > 0){
+			minConstant = currConstant + 1;
+		} else {
+			maxConstant = currConstant - 1;
+		}
+	}
+
+#ifdef _DEBUG
+	char str[256];
+	sprintf(str, "Invalid constant \"%s\"", name);
+	outputDebugString(str);
+#endif
+}
+
 void Direct3D10Renderer::setShaderConstantRaw(const char *name, const void *data, const int size){
 	int minConstant = 0;
 	int maxConstant = shaders[selectedShader].nConstants - 1;
@@ -1950,23 +2009,34 @@ void Direct3D10Renderer::setShaderConstantRaw(const char *name, const void *data
 }
 
 void Direct3D10Renderer::applyConstants(){
+	for (uint i = 0; i < constBuffers.getCount(); ++i)
+	{
+		if (constBuffers[i].dirty){
+			device->UpdateSubresource(constBuffers[i].constBuffer, 0, NULL, constBuffers[i].mem, 0, 0);
+			constBuffers[i].dirty = false;
+		}
+	}
+
 	if (currentShader != SHADER_NONE){
 		Shader *shader = &shaders[currentShader];
 
 		for (uint i = 0; i < shader->nVSCBuffers; i++){
 			if (shader->vsDirty[i]){
+				ASSERT(shader->vsConstMem[i] != NULL); // Ensure this is not a global buffer
 				device->UpdateSubresource(shader->vsConstants[i], 0, NULL, shader->vsConstMem[i], 0, 0);
 				shader->vsDirty[i] = false;
 			}
 		}
 		for (uint i = 0; i < shader->nGSCBuffers; i++){
 			if (shader->gsDirty[i]){
+				ASSERT(shader->vsConstMem[i] != NULL); // Ensure this is not a global buffer
 				device->UpdateSubresource(shader->gsConstants[i], 0, NULL, shader->gsConstMem[i], 0, 0);
 				shader->gsDirty[i] = false;
 			}
 		}
 		for (uint i = 0; i < shader->nPSCBuffers; i++){
 			if (shader->psDirty[i]){
+				ASSERT(shader->vsConstMem[i] != NULL); // Ensure this is not a global buffer
 				device->UpdateSubresource(shader->psConstants[i], 0, NULL, shader->psConstMem[i], 0, 0);
 				shader->psDirty[i] = false;
 			}

@@ -32,7 +32,6 @@
 typedef int TextureID;
 typedef int ShaderID;
 typedef int VertexBufferID;
-typedef int ConstantBufferID;
 typedef int IndexBufferID;
 typedef int VertexFormatID;
 typedef int SamplerStateID;
@@ -44,7 +43,6 @@ typedef int FontID;
 struct Texture;
 struct Shader;
 struct VertexBuffer;
-struct ConstantBuffer;
 struct IndexBuffer;
 struct VertexFormat;
 struct SamplerState;
@@ -294,8 +292,6 @@ public:
 	virtual void reset(const uint flags = RESET_ALL);
 	void apply();
 
-	virtual ConstantBufferID addConstantBuffer(const char* name, const int size, const uint flags = 0) = 0;
-
 	TextureID addTexture(const char *fileName, const bool useMipMaps, const SamplerStateID samplerState = SS_NONE, uint flags = 0);
 	virtual TextureID addTexture(Image &img, const SamplerStateID samplerState = SS_NONE, uint flags = 0) = 0;
 	TextureID addCubemap(const char **fileNames, const bool useMipMaps, const SamplerStateID samplerState = SS_NONE, const int nArraySlices = 1, uint flags = 0);
@@ -363,8 +359,6 @@ public:
 
 //	virtual int getTextureUnit(const ShaderID shader, const char *textureName) const = 0;
 //	virtual int getSamplerUnit(const ShaderID shader, const char *samplerName) const = 0;
-	
-	virtual void setConstantBuffer(ConstantBufferID, const void *data) = 0;
 
 	virtual void setTexture(const char *textureName, const TextureID texture) = 0;
 	virtual void setTexture(const char *textureName, const TextureID texture, const SamplerStateID samplerState) = 0;
@@ -416,7 +410,18 @@ public:
 	void setRasterizerState(const RasterizerStateID rasterizerState){
 		selectedRasterizerState = rasterizerState;
 	}
-
+	
+	void setGlobalConstant1i(const char *name, const int constant);
+	void setGlobalConstant1f(const char *name, const float constant);
+	void setGlobalConstant2f(const char *name, const vec2 &constant);
+	void setGlobalConstant3f(const char *name, const vec3 &constant);
+	void setGlobalConstant4f(const char *name, const vec4 &constant);
+	void setGlobalConstant4x4f(const char *name, const mat4 &constant);
+	void setGlobalConstantArray1f(const char *name, const float *constant, const uint count);
+	void setGlobalConstantArray2f(const char *name, const vec2  *constant, const uint count);
+	void setGlobalConstantArray3f(const char *name, const vec3  *constant, const uint count);
+	void setGlobalConstantArray4f(const char *name, const vec4  *constant, const uint count);
+	void setGlobalConstantArray4x4f(const char *name, const mat4 *constant, const uint count);
 
 	void setShaderConstant1i(const char *name, const int constant);
 	void setShaderConstant1f(const char *name, const float constant);
@@ -429,7 +434,8 @@ public:
 	void setShaderConstantArray3f(const char *name, const vec3  *constant, const uint count);
 	void setShaderConstantArray4f(const char *name, const vec4  *constant, const uint count);
 	void setShaderConstantArray4x4f(const char *name, const mat4 *constant, const uint count);
-
+	
+	virtual void setGlobalConstantRaw(const char *name, const void *data, const int size) = 0;
 	virtual void setShaderConstantRaw(const char *name, const void *data, const int size) = 0;
 	virtual void applyConstants() = 0;
 
@@ -514,7 +520,6 @@ protected:
 	Array <Shader> shaders;
 	Array <VertexBuffer> vertexBuffers;
 	Array <IndexBuffer> indexBuffers;
-	Array <ConstantBuffer> constBuffers;
 	Array <TexFont> fonts;
 	Array <VertexFormat> vertexFormats;
 	Array <SamplerState> samplerStates;

@@ -372,6 +372,50 @@ FontID Renderer::addFont(const char *textureFile, const char *fontFile, const Sa
 	return fonts.add(font);
 }
 
+void Renderer::setGlobalConstant1i(const char *name, const int constant){
+	setGlobalConstantRaw(name, &constant, sizeof(constant));
+}
+
+void Renderer::setGlobalConstant1f(const char *name, const float constant){
+	setGlobalConstantRaw(name, &constant, sizeof(constant));
+}
+
+void Renderer::setGlobalConstant2f(const char *name, const vec2 &constant){
+	setGlobalConstantRaw(name, &constant, sizeof(constant));
+}
+
+void Renderer::setGlobalConstant3f(const char *name, const vec3 &constant){
+	setGlobalConstantRaw(name, &constant, sizeof(constant));
+}
+
+void Renderer::setGlobalConstant4f(const char *name, const vec4 &constant){
+	setGlobalConstantRaw(name, &constant, sizeof(constant));
+}
+
+void Renderer::setGlobalConstant4x4f(const char *name, const mat4 &constant){
+	setGlobalConstantRaw(name, &constant, sizeof(constant));
+}
+
+void Renderer::setGlobalConstantArray1f(const char *name, const float *constant, const uint count){
+	setGlobalConstantRaw(name, constant, count * sizeof(float));
+}
+
+void Renderer::setGlobalConstantArray2f(const char *name, const vec2 *constant, const uint count){
+	setGlobalConstantRaw(name, constant, count * sizeof(vec2));
+}
+
+void Renderer::setGlobalConstantArray3f(const char *name, const vec3 *constant, const uint count){
+	setGlobalConstantRaw(name, constant, count * sizeof(vec3));
+}
+
+void Renderer::setGlobalConstantArray4f(const char *name, const vec4 *constant, const uint count){
+	setGlobalConstantRaw(name, constant, count * sizeof(vec4));
+}
+
+void Renderer::setGlobalConstantArray4x4f(const char *name, const mat4 *constant, const uint count){
+	setGlobalConstantRaw(name, constant, count * sizeof(mat4));
+}
+
 void Renderer::setShaderConstant1i(const char *name, const int constant){
 	ASSERT(selectedShader != SHADER_NONE);
 	setShaderConstantRaw(name, &constant, sizeof(constant));

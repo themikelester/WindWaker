@@ -40,6 +40,8 @@
 #define VB_INVALID (-2)
 */
 
+struct ConstantBuffer;
+struct Constant;
 
 class Direct3D10Renderer : public Renderer {
 public:
@@ -55,8 +57,6 @@ public:
 	void setD3Ddefaults();
 
 //	bool resetDevice();
-
-	ConstantBufferID addConstantBuffer(const char* name, const int size, const uint flags = 0);
 
 	TextureID addTexture(ID3D10Resource *resource, uint flags = 0);
 	TextureID addTexture(Image &img, const SamplerStateID samplerState = SS_NONE, uint flags = 0);
@@ -81,9 +81,7 @@ public:
 		const int stencilFuncFront, const int stencilFuncBack, const int stencilFailFront, const int stencilFailBack,
 		const int depthFailFront, const int depthFailBack, const int stencilPassFront, const int stencilPassBack);
 	RasterizerStateID addRasterizerState(const int cullMode, const int fillMode = SOLID, const bool multiSample = true, const bool scissor = false, const float depthBias = 0.0f, const float slopeDepthBias = 0.0f);
-
-	void setConstantBuffer(ConstantBufferID constantBuffer, const void *data);
-
+	
 	void setTexture(const char *textureName, const TextureID texture);
 	void setTexture(const char *textureName, const TextureID texture, const SamplerStateID samplerState);
 	void setTextureSlice(const char *textureName, const TextureID texture, const int slice);
@@ -91,7 +89,8 @@ public:
 
 	void setSamplerState(const char *samplerName, const SamplerStateID samplerState);
 	void applySamplerStates();
-
+	
+	void setGlobalConstantRaw(const char *name, const void *data, const int size);
 	void setShaderConstantRaw(const char *name, const void *data, const int size);
 	void applyConstants();
 
@@ -143,9 +142,11 @@ protected:
 #endif
 	ID3D10RenderTargetView *backBufferRTV;
 	ID3D10DepthStencilView *depthBufferDSV;
+	
+	Array <ConstantBuffer> constBuffers;
+	Array <Constant> globalConstants;
+	std::hash_map <std::string, uint> nameBufferMap;
 
-	Array <ID3D10Buffer*> globalCBuffers;
-	std::hash_map <std::string, ConstantBufferID> nameBufferMap;
 
 	TextureID currentTexturesVS[MAX_TEXTUREUNIT], selectedTexturesVS[MAX_TEXTUREUNIT];
 	TextureID currentTexturesGS[MAX_TEXTUREUNIT], selectedTexturesGS[MAX_TEXTUREUNIT];

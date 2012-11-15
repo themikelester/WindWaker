@@ -45,10 +45,7 @@ public:
 protected:
 	AssetManager assMan;
 	MemManager memMan;
-
-	ConstantBufferID m_PerFrameConstants;
-	ConstantBufferID m_PerFrameConstants2;
-
+	
 	Package *m_Pkg;
 	GCModel* m_Model;
 	ShaderID m_VerticesShader;

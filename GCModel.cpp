@@ -52,10 +52,13 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 	Batch1& batch = m_BDL->shp1.batches[batchIndex];
 
 	// Vertex format and buffer are uniform for an entire batch
-	renderer->changeShader( m_Shaders[batchIndex] );
-	renderer->changeVertexFormat( m_VertFormats[batchIndex] );
-	renderer->changeVertexBuffer(0, m_VertBuffers[batchIndex]);
-	renderer->changeIndexBuffer(m_IndexBuffers[batchIndex]);
+	renderer->reset();
+	renderer->setShader( m_Shaders[batchIndex] );
+	renderer->setVertexFormat( m_VertFormats[batchIndex] );
+	renderer->setVertexBuffer(0, m_VertBuffers[batchIndex]);
+	renderer->setIndexBuffer(m_IndexBuffers[batchIndex]);
+	renderer->setShaderConstant1f("scale", 1.0f);
+	renderer->apply();
 
 	// TODO: Make a shader for each vertex format
 	//renderer->setShader( SHADER( currBatch.attribs ) );

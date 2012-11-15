@@ -23,12 +23,6 @@
 
 BaseApp *app = new App();
 
-struct FrameConstants
-{
-	float4x4 worldViewProj;
-
-} frameConstants;
-
 bool App::init()
 {
 	memMan.init();
@@ -57,11 +51,7 @@ bool App::load()
 
 	char* filename = "C:\\Users\\Michael\\Dropbox\\Code\\Wind Waker Assets\\Link.rarc";
 	char* nodeName = "/bdl/bow.bdl";
-
-	IFC(m_PerFrameConstants = renderer->addConstantBuffer("g_PerFrame", sizeof(FrameConstants)));
-	IFC(m_PerFrameConstants2 = renderer->addConstantBuffer("g_Test", 16));
-
-
+	
 	m_Model = new GCModel;
 
 	IFC( assMan.OpenPkg(filename, &m_Pkg) );
@@ -118,15 +108,14 @@ void App::drawFrame()
 	float4x4 inv_vp_env = !(projection * view);
 	view.translate(-camPos);
  	float4x4 view_proj = projection * view;
-	frameConstants.worldViewProj = view_proj;
-
-	float scale = 100.0f;
 
 	float clearColor[4] = {0.5f, 0.1f, 0.2f};
 	renderer->clear(true, true, true, clearColor);
 	
-	renderer->setConstantBuffer(m_PerFrameConstants, &frameConstants);
-	renderer->setConstantBuffer(m_PerFrameConstants2, &scale);
+	renderer->reset();
+		renderer->setGlobalConstant4x4f("WorldViewProj", view_proj);
+		renderer->setGlobalConstant1f("anotherConstantInSeperateCBuffer", 1.0f);
+	renderer->apply();
 
 	m_Model->Draw(renderer, device);
 	
