@@ -384,6 +384,8 @@ Direct3D10Renderer::~Direct3D10Renderer(){
 
 	// Delete global constants
 	for (uint i = 0; i < constBuffers.getCount(); i++){
+		if (constBuffers[i].constBuffer) 
+			constBuffers[i].constBuffer->Release();
 		free(constBuffers[i].name);
 		free(constBuffers[i].mem);
 	}
@@ -1220,7 +1222,6 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 				cb.mem = malloc(cb.size);
 
 				cbID = constBuffers.add(cb);
-				cb = constBuffers[cbID];
 				nameBufferMap.insert( std::pair<std::string, uint>(sbDesc.Name, cbID) );
 
 				for (uint k = 0; k < sbDesc.Variables; k++){
@@ -1300,7 +1301,6 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 				cb.mem = malloc(cb.size);
 
 				cbID = constBuffers.add(cb);
-				cb = constBuffers[cbID];
 				nameBufferMap.insert( std::pair<std::string, uint>(sbDesc.Name, cbID) );
 
 				for (uint k = 0; k < sbDesc.Variables; k++){
@@ -1393,7 +1393,6 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 				cb.mem = malloc(cb.size);
 
 				cbID = constBuffers.add(cb);
-				cb = constBuffers[cbID];
 				nameBufferMap.insert( std::pair<std::string, uint>(sbDesc.Name, cbID) );
 
 				for (uint k = 0; k < sbDesc.Variables; k++){
