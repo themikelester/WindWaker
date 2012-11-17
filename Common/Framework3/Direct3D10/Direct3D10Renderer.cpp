@@ -382,12 +382,17 @@ Direct3D10Renderer::~Direct3D10Renderer(){
 		delete shaders[i].psDirty;
 	}
 
-	// Delete global constants
+	// Delete global buffers
 	for (uint i = 0; i < constBuffers.getCount(); i++){
 		if (constBuffers[i].constBuffer) 
 			constBuffers[i].constBuffer->Release();
 		free(constBuffers[i].name);
 		free(constBuffers[i].mem);
+	}
+
+	// Delete global constants
+	for (uint i = 0; i < globalConstants.getCount(); i++){
+		free(globalConstants[i].name);
 	}
 
     // Delete vertex formats
