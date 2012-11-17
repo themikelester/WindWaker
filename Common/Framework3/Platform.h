@@ -128,6 +128,12 @@ float getTimeDifference(const timestamp from, const timestamp to);
 #ifdef _WIN32
 
 #ifdef _MSC_VER
+
+// Disable warnings of deprecated functions for the MS C Compiler
+#if defined(_MSC_VER)
+#	pragma warning(disable: 4996)
+#endif
+
 // Ensure proper handling of for-scope
 #  if (_MSC_VER <= 1200)
 #    define for if(0); else for

@@ -108,6 +108,10 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="AssMan.cpp" />
+    <ClCompile Include="Common\Foundation\memory.cpp" />
+    <ClCompile Include="Common\Foundation\murmur_hash.cpp" />
+    <ClCompile Include="Common\Foundation\string_stream.cpp" />
+    <ClCompile Include="Common\Foundation\unit_test.cpp" />
     <ClCompile Include="Common\Framework3\BaseApp.cpp" />
     <ClCompile Include="Common\Framework3\Config.cpp" />
     <ClCompile Include="Common\Framework3\CPU.cpp" />
@@ -127,16 +131,25 @@
     <ClCompile Include="Common\Framework3\Util\String.cpp" />
     <ClCompile Include="Common\Framework3\Util\Tokenizer.cpp" />
     <ClCompile Include="Common\Framework3\Windows\WindowsBase.cpp" />
+    <ClCompile Include="GC3D.cpp" />
     <ClCompile Include="GCModel.cpp" />
-    <ClCompile Include="Allocators.cpp" />
-    <ClCompile Include="Mem.cpp" />
     <ClCompile Include="Package.cpp" />
+    <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Allocators.h" />
     <ClInclude Include="App.h" />
     <ClInclude Include="Common\Configuration.h" />
     <ClInclude Include="Common\Debug.h" />
+    <ClInclude Include="Common\Foundation\array.h" />
+    <ClInclude Include="Common\Foundation\collection_types.h" />
+    <ClInclude Include="Common\Foundation\hash.h" />
+    <ClInclude Include="Common\Foundation\math_types.h" />
+    <ClInclude Include="Common\Foundation\memory.h" />
+    <ClInclude Include="Common\Foundation\memory_types.h" />
+    <ClInclude Include="Common\Foundation\murmur_hash.h" />
+    <ClInclude Include="Common\Foundation\queue.h" />
+    <ClInclude Include="Common\Foundation\string_stream.h" />
+    <ClInclude Include="Common\Foundation\temp_allocator.h" />
     <ClInclude Include="Common\Random.h" />
     <ClInclude Include="Common\Types.h" />
     <ClInclude Include="Asset.h" />
@@ -173,9 +186,8 @@
     <ClInclude Include="Common\gcio.h" />
     <ClInclude Include="GC3D.h" />
     <ClInclude Include="GCModel.h" />
-    <ClInclude Include="Mem.h" />
     <ClInclude Include="Package.h" />
-    <ClInclude Include="util.h" />
+    <ClInclude Include="Util.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="BMDLoader\BMDLoader.vcxproj">

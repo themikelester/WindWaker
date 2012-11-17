@@ -1,6 +1,5 @@
 #include "GCModel.h"
 #include "util.h"
-#include "Mem.h"
 #include "GC3D.h"
 
 RESULT GCModel::Load(Chunk* data) 

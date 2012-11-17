@@ -20,19 +20,23 @@
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "App.h"
+#include <Foundation\memory.h>
+#include "GC3D.h"
 
 BaseApp *app = new App();
 
 bool App::init()
 {
-	memMan.init();
+	foundation::memory_globals::init(4 * 1024 * 1024);
+	GC3D::Init();
 
 	return true;
 }
 
 void App::exit()
 {
-	memMan.shutdown();
+	GC3D::Shutdown();
+	foundation::memory_globals::shutdown();
 }
 
 bool App::initAPI()
@@ -57,13 +61,9 @@ bool App::load()
 	IFC( assMan.OpenPkg(filename, &m_Pkg) );
 	IFC( assMan.Load(m_Pkg, nodeName, m_Model) );
 
-	void* test = Mem::defaultAllocator->Alloc(16);
-
 	defaultFont = renderer->addFont("../Fonts/Future.dds", "../Fonts/Future.font", linearClamp);
 
 	m_Model->Init(renderer);
-
-	Mem::defaultAllocator->Free(test);
 
 cleanup:
 	return SUCCEEDED(r);
