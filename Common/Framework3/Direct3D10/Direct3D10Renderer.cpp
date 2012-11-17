@@ -49,11 +49,17 @@ struct Constant {
 	int psBuffer;
 };
 
+struct Global {
+	char *name;
+	ubyte *data;
+	int bufferID;
+};
+
 int constantComp(const void *s0, const void *s1){
 	return strcmp(((Constant *) s0)->name, ((Constant *) s1)->name);
 }
 
-int constantComp(const Constant& s0, const Constant& s1){
+int globalsComp(const Global& s0, const Global& s1){
 	return strcmp(s0.name, s1.name);
 }
 
@@ -259,7 +265,8 @@ static DXGI_FORMAT formats[] = {
 	DXGI_FORMAT_BC5_UNORM,
 };
 
-static int findConstant(const char* name, Constant* constants, uint numConstants)
+template <typename DATA_TYPE>
+static int findConstant(const char* name, DATA_TYPE* constants, uint numConstants)
 {
 	int minConstant = 0;
 	int maxConstant = numConstants - 1;
@@ -1220,35 +1227,19 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 					D3D10_SHADER_VARIABLE_DESC vDesc;
 					vsRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
 
-					Constant constant;
+					Global constant;
 					size_t length = strlen(vDesc.Name);
 					constant.name = new char[length + 1];
 					strcpy(constant.name, vDesc.Name);
-					constant.vsData = (ubyte*)cb.mem + vDesc.StartOffset;
-					constant.gsData = NULL;
-					constant.psData = NULL;
-					constant.vsBuffer = cbID;
-					constant.gsBuffer = -1;
-					constant.psBuffer = -1;
+					constant.data = (ubyte*)cb.mem + vDesc.StartOffset;
+					constant.bufferID = cbID;
 					globalConstants.add(constant);
 				}
 			}
-			else
+			else // This CB has already been created. Add our stage variables to it's description
 			{
 				cbID = iter->second;
 				cb = constBuffers[cbID];
-
-
-				for (uint k = 0; k < sbDesc.Variables; k++){
-					D3D10_SHADER_VARIABLE_DESC vDesc;
-					vsRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
-
-					uint c = findConstant(vDesc.Name, globalConstants.getArray(), globalConstants.getCount());
-					Constant* constant = &globalConstants[c];
-
-					constant->vsBuffer = cbID;
-					constant->vsData = (ubyte*)cb.mem;
-				}
 			}
 	
 			shader.vsConstants[i] = cb.constBuffer;
@@ -1316,34 +1307,19 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 					D3D10_SHADER_VARIABLE_DESC vDesc;
 					gsRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
 
-					Constant constant;
+					Global constant;
 					size_t length = strlen(vDesc.Name);
 					constant.name = new char[length + 1];
 					strcpy(constant.name, vDesc.Name);
-					constant.vsData = NULL;
-					constant.gsData = (ubyte*)cb.mem + vDesc.StartOffset;
-					constant.psData = NULL;
-					constant.vsBuffer = -1;
-					constant.gsBuffer = cbID;
-					constant.psBuffer = -1;
+					constant.data = (ubyte*)cb.mem + vDesc.StartOffset;
+					constant.bufferID = cbID;
 					globalConstants.add(constant);
 				}
 			}
-			else
+			else // This CB has already been created.
 			{
 				cbID = iter->second;
 				cb = constBuffers[cbID];
-
-				for (uint k = 0; k < sbDesc.Variables; k++){
-					D3D10_SHADER_VARIABLE_DESC vDesc;
-					gsRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
-
-					uint c = findConstant(vDesc.Name, globalConstants.getArray(), globalConstants.getCount());
-					Constant* constant = &globalConstants[c];
-
-					constant->gsBuffer = cbID;
-					constant->gsData = (ubyte*)cb.mem;
-				}
 			}
 	
 			shader.gsConstants[i] = cb.constBuffer;
@@ -1424,34 +1400,19 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 					D3D10_SHADER_VARIABLE_DESC vDesc;
 					psRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
 
-					Constant constant;
+					Global constant;
 					size_t length = strlen(vDesc.Name);
 					constant.name = new char[length + 1];
 					strcpy(constant.name, vDesc.Name);
-					constant.vsData = NULL;
-					constant.gsData = NULL;
-					constant.psData = (ubyte*)cb.mem + vDesc.StartOffset;
-					constant.vsBuffer = -1;
-					constant.gsBuffer = -1;
-					constant.psBuffer = cbID;
+					constant.data = (ubyte*)cb.mem + vDesc.StartOffset;
+					constant.bufferID = cbID;
 					globalConstants.add(constant);
 				}
 			}
-			else
+			else // This CB has already been created. 
 			{
 				cbID = iter->second;
 				cb = constBuffers[cbID];
-
-				for (uint k = 0; k < sbDesc.Variables; k++){
-					D3D10_SHADER_VARIABLE_DESC vDesc;
-					psRefl->GetConstantBufferByIndex(i)->GetVariableByIndex(k)->GetDesc(&vDesc);
-
-					uint c = findConstant(vDesc.Name, globalConstants.getArray(), globalConstants.getCount());
-					Constant* constant = &globalConstants[c];
-
-					constant->psBuffer = cbID;
-					constant->psData = (ubyte*)cb.mem;
-				}
 			}
 	
 			shader.psConstants[i] = cb.constBuffer;
@@ -1503,7 +1464,7 @@ ShaderID Direct3D10Renderer::addShader(const char *vsText, const char *gsText, c
 	qsort(shader.constants, shader.nConstants, sizeof(Constant), constantComp);
 
 	// Sort global constants
-	globalConstants.sort(constantComp);
+	globalConstants.sort(globalsComp);
 
 	uint nMaxVSRes = vsRefl? vsDesc.BoundResources : 0;
 	uint nMaxGSRes = gsRefl? gsDesc.BoundResources : 0;
@@ -2092,32 +2053,30 @@ void Direct3D10Renderer::applySamplerStates(){
 }
 
 void Direct3D10Renderer::setGlobalConstantRaw(const char *name, const void *data, const int size){
-	int constID = findConstant(name, globalConstants.getArray(), globalConstants.getCount());
-	Constant *c = &globalConstants[constID];
+	Global *c;
 
-	if (c->vsData){
-		if (memcmp(c->vsData, data, size)){
-			memcpy(c->vsData, data, size);
-			constBuffers[c->vsBuffer].dirty = true;
-		}
-	}
-	if (c->gsData){
-		if (memcmp(c->gsData, data, size)){
-			memcpy(c->gsData, data, size);
-			constBuffers[c->gsBuffer].dirty = true;
-		}
-	}
-	if (c->psData){
-		if (memcmp(c->psData, data, size)){
-			memcpy(c->psData, data, size);
-			constBuffers[c->psBuffer].dirty = true;
+	int constID = findConstant(name, globalConstants.getArray(), globalConstants.getCount());
+	if (constID < 0)
+		return;
+
+	c = &globalConstants[constID];
+
+	if (c->data){
+		if (memcmp(c->data, data, size)){
+			memcpy(c->data, data, size);
+			constBuffers[c->bufferID].dirty = true;
 		}
 	}
 }
 
 void Direct3D10Renderer::setShaderConstantRaw(const char *name, const void *data, const int size){
+	Constant *c;
+
 	int constID = findConstant(name, shaders[selectedShader].constants, shaders[selectedShader].nConstants);
-	Constant *c = shaders[selectedShader].constants + constID;
+	if (constID < 0)
+		return;
+
+	c = shaders[selectedShader].constants + constID;
 
 	if (c->vsData){
 		if (memcmp(c->vsData, data, size)){

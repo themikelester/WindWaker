@@ -41,7 +41,7 @@
 */
 
 struct ConstantBuffer;
-struct Constant;
+struct Global;
 
 class Direct3D10Renderer : public Renderer {
 public:
@@ -144,7 +144,7 @@ protected:
 	ID3D10DepthStencilView *depthBufferDSV;
 	
 	Array <ConstantBuffer> constBuffers;
-	Array <Constant> globalConstants;
+	Array <Global> globalConstants;
 	std::hash_map <std::string, uint> nameBufferMap;
 
 
