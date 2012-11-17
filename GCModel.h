@@ -29,7 +29,6 @@ private:
 	std::vector<VertexBufferID>	m_VertBuffers;
 	std::vector<void*>			m_VertexData;
 	std::vector<void*>			m_IndexData;
-	std::vector<u16>			m_IndexCounts;
 	std::vector<ShaderID>		m_Shaders;
 	std::vector<VertexFormatID>	m_VertFormats;
 

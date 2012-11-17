@@ -62,28 +62,13 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 
 	device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	
-	int numIndices = 0;
 	int numIndicesSoFar = 0;
 	STL_FOR_EACH(packet, batch.packets)
 	{
 		// Setup Matrix table and apply billboarding to matrices here
-		STL_FOR_EACH(prim, packet->primitives)
-		{
-			switch(prim->type)
-			{
-				case PRIM_TRI_STRIP: device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP); break;
-				case PRIM_TRI_FAN: WARN("Triangle fans have been deprecated in D3D10. Won't draw!"); return;
-				default:
-					WARN("unknown primitive type %x", prim->type);
-					continue;
-			}
-			
-			numIndices = prim->points.size();
-			device->DrawIndexed(numIndices, numIndicesSoFar, 0);
-			numIndicesSoFar += numIndices;
-			numIndicesSoFar += 1;
-		}
-		numIndicesSoFar -= 1;
+	
+		device->DrawIndexed(packet->indexCount, numIndicesSoFar, 0);	
+		numIndicesSoFar = packet->indexCount;
 	}
 }
 
