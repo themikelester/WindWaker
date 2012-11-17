@@ -235,6 +235,9 @@
     <None Include="Vertices.shd">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shared.shd">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Common\Framework3\Windows\Resources.rc">

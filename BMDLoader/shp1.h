@@ -49,6 +49,9 @@ struct Packet
   std::vector<Primitive> primitives;
 
   std::vector<u16> matrixTable; //maps attribute matrix index to draw array index
+
+  // Internal use only
+  u16 indexCount;
 };
 
 struct Batch1

@@ -234,6 +234,9 @@ struct FormatDesc {
 #define MAX_TEXTUREUNIT  16
 #define MAX_SAMPLERSTATE 16
 
+// Strip-cut index (resets triangle strips for index buffers)
+#define STRIP_CUT_INDEX ~0
+
 // Blending constants
 extern const int ZERO;
 extern const int ONE;

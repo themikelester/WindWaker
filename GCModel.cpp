@@ -60,9 +60,8 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 	renderer->setShaderConstant1f("scale", 1.0f);
 	renderer->apply();
 
-	// TODO: Make a shader for each vertex format
-	//renderer->setShader( SHADER( currBatch.attribs ) );
-
+	device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	
 	int numIndices = 0;
 	int numIndicesSoFar = 0;
 	STL_FOR_EACH(packet, batch.packets)
@@ -82,7 +81,9 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 			numIndices = prim->points.size();
 			device->DrawIndexed(numIndices, numIndicesSoFar, 0);
 			numIndicesSoFar += numIndices;
+			numIndicesSoFar += 1;
 		}
+		numIndicesSoFar -= 1;
 	}
 }
 
@@ -182,8 +183,8 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 		// FORCE BATCH ATTRIBUTES TO BE ONLY VERTICES RIGHT NOW
 		batch.attribs = HAS_POSITIONS;
 
-		int vertexCount = 0; 
 		int pointCount = 0;
+		int primCount = 0;
 
 		// Count "points" in this batch
 		// A point is a struct of indexes that point to each attribute of the 3D vertex
@@ -193,7 +194,21 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 		{
 			STL_FOR_EACH(prim, packet->primitives)
 			{
-				pointCount += prim->points.size();
+				switch(prim->type)
+				{
+					case PRIM_TRI_STRIP: 
+						pointCount += prim->points.size();
+						primCount += 1; 
+						break;
+
+					case PRIM_TRI_FAN: 
+						WARN("Triangle fans have been deprecated in D3D10. Won't draw!"); 
+						continue;
+
+					default:
+						WARN("unknown primitive type %x", prim->type);
+						continue;
+				}
 			}
 		}
 
@@ -202,12 +217,13 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 		int bufferSize = pointCount * vertexSize; // we may not need all this space, see pointCount above
 		
 		ubyte* vertexBuffer = (ubyte*)malloc( bufferSize );
-		u16* indexBuffer = (u16*)malloc( pointCount * sizeof(u16) );
+		u16* indexBuffer = (u16*)malloc( (pointCount + primCount) * sizeof(u16));
 		
 		// Interlace each attribute into a single vertex stream 
 		// (may be duplicates because it's using indices into the vtx1 buffer) 
-		pointCount = 0;
-		vertexCount = 0;
+		int indexCount = 0;
+		int vertexCount = 0; 
+		int packetIndexOffset = 0;
 		STL_FOR_EACH(packet, batch.packets)
 		{
 			STL_FOR_EACH(prim, packet->primitives)
@@ -226,15 +242,23 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 					}
 
 					// Set the index into our vertex buffer for this point
-					indexBuffer[pointCount] = vbIndex;
-					pointCount += 1;
+					indexBuffer[indexCount++] = vbIndex;
 				}
+
+				// Add a strip-cut index to reset to a new triangle strip
+				indexBuffer[indexCount++] = STRIP_CUT_INDEX;
 			}
+			
+			// Might as well remove the last strip-cut index
+			indexCount -= 1;
+
+			packet->indexCount = indexCount - packetIndexOffset;
+			packetIndexOffset = indexCount;
 		}
 		
 		// Register our vertex buffer
 		VertexBufferID VBID = renderer->addVertexBuffer(bufferSize, STATIC, vertexBuffer);
-		IndexBufferID IBID =  renderer->addIndexBuffer(pointCount, 2, STATIC, indexBuffer);
+		IndexBufferID IBID =  renderer->addIndexBuffer(indexCount, 2, STATIC, indexBuffer);
 
 		// Save data so that we can use/free it later
 		m_VertexData[batchIndex] = vertexBuffer;

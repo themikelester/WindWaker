@@ -187,6 +187,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Common\Framework3\Windows\Resources.aps" />
+    <None Include="Shared.shd" />
     <None Include="Vertices.shd" />
   </ItemGroup>
   <ItemGroup>
