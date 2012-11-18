@@ -29,12 +29,14 @@ bool App::init()
 {
 	foundation::memory_globals::init(4 * 1024 * 1024);
 	GC3D::Init();
+	m_AssMan.Init();
 
 	return true;
 }
 
 void App::exit()
 {
+	m_AssMan.Shutdown();
 	GC3D::Shutdown();
 	foundation::memory_globals::shutdown();
 }
@@ -58,8 +60,8 @@ bool App::load()
 	
 	m_Model = new GCModel;
 
-	IFC( assMan.OpenPkg(filename, &m_Pkg) );
-	IFC( assMan.Load(m_Pkg, nodeName, m_Model) );
+	IFC( m_AssMan.OpenPkg(filename, &m_Pkg) );
+	IFC( m_AssMan.Load(m_Pkg, nodeName, m_Model) );
 
 	defaultFont = renderer->addFont("../Fonts/Future.dds", "../Fonts/Future.font", linearClamp);
 
@@ -71,7 +73,10 @@ cleanup:
 
 void App::unload()
 {
-	assMan.ClosePkg(m_Pkg);
+	m_AssMan.Unload(m_Model);
+	m_AssMan.ClosePkg(m_Pkg);
+
+	delete m_Model;
 }
 
 bool App::onKey(const uint key, const bool pressed)
@@ -82,8 +87,9 @@ bool App::onKey(const uint key, const bool pressed)
 	if (pressed && key == KEY_RIGHT)
 	{
 		do {
+			//m_AssMan.Unload(m_Model);
 			++curModel;
-		} while( (assMan.Load(m_Pkg, (curModel % numAssets), (Asset**)&m_Model) != S_OK) );
+		} while( (m_AssMan.Load(m_Pkg, (curModel % numAssets), (Asset**)&m_Model) != S_OK) );
 		
 		m_Model->Init(renderer);
 	}
@@ -92,7 +98,7 @@ bool App::onKey(const uint key, const bool pressed)
 	{
 		do {
 			if(--curModel == -1) curModel = 92;		
-		} while( (assMan.Load(m_Pkg, curModel, (Asset**)&m_Model) != S_OK) );
+		} while( (m_AssMan.Load(m_Pkg, curModel, (Asset**)&m_Model) != S_OK) );
 		m_Model->Init(renderer);
 	}
 

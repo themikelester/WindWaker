@@ -2,6 +2,7 @@
 
 #include <common.h>
 #include <hash_map>
+#include <Foundation\memory_types.h>
 #include "Package.h"
 #include "Asset.h"
 
@@ -17,6 +18,9 @@ public:
 public:
 	AssetManager() : numAssets(0){};
 
+	RESULT Init();
+	RESULT Shutdown();
+
 	RESULT OpenPkg(char* filename, Package** pkg);
 	RESULT ClosePkg(Package* pkg);
 
@@ -28,6 +32,8 @@ public:
 	RESULT Load(Package* pkg, char* nodepath, Asset* ppAsset);
 	RESULT Load(Package* pkg, int index, Asset** ppAsset);
 	
+	RESULT Unload(Asset* pAsset);
+
 	// Load all assets in a package
 	// pkg		[in]	- package from which to load assets. Get this pointer by calling OpenPkg();
 	// numLoaded[out]	- number of assets successfully loaded from the package. If NULL, returns nothing.
@@ -40,6 +46,7 @@ public:
 
 protected:
 	std::hash_map <std::string, Asset*> m_AssetMap;
+	foundation::Allocator* m_Allocator;
 
 protected:
 	RESULT LoadChunk(Chunk* chnk, const char* nodepath, Asset** asset);

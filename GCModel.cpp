@@ -15,7 +15,7 @@ RESULT GCModel::Reload()
 	
 RESULT GCModel::Unload() 
 {	
-	free(m_BDL);
+	delete m_BDL;
 	return S_OK;
 }
 

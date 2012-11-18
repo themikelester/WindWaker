@@ -42,7 +42,7 @@ public:
 	bool onKey(const uint key, const bool pressed);
 
 protected:
-	AssetManager assMan;
+	AssetManager m_AssMan;
 	
 	Package *m_Pkg;
 	GCModel* m_Model;

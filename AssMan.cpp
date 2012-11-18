@@ -1,5 +1,6 @@
 #include "AssMan.h"
 #include "RARCReader\RARCReader.h"
+#include <Foundation\memory.h>
 #include "GCModel.h"
 
 static RESULT GetExtension(const char* nodepath, char* &ext)
@@ -26,7 +27,7 @@ RESULT AssetManager::LoadChunk(Chunk* chnk, const char* nodepath, Asset** asset)
 
 	if (strcmp(ext, "bdl") == 0)
 	{
-		*asset = new GCModel();
+		*asset = MAKE_NEW(*m_Allocator, GCModel);
 	} else
 	{
 		return S_FALSE;
@@ -71,6 +72,8 @@ RESULT AssetManager::Load(Package* pkg, char* nodepath, Asset* pAsset)
 	IFC(pAsset->Init(nodepath));
 	IFC(pAsset->Load(chnk));
 	
+	delete chnk;
+
 	m_AssetMap.insert( std::pair<const char*, Asset*> (nodepath, pAsset) ); 
 	numAssets += 1;
 #ifdef DEBUG
@@ -112,6 +115,15 @@ RESULT AssetManager::Load(Package* pkg, int index, Asset** ppAsset)
 cleanup:
 	return r;
 }
+
+RESULT AssetManager::Unload(Asset* pAsset)
+{
+	pAsset->Unload();
+//	pAsset->~Asset();
+//	(*m_Allocator).deallocate(pAsset);
+
+	return S_OK;
+}
 	
 // Load all assets in a package
 // pkg		[in]	- package from which to load assets. Get this pointer by calling OpenPkg();
@@ -133,6 +145,13 @@ RESULT AssetManager::LoadAll(Package* pkg, Asset** &ppAssets, int* numLoaded)
 	return S_OK;
 }
 
-RESULT Get(int hashkey, Asset** asset);
-RESULT Get(char* fileNodePath, Asset** asset);
-RESULT Get(char* nodepath, Asset** asset);
+RESULT AssetManager::Init()
+{
+	m_Allocator = &foundation::memory_globals::default_allocator();
+	return S_OK;
+}
+
+RESULT AssetManager::Shutdown()
+{
+	return S_OK;
+}

@@ -386,8 +386,8 @@ Direct3D10Renderer::~Direct3D10Renderer(){
 	for (uint i = 0; i < constBuffers.getCount(); i++){
 		if (constBuffers[i].constBuffer) 
 			constBuffers[i].constBuffer->Release();
-		free(constBuffers[i].name);
-		free(constBuffers[i].mem);
+		delete constBuffers[i].name;
+		delete constBuffers[i].mem;
 	}
 
 	// Delete global constants
