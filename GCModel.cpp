@@ -1,6 +1,5 @@
 #include "GCModel.h"
 #include "util.h"
-#include "Mem.h"
 #include "GC3D.h"
 
 RESULT GCModel::Load(Chunk* data) 
@@ -16,7 +15,7 @@ RESULT GCModel::Reload()
 	
 RESULT GCModel::Unload() 
 {	
-	free(m_BDL);
+	delete m_BDL;
 	return S_OK;
 }
 

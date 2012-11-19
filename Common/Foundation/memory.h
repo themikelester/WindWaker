@@ -51,7 +51,7 @@ namespace foundation
 	};
 
 	/// Creates a new object of type T using the allocator a to allocate the memory.
-	#define MAKE_NEW(a, T, ...)		(new ((a).allocate(sizeof(T), alignof(T))) T(__VA_ARGS__))
+	#define MAKE_NEW(a, T, ...)		(new ((a).allocate(sizeof(T), _alignof(T))) T(__VA_ARGS__))
 
 	/// Frees an object allocated with MAKE_NEW.
 	#define MAKE_DELETE(a, T, p)	do {if (p) {(p)->~T(); a.deallocate(p);}} while (0)
@@ -72,7 +72,7 @@ namespace foundation
 		/// to service the allocations.
 		///
 		/// If there is not enough memory in the buffer to match requests for scratch
-		/// memory, memory from the default_allocator will be returned instaed.
+		/// memory, memory from the default_allocator will be returned instead.
 		Allocator &default_scratch_allocator();
 
 		/// Shuts down the global memory allocators created by init().

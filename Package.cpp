@@ -1,18 +1,21 @@
 
-#include <stdlib.h>
-
+#include <Foundation\memory.h>
 #include "Package.h"
 #include "RARCReader\RARCReader.h"
 
+using namespace foundation;
+
 static RESULT copyFileToMem(const char *filename, void** contents)
 {
+	Allocator* allocator = &memory_globals::default_allocator();
+
 	long size;
 	FILE *fp = fopen(filename, "rb");
 	if(fp == NULL) return E_INVALIDARG;
 
 	fseek(fp, 0, SEEK_END);
 	size = ftell(fp);
-	*contents = malloc(size);
+	*contents = allocator->allocate(size);
 	rewind(fp);
 	fread(*contents, size, 1, fp);
 	fclose(fp);
@@ -50,9 +53,11 @@ cleanup:
 
 RESULT Package::Close()
 {
+	Allocator* allocator = &memory_globals::default_allocator();
+
 	switch(m_AccessMode)
 	{
-		case PKG_READ_MEM:  free(m_Data);
+		case PKG_READ_MEM:  allocator->deallocate(m_Data);
 		case PKG_READ_DISK: fclose(m_File);
 	}
 

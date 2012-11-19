@@ -92,7 +92,7 @@ namespace foundation {
 
 			T *new_data = 0;
 			if (new_capacity > 0) {
-				new_data = (T *)a._allocator->allocate(sizeof(T)*new_capacity, __alignof(T));
+				new_data = (T *)a._allocator->allocate(sizeof(T)*new_capacity, (_alignof(T) < 4 ? 4 : _alignof(T)));
 				memcpy(new_data, a._data, sizeof(T)*a._size);
 			}
 			a._allocator->deallocate(a._data);

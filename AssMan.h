@@ -4,6 +4,7 @@
 #include <Foundation\collection_types.h>
 #include <Foundation\murmur_hash.h>
 #include <Foundation\hash.h>
+#include <Foundation\memory_types.h>
 #include "Package.h"
 #include "Asset.h"
 #include "AssetPtr.h"
@@ -16,9 +17,14 @@ public:
 	RESULT Init();
 	RESULT Shutdown();
 
+	RESULT Init();
+	RESULT Shutdown();
+
 	RESULT OpenPkg(char* filename, Package** pkg);
 	RESULT ClosePkg(Package* pkg);
 	
+	RESULT Unload(Asset* pAsset);
+
 	// Load all assets in a package
 	// pkg		[in]	- package from which to load assets. Get this pointer by calling OpenPkg();
 	// numLoaded[out]	- number of assets successfully loaded from the package. If NULL, returns nothing.

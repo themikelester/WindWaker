@@ -2,7 +2,7 @@
 
 #include "Asset.h"
 #include "BMDLoader\BMDLoader.h"
-#include "Mem.h"
+#include <Foundation\memory_types.h>
 #include <Framework3\Direct3D10\Direct3D10Renderer.h>
 
 class Renderer;
@@ -13,10 +13,10 @@ public:
 	void init();
 	void shutdown();
 
-	static Allocator* getAllocator() {return _allocator;}
+	static foundation::Allocator* getAllocator() {return _allocator;}
 
 protected:
-	static Allocator* _allocator;
+	static foundation::Allocator* _allocator;
 };
 
 class GCModel : public Asset

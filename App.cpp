@@ -21,22 +21,23 @@
 
 #include "App.h"
 #include <Foundation\memory.h>
+#include "GC3D.h"
 
 BaseApp *app = new App();
 
 bool App::init()
 {
-	foundation::memory_globals::init();
-	memMan.init();
-	assMan.Init();
+	foundation::memory_globals::init(4 * 1024 * 1024);
+	GC3D::Init();
+	m_AssMan.Init();
 
 	return true;
 }
 
 void App::exit()
 {
-	memMan.shutdown();
-	assMan.Shutdown();
+	m_AssMan.Shutdown();
+	GC3D::Shutdown();
 	foundation::memory_globals::shutdown();
 }
 
@@ -57,17 +58,13 @@ bool App::load()
 	char* filename = "C:\\Users\\Michael\\Dropbox\\Code\\Wind Waker Assets\\Link.rarc";
 	char* nodeName = "/bdl/bow.bdl";
 
-	IFC( assMan.OpenPkg(filename, &m_Pkg) );
-	IFC(assMan.Load(m_Pkg, nodeName));
-	IFC(assMan.Get(nodeName, &m_Model)); 
-
-	void* test = Mem::defaultAllocator->Alloc(16);
+	IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
+	IFC(m_AssMan.Load(m_Pkg, nodeName));
+	IFC(m_AssMan.Get(nodeName, &m_Model)); 
 
 	defaultFont = renderer->addFont("../Fonts/Future.dds", "../Fonts/Future.font", linearClamp);
 
 	m_Model->Init(renderer);
-
-	Mem::defaultAllocator->Free(test);
 
 cleanup:
 	return SUCCEEDED(r);
@@ -82,7 +79,7 @@ void App::unload()
 	m_Model.~AssetPtr();
 	memset(&m_Model, 0, sizeof(m_Model));
 
-	assMan.ClosePkg(m_Pkg);
+	m_AssMan.ClosePkg(m_Pkg);
 }
 
 bool App::onKey(const uint key, const bool pressed)
@@ -93,9 +90,10 @@ bool App::onKey(const uint key, const bool pressed)
 	if (pressed && key == KEY_RIGHT)
 	{
 		do {
+			//m_AssMan.Unload(m_Model);
 			++curModel;
-		} while( (assMan.Load(m_Pkg, (curModel % numAssets)) != S_OK) );
-
+		} while( (m_AssMan.Load(m_Pkg, (curModel % numAssets)) != S_OK) );
+		
 		m_Model->Init(renderer);
 	}
 
@@ -103,7 +101,8 @@ bool App::onKey(const uint key, const bool pressed)
 	{
 		do {
 			if(--curModel == -1) curModel = 92;		
-		} while( (assMan.Load(m_Pkg, curModel) != S_OK) );
+		} while( (m_AssMan.Load(m_Pkg, curModel) != S_OK) );
+		
 		m_Model->Init(renderer);
 	}
 

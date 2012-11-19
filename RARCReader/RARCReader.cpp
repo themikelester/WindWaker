@@ -144,8 +144,12 @@ RESULT RARCReader::Read(const char* nodeName, Chunk** ppChnk)
 	GetFileEntry(fileIndex, &fileEntry);
 	
 	*ppChnk = new Chunk(fileEntry.dataSize);
-	GetData(fileEntry.dataOffset, fileEntry.dataSize, (*ppChnk)->base);
+	IFC(GetData(fileEntry.dataOffset, fileEntry.dataSize, (*ppChnk)->base));
 		
+	return r;
+
+cleanup:
+	delete *ppChnk;
 	return r;
 }
 

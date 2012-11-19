@@ -2,6 +2,7 @@
 #include "RARCReader\RARCReader.h"
 #include "Foundation\hash.h"
 #include "Foundation\murmur_hash.h"
+#include <Foundation\memory.h>
 #include "GCModel.h"
 
 RESULT AssetManager::Init()
@@ -57,7 +58,7 @@ static RESULT createAsset(Chunk* chnk, foundation::Allocator* alctr,
 
 	if (strcmp(ext, "bdl") == 0)
 	{
-		*ppAsset = new GCModel();
+		*ppAsset = MAKE_NEW(*alctr, GCModel);
 	} else
 	{
 		r = E_FAIL;
@@ -166,4 +167,15 @@ RESULT AssetManager::Unload(Package* pkg, char* nodepath)
 
 cleanup:
 	return r;
+}
+
+RESULT AssetManager::Init()
+{
+	m_AssetAllocator = &foundation::memory_globals::default_allocator();
+	return S_OK;
+}
+
+RESULT AssetManager::Shutdown()
+{
+	return S_OK;
 }
