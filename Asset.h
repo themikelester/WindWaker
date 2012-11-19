@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common.h>
+#include <Foundation\memory.h>
 
 struct Chunk;
 
@@ -35,7 +36,8 @@ public:
 	Asset* pAsset;
 	uint refcount;
 
-	AssetSlot() : refcount(0) {};
+	AssetSlot(foundation::Allocator* allocator) : refcount(0), alctr(allocator) {};
+	~AssetSlot() {assert(pAsset == NULL);} // Assert that our asset has been evicted before we clear this slot
 
 	void _incRef() {++refcount;}
 	
@@ -51,7 +53,8 @@ public:
 	{
 		RESULT r;
 		IFC(pAsset->Unload());
-		delete pAsset;
+		MAKE_DELETE(*alctr, Asset, pAsset);
+		pAsset = NULL;
 cleanup:
 		return r;
 	}
@@ -61,4 +64,8 @@ cleanup:
 		pAsset = asset;
 		return pAsset->Load(chnk);
 	}
+
+private:
+	AssetSlot();
+	foundation::Allocator* alctr;
 };

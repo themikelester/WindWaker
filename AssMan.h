@@ -17,9 +17,6 @@ public:
 	RESULT Init();
 	RESULT Shutdown();
 
-	RESULT Init();
-	RESULT Shutdown();
-
 	RESULT OpenPkg(char* filename, Package** pkg);
 	RESULT ClosePkg(Package* pkg);
 	
@@ -59,7 +56,4 @@ protected:
 
 	static const u64 hashSeed = 0xAAFFBBCC;
 	foundation::Hash<AssetSlot*> *m_AssetMap;
-
-	// Temporary solution for now. Should be dyn allocated from a pool later.
-	AssetSlot m_Assets[6];
 };

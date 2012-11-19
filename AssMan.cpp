@@ -22,9 +22,18 @@ RESULT AssetManager::Shutdown()
 	do
 	{
 		if (entry->value->refcount == 0)
+		{
 			SlotsThatShouldHaveBeenFreedButArent++;
-		
-if (entry->next == ~0)
+		}
+		else
+		{
+			entry->value->evict();
+		}
+
+		// Free all of our leftover slots
+		MAKE_DELETE(*m_AssetAllocator, AssetSlot, entry->value);
+
+		if (entry->next == ~0)
 			break;
 
 		entry = &m_AssetMap->_data[entry->next];
@@ -79,7 +88,7 @@ RESULT AssetManager::LoadChunk(Chunk* chnk, const char* nodepath)
 	IFC(asset->Init(nodepath));
 	
 	// Create a new Slot for our new asset
-	slot = &m_Assets[0];
+	slot = MAKE_NEW(*m_AssetAllocator, AssetSlot, m_AssetAllocator);
 
 	// Stuff the asset into our slot and feed it its data
 	slot->stuff(asset, chnk);
@@ -157,25 +166,13 @@ RESULT AssetManager::Unload(Package* pkg, char* nodepath)
 	}
 
 	// Remove the asset (cleanly) from memory
-	slot->evict();
+	IFC(slot->evict());
 
-	// Clear the slot too
-	// delete slot
+	// Do not delete the slot, leave it open until its refcount is 0
 
 	// Remove the asset from our map
 	foundation::hash::remove(*m_AssetMap, key);
 
 cleanup:
 	return r;
-}
-
-RESULT AssetManager::Init()
-{
-	m_AssetAllocator = &foundation::memory_globals::default_allocator();
-	return S_OK;
-}
-
-RESULT AssetManager::Shutdown()
-{
-	return S_OK;
 }
