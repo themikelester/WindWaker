@@ -14,33 +14,32 @@ RESULT AssetManager::Init()
 
 RESULT AssetManager::Shutdown()
 {
-	// For now, slots handle the evicting of their assets when their refcount hits 0.
-	// This should change so that we check slots every frame and evict if refcount is 0.
-	// We also need to remove the corresponding entry in our map. For now we do it here.
-	int SlotsThatShouldHaveBeenFreedButArent = 0;
-	auto entry = foundation::hash::begin(*m_AssetMap);
-	do
+	if (m_AssetMap->_data._size > 0)
 	{
-		if (entry->value->refcount == 0)
+		// For now, slots handle the evicting of their assets when their refcount hits 0.
+		// This should change so that we check slots every frame and evict if refcount is 0.
+		// We also need to remove the corresponding entry in our map. For now we do it here.
+		int SlotsThatShouldHaveBeenFreedButArent = 0;
+		auto entry = foundation::hash::begin(*m_AssetMap);
+		do
 		{
-			SlotsThatShouldHaveBeenFreedButArent++;
-		}
-		else
-		{
-			entry->value->evict();
-		}
+			if (entry->value->refcount == 0)
+				SlotsThatShouldHaveBeenFreedButArent++;
+			else
+				entry->value->evict();
 
-		// Free all of our leftover slots
-		MAKE_DELETE(*m_AssetAllocator, AssetSlot, entry->value);
+			// Free all of our leftover slots
+			MAKE_DELETE(*m_AssetAllocator, AssetSlot, entry->value);
 
-		if (entry->next == ~0)
-			break;
+			if (entry->next == ~0)
+				break;
+			else
+				entry = &m_AssetMap->_data[entry->next];
+		} while (true);
 
-		entry = &m_AssetMap->_data[entry->next];
-	} while (true);
-
-	// Anything left over in AssetMap is an asset we didn't unload()
-	assert(m_AssetMap->_data._size == SlotsThatShouldHaveBeenFreedButArent);
+		// Anything left over in AssetMap is an asset we didn't unload()
+		assert(m_AssetMap->_data._size == SlotsThatShouldHaveBeenFreedButArent);
+	}
 
 	delete m_AssetMap;
 	return S_OK;
