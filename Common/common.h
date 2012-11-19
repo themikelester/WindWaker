@@ -11,6 +11,8 @@
 #define ISC(x) if( !FAILED((r = x))) {goto cleanup;}	// If Success Cleanup
 #define GTC(x) { r = x; goto cleanup; }					// Go To Cleanup
 
+#define IFWC(x, ...) if( FAILED((r = x)) ) {WARN(__VA_ARGS__); goto cleanup;} // If Failed Warn and Cleanup
+
 // Math
 #define DEGTORAD(x) (x/360.f*2*PI)
 
