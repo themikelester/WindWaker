@@ -335,6 +335,19 @@ Direct3D10Renderer::~Direct3D10Renderer(){
 /*
 	releaseFrameBufferSurfaces();
 */
+	
+	// Delete global buffers
+	for (uint i = 0; i < constBuffers.getCount(); i++){
+		if (constBuffers[i].constBuffer) 
+			constBuffers[i].constBuffer->Release();
+		delete constBuffers[i].name;
+		delete constBuffers[i].mem;
+	}
+
+	// Delete global constants
+	for (uint i = 0; i < globalConstants.getCount(); i++){
+		free(globalConstants[i].name);
+	}
 
 	// Delete shaders
 	for (uint i = 0; i < shaders.getCount(); i++){
@@ -344,16 +357,25 @@ Direct3D10Renderer::~Direct3D10Renderer(){
 		if (shaders[i].inputSignature) shaders[i].inputSignature->Release();
 
 		for (uint k = 0; k < shaders[i].nVSCBuffers; k++){
-			shaders[i].vsConstants[k]->Release();
-			delete shaders[i].vsConstMem[k];
+			if(shaders[i].vsConstMem[k])
+			{
+				shaders[i].vsConstants[k]->Release();
+				delete shaders[i].vsConstMem[k];
+			}
 		}
 		for (uint k = 0; k < shaders[i].nGSCBuffers; k++){
-			shaders[i].gsConstants[k]->Release();
-			delete shaders[i].gsConstMem[k];
+			if(shaders[i].gsConstMem[k])
+			{
+				shaders[i].gsConstants[k]->Release();
+				delete shaders[i].gsConstMem[k];
+			}
 		}
 		for (uint k = 0; k < shaders[i].nPSCBuffers; k++){
-			shaders[i].psConstants[k]->Release();
-			delete shaders[i].psConstMem[k];
+			if(shaders[i].psConstMem[k])
+			{
+				shaders[i].psConstants[k]->Release();
+				delete shaders[i].psConstMem[k];
+			}
 		}
 		delete shaders[i].vsConstants;
 		delete shaders[i].gsConstants;
@@ -380,19 +402,6 @@ Direct3D10Renderer::~Direct3D10Renderer(){
 		delete shaders[i].vsDirty;
 		delete shaders[i].gsDirty;
 		delete shaders[i].psDirty;
-	}
-
-	// Delete global buffers
-	for (uint i = 0; i < constBuffers.getCount(); i++){
-		if (constBuffers[i].constBuffer) 
-			constBuffers[i].constBuffer->Release();
-		delete constBuffers[i].name;
-		delete constBuffers[i].mem;
-	}
-
-	// Delete global constants
-	for (uint i = 0; i < globalConstants.getCount(); i++){
-		free(globalConstants[i].name);
 	}
 
     // Delete vertex formats
