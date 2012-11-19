@@ -102,18 +102,17 @@ cleanup:
 	return r;
 }
 
-RESULT AssetManager::OpenPkg(char* filename, Package** pkg)
+RESULT AssetManager::OpenPkg(char* filename, Package** ppPkg)
 {
-	RESULT r = S_OK;
-
-	return Package::Open(filename, pkg, PKG_READ_DISK);
+	*ppPkg = MAKE_NEW(*m_AssetAllocator, Package, m_AssetAllocator);
+	return (*ppPkg)->Open(filename, PKG_READ_DISK);
 }
 
 
 RESULT AssetManager::ClosePkg(Package* pkg)
 {
-	free(pkg);
-
+	pkg->Close();
+	MAKE_DELETE(*m_AssetAllocator, Package, pkg);
 	return S_OK;
 }
 

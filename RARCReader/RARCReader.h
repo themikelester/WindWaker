@@ -51,30 +51,28 @@ namespace RARC {
 	};
 }
 
-class RARCReader : public Package
+class RARCReader : public FileReader
 {
+public:
+	RESULT Init (void* data, FILE* f);
+	RESULT Read (const char* nodeName, Chunk** chnk);
+	RESULT Read (int nodeIndex, Chunk** ppChnk, const char** nodepath);
+
+protected:
+	RESULT Index ();
+	RESULT Index (int nodeIndex, std::string parentName);
+	RESULT GetFileEntry (int index, RARC::FileEntry* file);
+	RESULT GetNode (int index, RARC::Node* n);
+	RESULT GetString (int index, std::string* str);
+	RESULT GetData (int offset, int size, void* buf);
+
 private:
 	RARC::RarcHeader m_Hdr;
+
+	FILE* m_File;
+	char* m_Data;
 
 	// Maps between node names and file entry indices
 	std::hash_map <std::string, int> m_TOC;		   // Table of Contents
 	std::vector < std::pair<int, std::string> > m_RTOC; // Reverse Table of Contents
-
-protected:
-	RESULT Index();
-	RESULT RARCReader::Index (int nodeIndex, std::string parentName);
-	RESULT RARCReader::GetFileEntry(int index, RARC::FileEntry* file);
-	RESULT RARCReader::GetNode(int index, RARC::Node* n);
-	RESULT RARCReader::GetString(int index, std::string* str);
-	RESULT RARCReader::GetData(int offset, int size, void* buf);
-
-public:
-	RARCReader( void* data, FILE* f, const char* filename );
-	~RARCReader();
-
-public:
-	RESULT Read (const char* nodeName, Chunk** chnk);
-	RESULT Read(int nodeIndex, Chunk** ppChnk, const char** nodepath);
-	
-	//RESULT ReadAll(Chunk** &pChnks, const char** &nodepaths, int* numFiles);
 };

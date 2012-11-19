@@ -195,10 +195,8 @@ RESULT RARCReader::ReadAll(Chunk** &ppChnk, char** &nodepaths, int* numFiles)
 }
 */
 
-RARCReader::RARCReader( void* data, FILE* f, const char* filename )
+RESULT RARCReader::Init( void* data, FILE* f )
 {
-	m_Filename = filename;
-	
 	if (data == NULL)
 		m_File = f;
 	else
@@ -222,10 +220,5 @@ RARCReader::RARCReader( void* data, FILE* f, const char* filename )
 	toDWORD(m_Hdr.unknown5[1]);
 
 	// Build the Table of Contents
-	Index();
-}
-
-RARCReader::~RARCReader()
-{
-	fclose(m_File);
+	return Index();
 }
