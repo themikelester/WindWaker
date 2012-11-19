@@ -26,3 +26,36 @@ protected:
 private:
 };
 
+class AssetSlot
+{
+public:
+	Asset* pAsset;
+	uint refcount;
+
+	AssetSlot() : refcount(0) {};
+
+	void _incRef() {++refcount;}
+	
+	void _decRef() 
+	{	
+		assert(refcount > 0);
+		// TODO: evict should only be called by Asset Manager. 
+		// It should check for assets that can be evicted on every tick or so.
+		if(--refcount <= 0) evict();
+	}
+
+	RESULT evict()
+	{
+		RESULT r;
+		IFC(pAsset->Unload());
+		delete pAsset;
+cleanup:
+		return r;
+	}
+
+	RESULT stuff(Asset* asset, Chunk* chnk)
+	{
+		pAsset = asset;
+		return pAsset->Load(chnk);
+	}
+};

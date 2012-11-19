@@ -1,6 +1,40 @@
 #include "AssMan.h"
 #include "RARCReader\RARCReader.h"
+#include "Foundation\hash.h"
+#include "Foundation\murmur_hash.h"
 #include "GCModel.h"
+
+RESULT AssetManager::Init()
+{
+	m_AssetAllocator = &foundation::memory_globals::default_allocator();
+	m_AssetMap = new foundation::Hash<AssetSlot*>(*m_AssetAllocator);
+	return S_OK;
+}
+
+RESULT AssetManager::Shutdown()
+{
+	// For now, slots handle the evicting of their assets when their refcount hits 0.
+	// This should change so that we check slots every frame and evict if refcount is 0.
+	// We also need to remove the corresponding entry in our map. For now we do it here.
+	int SlotsThatShouldHaveBeenFreedButArent = 0;
+	auto entry = foundation::hash::begin(*m_AssetMap);
+	do
+	{
+		if (entry->value->refcount == 0)
+			SlotsThatShouldHaveBeenFreedButArent++;
+		
+if (entry->next == ~0)
+			break;
+
+		entry = &m_AssetMap->_data[entry->next];
+	} while (true);
+
+	// Anything left over in AssetMap is an asset we didn't unload()
+	assert(m_AssetMap->_data._size == SlotsThatShouldHaveBeenFreedButArent);
+
+	delete m_AssetMap;
+	return S_OK;
+}
 
 static RESULT GetExtension(const char* nodepath, char* &ext)
 {
@@ -13,33 +47,49 @@ static RESULT GetExtension(const char* nodepath, char* &ext)
 	return r;
 }
 
-RESULT AssetManager::LoadChunk(Chunk* chnk, const char* nodepath, Asset** asset)
+static RESULT createAsset(Chunk* chnk, foundation::Allocator* alctr, 
+						  const char* nodepath, Asset** ppAsset)
 {
 	RESULT r = S_OK;
-
 	char* ext = NULL;
-	if( FAILED( GetExtension(nodepath, ext) ) )
-	{ 
-		WarningMsg("Invalid extension");
-		goto cleanup;
-	}
+
+	IFWC( GetExtension(nodepath, ext), "Failed attempting to create node %s", nodepath );
 
 	if (strcmp(ext, "bdl") == 0)
 	{
-		*asset = new GCModel();
+		*ppAsset = new GCModel();
 	} else
 	{
-		return S_FALSE;
+		r = E_FAIL;
 	}
-	
-	m_AssetMap.insert( std::pair<const char*, Asset*> (nodepath, *asset) ); 
-	numAssets += 1;
-
-	IFC((*asset)->Init(nodepath));
-	IFC((*asset)->Load(chnk));
 
 cleanup:
-	free(chnk);
+	return r;
+}
+
+RESULT AssetManager::LoadChunk(Chunk* chnk, const char* nodepath)
+{
+	RESULT r = S_OK;
+	Asset* asset;
+	AssetSlot* slot;
+
+	// Create an empty Asset of the correct type
+	IFC(createAsset(chnk, m_AssetAllocator, nodepath, &asset)); 
+	IFC(asset->Init(nodepath));
+	
+	// Create a new Slot for our new asset
+	slot = &m_Assets[0];
+
+	// Stuff the asset into our slot and feed it its data
+	slot->stuff(asset, chnk);
+
+	// Don't lose track of our Asset!
+	u64 key = foundation::murmur_hash_64(nodepath, strlen(nodepath), hashSeed);
+	foundation::hash::set(*m_AssetMap, key, slot);
+
+cleanup:
+	if (FAILED(r))
+		WARN("Failed to load asset %s", nodepath);
 	return r;
 }
 
@@ -61,78 +111,59 @@ RESULT AssetManager::ClosePkg(Package* pkg)
 // Load a specific asset from a package into the Asset Manager
 // pkg		[in]	- package in which the asset risides. Get this pointer by calling OpenPkg();
 // nodepath	[in]	- path to the asset inside the package. E.g. "models/myModel.obj"
-// hashkey	[out]	- hashkey of the loaded asset that can be used as an index into the asset table
-RESULT AssetManager::Load(Package* pkg, char* nodepath, Asset* pAsset)
+RESULT AssetManager::Load(Package* pkg, char* nodepath)
 {
 	RESULT r;
-
 	Chunk* chnk;
-	IFC(pkg->Read(nodepath, &chnk));
-	IFC(pAsset->Init(nodepath));
-	IFC(pAsset->Load(chnk));
-	
-	m_AssetMap.insert( std::pair<const char*, Asset*> (nodepath, pAsset) ); 
-	numAssets += 1;
-#ifdef DEBUG
-	m_AssetNameMap.insert( std::pair<const char*, Asset*> (nodepath, pAsset) );
-#endif
 
-	return S_OK;
+	// Read the raw data from memory into a Chunk
+	IFC(pkg->Read(nodepath, &chnk));
+	LoadChunk(chnk, nodepath);
 
 cleanup:
-	WARN("Failed to load asset %s from package %s", pkg->GetFilename(), nodepath);
+	delete chnk;
 	return r;
 }
 
-// Load a specific asset from a package into the Asset Manager
-// pkg		[in]	- package in which the asset risides. Get this pointer by calling OpenPkg();
-// nodepath	[in]	- path to the asset inside the package. E.g. "models/myModel.obj"
-// hashkey	[out]	- hashkey of the loaded asset that can be used as an index into the asset table
-RESULT AssetManager::Load(Package* pkg, char* nodepath, Asset** ppAsset)
-{
-	RESULT r = S_OK;
-	Chunk* chnk;
-
-	IFC(pkg->Read(nodepath, &chnk));
-	IFC(LoadChunk(chnk, nodepath, ppAsset));
-
-cleanup:
-	return r;
-}
-
-RESULT AssetManager::Load(Package* pkg, int index, Asset** ppAsset)
+RESULT AssetManager::Load(Package* pkg, int startIndex, int numAssets)
 {
 	RESULT r = S_OK;
 	const char* nodepath;
-	Chunk* chnk;
 
-	IFC(pkg->Read(index, &chnk, &nodepath));
-	IFC(LoadChunk(chnk, nodepath, ppAsset));
+	for (int i = startIndex; i < numAssets; ++i)
+	{
+		Chunk* chnk;
+		IFC(pkg->Read(i, &chnk, &nodepath));
+		IFC(LoadChunk(chnk, nodepath));
+		delete chnk;
+	}
 
 cleanup:
 	return r;
 }
-	
-// Load all assets in a package
-// pkg		[in]	- package from which to load assets. Get this pointer by calling OpenPkg();
-// numLoaded[out]	- number of assets successfully loaded from the package. If NULL, returns nothing.
-// hashkeys [out]	- an array of hashkeys of the newly loaded objects. 
-//						If NULL, or if numLoaded is NULL, no hashkeys are returned. 
-RESULT AssetManager::LoadAll(Package* pkg, Asset** &ppAssets, int* numLoaded)
+
+RESULT AssetManager::Unload(Package* pkg, char* nodepath)
 {
 	RESULT r = S_OK;
-	int i;
+	AssetSlot* slot;
 
-	for (i = 0; r == S_OK; i++) 
+	u64 key = foundation::murmur_hash_64(nodepath, strlen(nodepath), hashSeed);
+	slot = foundation::hash::get(*m_AssetMap, key, (AssetSlot*)NULL);
+	if (slot == NULL)
 	{
-		r = Load(pkg, i, ppAssets);
+		WARN("Attempted to unload %s which is not currently loaded", nodepath);
+		return E_FAIL;
 	}
 
-	*numLoaded = i;
+	// Remove the asset (cleanly) from memory
+	slot->evict();
 
-	return S_OK;
+	// Clear the slot too
+	// delete slot
+
+	// Remove the asset from our map
+	foundation::hash::remove(*m_AssetMap, key);
+
+cleanup:
+	return r;
 }
-
-RESULT Get(int hashkey, Asset** asset);
-RESULT Get(char* fileNodePath, Asset** asset);
-RESULT Get(char* nodepath, Asset** asset);

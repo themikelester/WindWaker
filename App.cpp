@@ -20,12 +20,15 @@
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "App.h"
+#include <Foundation\memory.h>
 
 BaseApp *app = new App();
 
 bool App::init()
 {
+	foundation::memory_globals::init();
 	memMan.init();
+	assMan.Init();
 
 	return true;
 }
@@ -33,6 +36,8 @@ bool App::init()
 void App::exit()
 {
 	memMan.shutdown();
+	assMan.Shutdown();
+	foundation::memory_globals::shutdown();
 }
 
 bool App::initAPI()
@@ -51,11 +56,10 @@ bool App::load()
 
 	char* filename = "C:\\Users\\Michael\\Dropbox\\Code\\Wind Waker Assets\\Link.rarc";
 	char* nodeName = "/bdl/bow.bdl";
-	
-	m_Model = new GCModel;
 
 	IFC( assMan.OpenPkg(filename, &m_Pkg) );
-	IFC( assMan.Load(m_Pkg, nodeName, m_Model) );
+	IFC(assMan.Load(m_Pkg, nodeName));
+	IFC(assMan.Get(nodeName, &m_Model)); 
 
 	void* test = Mem::defaultAllocator->Alloc(16);
 
@@ -71,6 +75,13 @@ cleanup:
 
 void App::unload()
 {
+	// Destructing an Asset pointer will cause it to be evicted if the refcount is 0
+	// We have to do this goofily here because the model destructor won't be called until
+	//   after the asset manager is shut down. 
+	// The memset is to clear the m_AssetPtr attribute to negate the second destructor call
+	m_Model.~AssetPtr();
+	memset(&m_Model, 0, sizeof(m_Model));
+
 	assMan.ClosePkg(m_Pkg);
 }
 
@@ -83,8 +94,8 @@ bool App::onKey(const uint key, const bool pressed)
 	{
 		do {
 			++curModel;
-		} while( (assMan.Load(m_Pkg, (curModel % numAssets), (Asset**)&m_Model) != S_OK) );
-		
+		} while( (assMan.Load(m_Pkg, (curModel % numAssets)) != S_OK) );
+
 		m_Model->Init(renderer);
 	}
 
@@ -92,7 +103,7 @@ bool App::onKey(const uint key, const bool pressed)
 	{
 		do {
 			if(--curModel == -1) curModel = 92;		
-		} while( (assMan.Load(m_Pkg, curModel, (Asset**)&m_Model) != S_OK) );
+		} while( (assMan.Load(m_Pkg, curModel) != S_OK) );
 		m_Model->Init(renderer);
 	}
 

@@ -47,6 +47,6 @@ protected:
 	MemManager memMan;
 	
 	Package *m_Pkg;
-	GCModel* m_Model;
+	AssetPtr<GCModel> m_Model;
 	ShaderID m_VerticesShader;
 };
