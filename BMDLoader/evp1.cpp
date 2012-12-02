@@ -46,9 +46,9 @@ void readMatrix(Chunk* c, mat4& m)
 {
 	assert(sizeof(vec4) == 16);
 	for(int j = 0; j < 3; ++j)
-		DRead(&(m.rows[j]), 4, 4, c);
-	// This isn't flipping endianness (GC is big-endian, PC's are little-endian)
-	// But it doesn't seem to matter, we must flip when we read it later
+		for(int k = 0; k < 4; ++k)
+			readFLOAT(c, m.rows[j][k]);  
+	m.rows[3] = 0;
 }
 
 void dumpEvp1(Chunk* f, Evp1& dst)
