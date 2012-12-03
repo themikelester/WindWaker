@@ -48,7 +48,6 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 		renderer->setVertexFormat( m_VertFormats[batchIndex] );
 		renderer->setVertexBuffer(0, m_VertBuffers[batchIndex]);
 		renderer->setIndexBuffer(m_IndexBuffers[batchIndex]);
-		renderer->setShaderConstant1f("scale", 1.0f);
 		renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, packet->matrixTable.size());
 		renderer->apply();
 

@@ -82,21 +82,13 @@
 cbuffer g_PerFrame
 {
 	float4x4 WorldViewProj;
+	float4 globalColor;
 }
 
 cbuffer PerBatch
 {
 	float4x4 ModelMat[10];
 }
-
-// Global constant that can be accessed from many shaders
-cbuffer g_Test
-{
-	float anotherConstantInSeperateCBuffer;
-	float4 globalColor;
-}
-
-float scale;
 
 struct VsIn
 {
@@ -122,26 +114,6 @@ struct PsIn
 
 [Vertex shader]
 
-float4 Position(float4 position)
-{
-	return (scale*anotherConstantInSeperateCBuffer) * mul(WorldViewProj, position);
-}
-
-float3 Normal(float3 normal)
-{
-	return normal;
-}
-
-float4 Color(uint4 rgba)
-{
-	return rgba;
-}
-
-float4 TexCoord(float2 uv)
-{
-	return 1.0;
-}
-
 PsIn main(VsIn In)
 {
 	PsIn Out;
@@ -152,7 +124,7 @@ PsIn main(VsIn In)
 	IF_MATRICES( matIndex = In.MatIndex);
 
 	position = mul(ModelMat[matIndex], position);
-	Out.Position = Position(position);
+	Out.Position = mul(WorldViewProj, position);
 
 	return Out;
 }
