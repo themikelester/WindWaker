@@ -56,7 +56,7 @@ bool App::load()
 	RESULT r;
 
 	char* filename = "C:\\Users\\Michael\\Dropbox\\Code\\Wind Waker Assets\\Link.rarc";
-	char* nodeName = "/bdl/bow.bdl";
+	char* nodeName = "/bdl/cl.bdl";
 
 	IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
 	IFC(m_AssMan.Load(m_Pkg, nodeName));

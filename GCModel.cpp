@@ -3,7 +3,7 @@
 #include "GC3D.h"
 
 // ----- Static functions ------------------------------------------------------- //
-mat4 frameToMatrix(const Frame& f);
+mat4 frameMatrix(const Frame& f);
 void adjustMatrix(mat4& mat, u8 matrixType);
 mat4 localMatrix(int i, const BModel* bm);
 void updateMatrixTable(const BModel* bmd, const Packet& packet, 
@@ -65,7 +65,7 @@ void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const Sce
 	case SG_JOINT:
 	{
 		const Frame& f = m_BDL->jnt1.frames[scenegraph.index];
-		m_BDL->jnt1.matrices[scenegraph.index] = parentMatrix * frameToMatrix(f);
+		m_BDL->jnt1.matrices[scenegraph.index] = parentMatrix * frameMatrix(f);
 		tempMat = m_BDL->jnt1.matrices[scenegraph.index];
 		
 		// This should probably be here. See definition comment of isMatrixValid
@@ -238,7 +238,7 @@ RESULT GCModel::Init(Renderer *renderer)
 	{
 		Frame& frame = m_BDL->jnt1.frames[i];
 		mat4& mat = m_BDL->jnt1.matrices[i];
-		mat = frameToMatrix(frame);
+		mat = frameMatrix(frame);
 	}
 
 	return initBatches(renderer, m_Scenegraph);
@@ -257,7 +257,7 @@ mat4 frameToMatrix(const Frame& f)
   mat4 t, r, s;
   t = translate(f.t);
   //TODO: Double check that this is correct. May need rotateZYX
-  r = rotateZXY( DEGTORAD(f.rx), DEGTORAD(f.ry), DEGTORAD(f.rz) );
+  r = identity4();//rotateZXY( DEGTORAD(f.rx), DEGTORAD(f.ry), DEGTORAD(f.rz) );
   s = scale(f.sx, f.sy, f.sz);
 
   //this is probably right this way:
@@ -275,6 +275,30 @@ mat4 frameToMatrix(const Frame& f)
   else
     assert(false);
   */
+}
+
+mat4 frameMatrix(const Frame& f)
+{
+  mat4 t, rx, ry, rz, s;
+  t = translate(f.t);
+  rx = rotateX(f.rx/360.f*2*PI);
+  ry = rotateY(f.ry/360.f*2*PI);
+  rz = rotateZ(f.rz/360.f*2*PI);
+  s = scale(f.sx, f.sy, f.sz);
+
+  //this is probably right this way:
+  //return t*rz*ry*rx*s; //scales seem to be local only
+  return t*rz*ry*rx;
+
+  //experimental:
+  if(f.unknown == 0)
+    return t*rx*ry*rz;
+  else if(f.unknown == 1)
+    return t*ry*rz*rx;
+  else if(f.unknown == 2)
+    return t*rz*ry*rx;
+  else
+    assert(false);
 }
 
 void adjustMatrix(mat4& mat, u8 matrixType)
@@ -324,16 +348,16 @@ void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, m
 				//(and this code is slow as hell, so TODO: fix this)
 			
 				//NO idea if this is right this way...
-				mat4 m = identity4();
+				mat4 m(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				const MultiMatrix& mm = bmd->evp1.weightedIndices[bmd->drw1.data[index]];
 				for(size_t r = 0; r < mm.weights.size(); ++r)
 				{
-					const mat4 sm1 = bmd->evp1.matrices[mm.indices[r]];
-					const mat4 sm2 = localMatrix(mm.indices[r], bmd);
-					m = m + sm2 * sm1 * mm.weights[r];
+					const mat4 evpMat = bmd->evp1.matrices[mm.indices[r]];
+					const mat4 localMat = localMatrix(mm.indices[r], bmd);
+					m = m + localMat * evpMat * mm.weights[r];
 				}
 				m.rows[3][3] = 1;
-			
+
 				matrixTable[i] = m;
 				if(isMatrixWeighted != NULL)
 					isMatrixWeighted[i] = true;
@@ -358,6 +382,7 @@ static RESULT buildVertex(ubyte* dst, Index &point, u16 attribs, BModel* bdl)
 
 	// TODO: Fix the uint cast. Perhaps we can keep it as a u16 somehow? Depends on HLSL
 	if (attribs & HAS_MATRIX_INDICES) {
+		ASSERT(point.matrixIndex/3 < 10); 
 		uint matrixIndex = point.matrixIndex/3;
 		memcpy(dst, &matrixIndex, sizeof(uint));
 		dst += sizeof(uint);

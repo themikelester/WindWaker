@@ -42,13 +42,12 @@ void readArray8(Chunk* f, vector<int>& arr)
   }
 }
 
-void readMatrix(Chunk* c, mat4& m)
+void readMatrix(Chunk* c, f32 m[3][4])
 {
-	assert(sizeof(vec4) == 16);
-	for(int j = 0; j < 3; ++j)
-		for(int k = 0; k < 4; ++k)
-			readFLOAT(c, m.rows[j][k]);  
-	m.rows[3] = 0;
+  DRead(&m[0][0], 4, 3*4, c);
+  for(int j = 0; j < 3; ++j)
+    for(int k = 0; k < 4; ++k)
+      toFLOAT(m[j][k]);  
 }
 
 void dumpEvp1(Chunk* f, Evp1& dst)
@@ -96,7 +95,14 @@ void dumpEvp1(Chunk* f, Evp1& dst)
   DSeek(f, evp1Offset + h.offsets[3], SEEK_SET);
   for(i = 0; i < numMatrices; ++i)
   {
-    readMatrix(f, dst.matrices[i]);
+    f32 m[3][4];
+    readMatrix(f, m);
+    
+    mat4& dMat = dst.matrices[i];
+    for(int j = 0; j < 3; ++j)
+      for(int k = 0; k < 4; ++k)
+        dMat.rows[j][k] = m[j][k];
+    dMat.rows[3][0] = 0.f; dMat.rows[3][1] = 0.f; dMat.rows[3][2] = 0.f; dMat.rows[3][3] = 1.f;
   }
 }
 
