@@ -19,7 +19,87 @@ RESULT GCModel::Unload()
 	return S_OK;
 }
 
-// TODO: This should be done at load time!!
+void adjustMatrix(mat4& mat, u8 matrixType)
+{
+	switch(matrixType)
+	{
+		case 1: //billboard
+			WARN("Billboards not yet supported");
+			break;
+
+		case 2: //y billboard
+			WARN("Y-Billboards not yet supported");
+			break;
+	}
+}
+
+mat4 localMatrix(int i, const BModel* bm)
+{
+  mat4 s = scale(bm->jnt1.frames[i].sx, bm->jnt1.frames[i].sy, bm->jnt1.frames[i].sz);
+
+  //TODO: I don't know which of these two return values are the right ones
+  //(if it's the first, then what is scale used for at all?)
+
+  //looks wrong in certain circumstances...
+  return bm->jnt1.matrices[i]; //this looks better with vf_064l.bdl (from zelda)
+  return bm->jnt1.matrices[i]*s; //this looks a bit better with mario's bottle_in animation
+}
+
+mat4& mad(mat4& r, const mat4& m, float f)
+{
+  for(int j = 0; j < 3; ++j)
+    for(int k = 0; k < 4; ++k)
+      r.rows[j][k] += f*m.rows[j][k];
+  return r;
+}
+
+void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, mat4* matrixTable,
+                       bool* isMatrixWeighted)
+{
+	for(size_t i = 0; i < packet.matrixTable.size(); ++i)
+	{
+		if(packet.matrixTable[i] != 0xffff) //this means keep old entry
+		{
+			u16 index = packet.matrixTable[i];
+			if(bmd->drw1.isWeighted[index])
+			{
+				//TODO: the EVP1 data should probably be used here,
+				//figure out how this works (most files look ok
+				//without this, but models/ji.bdl is for example
+				//broken this way)
+				//matrixTable[i] = def;
+			
+				//the following _does_ the right thing...it looks
+				//ok for all files, but i don't understand why :-P
+				//(and this code is slow as hell, so TODO: fix this)
+			
+				//NO idea if this is right this way...
+				mat4 m = identity4();
+				const MultiMatrix& mm = bmd->evp1.weightedIndices[bmd->drw1.data[index]];
+				for(size_t r = 0; r < mm.weights.size(); ++r)
+				{
+					const mat4 sm1 = bmd->evp1.matrices[mm.indices[r]];
+					const mat4 sm2 = localMatrix(mm.indices[r], bmd);
+					mad(m, sm2*sm1, mm.weights[r]);
+				}
+				m.rows[3][3] = 1;
+			
+				matrixTable[i] = m;
+				if(isMatrixWeighted != NULL)
+					isMatrixWeighted[i] = true;
+			}
+			else
+			{
+				matrixTable[i] = bmd->jnt1.matrices[bmd->drw1.data[index]];
+								
+				if(isMatrixWeighted != NULL)
+					isMatrixWeighted[i] = false;
+			}
+			adjustMatrix(matrixTable[i], matrixType);
+		}
+	}
+}
+
 // Convert a "Frame" into a D3D usable matrix
 mat4 frameMatrix(const Frame& f)
 {
@@ -31,7 +111,7 @@ mat4 frameMatrix(const Frame& f)
 
   //this is probably right this way:
   //return t*rz*ry*rx*s; //scales seem to be local only
-  return t*r;
+  return t*r*s;
 
   //experimental: 
   /*
@@ -49,23 +129,27 @@ mat4 frameMatrix(const Frame& f)
 void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex, const mat4 &parentMatrix)
 {
 	Batch1& batch = m_BDL->shp1.batches[batchIndex];
-
-	// Vertex format and buffer are uniform for an entire batch
-	renderer->reset();
-	renderer->setShader( m_Shaders[batchIndex] );
-	renderer->setVertexFormat( m_VertFormats[batchIndex] );
-	renderer->setVertexBuffer(0, m_VertBuffers[batchIndex]);
-	renderer->setIndexBuffer(m_IndexBuffers[batchIndex]);
-	renderer->setShaderConstant1f("scale", 1.0f);
-	renderer->apply();
-
-	device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	mat4 matrixTable[10];
+	bool isMatrixWeighted[10];
 	
+	// Vertex format and buffer are uniform for an entire batch
+	device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
 	int numIndicesSoFar = 0;
 	STL_FOR_EACH(packet, batch.packets)
 	{
-		// Setup Matrix table and apply billboarding to matrices here
-	
+		// Setup Matrix table
+		updateMatrixTable(m_BDL, *packet, batch.matrixType, matrixTable, isMatrixWeighted);	
+		
+		renderer->reset();
+		renderer->setShader( m_Shaders[batchIndex] );
+		renderer->setVertexFormat( m_VertFormats[batchIndex] );
+		renderer->setVertexBuffer(0, m_VertBuffers[batchIndex]);
+		renderer->setIndexBuffer(m_IndexBuffers[batchIndex]);
+		renderer->setShaderConstant1f("scale", 1.0f);
+		renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, packet->matrixTable.size());
+		renderer->apply();
+
 		device->DrawIndexed(packet->indexCount, numIndicesSoFar, 0);	
 		numIndicesSoFar = packet->indexCount;
 	}
@@ -73,7 +157,7 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 
 void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& scenegraph, const mat4& parentMatrix, bool onDown, int matIndex)
 {
-	mat4 tempMat;
+	mat4 tempMat = parentMatrix;
 
 	switch(scenegraph.type)
 	{
@@ -82,6 +166,10 @@ void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const Sce
 		const Frame& f = m_BDL->jnt1.frames[scenegraph.index];
 		m_BDL->jnt1.matrices[scenegraph.index] = parentMatrix * frameMatrix(f);
 		tempMat = m_BDL->jnt1.matrices[scenegraph.index];
+		
+		// This should probably be here. See definition comment of isMatrixValid
+		//m_BDL->jnt1.isMatrixValid[scenegraph.index] = true;
+		
 		break;
 	}
 
@@ -132,6 +220,13 @@ static RESULT buildVertex(ubyte* dst, Index &point, u16 attribs, BModel* bdl)
 	if ( attribs != HAS_POSITIONS )
 		WARN("Model does not have required attributes");
 
+	// TODO: Fix the uint cast. Perhaps we can keep it as a u16 somehow? Depends on HLSL
+	if (attribs & HAS_MATRIX_INDICES) {
+		uint matrixIndex = point.matrixIndex/3;
+		memcpy(dst, &matrixIndex, sizeof(uint));
+		dst += sizeof(uint);
+	}
+
 	if (attribs & HAS_POSITIONS) {
 		memcpy(dst, bdl->vtx1.positions[point.posIndex], sizeof(float3));
 		dst += sizeof(float3);
@@ -164,8 +259,8 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 		int batchIndex = node->index;
 		Batch1& batch = m_BDL->shp1.batches[batchIndex];
 		
-		// FORCE BATCH ATTRIBUTES TO BE ONLY VERTICES RIGHT NOW
-		batch.attribs = HAS_POSITIONS;
+		// TODO: LIMIT BATCH ATTRIBUTES TO POSITION AND MATRICES RIGHT NOW
+		batch.attribs &= (HAS_POSITIONS | HAS_MATRIX_INDICES);
 
 		int pointCount = 0;
 		int primCount = 0;
@@ -262,6 +357,15 @@ RESULT GCModel::Init(Renderer *renderer)
 {	
 	// First things first
 	buildSceneGraph(m_BDL->inf1, m_Scenegraph);
+
+	// Convert BMD/BDL "Frames" into matrices usable by the renderer
+	for (int i = 0; i < m_BDL->jnt1.frames.size(); i++)
+	{
+		Frame& frame = m_BDL->jnt1.frames[i];
+		mat4& mat = m_BDL->jnt1.matrices[i];
+		mat = frameMatrix(frame);
+	}
+
 	return initBatches(renderer, m_Scenegraph);
 }
 

@@ -23,19 +23,19 @@ namespace GC3D
 
 	FormatDesc __GCformat[MAX_VERTEX_ATTRIBS] =
 	{
-		{ 0, TYPE_GENERIC,	FORMAT_FLOAT, 0 }, // Empty, because the first attribute is MATRICES which is not a vertex attrib
-		{ 0, TYPE_VERTEX,   FORMAT_FLOAT, 3 },
-		{ 0, TYPE_NORMAL,   FORMAT_FLOAT, 3 },
-		{ 0, TYPE_COLOR,	FORMAT_UBYTE, 4 },
-		{ 0, TYPE_COLOR,	FORMAT_UBYTE, 4 },
-		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 },
-		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 },
-		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 },
-		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 },
-		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 },
-		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 },
-		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 },
-		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 },
+		{ 0, TYPE_GENERIC,	FORMAT_UINT,  1 }, // Matrix Index
+		{ 0, TYPE_VERTEX,   FORMAT_FLOAT, 3 }, // Position
+		{ 0, TYPE_NORMAL,   FORMAT_FLOAT, 3 }, // Normal
+		{ 0, TYPE_COLOR,	FORMAT_UBYTE, 4 }, // Color 0
+		{ 0, TYPE_COLOR,	FORMAT_UBYTE, 4 }, // Color 1
+		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 0
+		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 1
+		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 2
+		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 3
+		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 4
+		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 5
+		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 6
+		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 7
 	};
 
 	const char* __ShaderSwitches[MAX_VERTEX_ATTRIBS] =
@@ -103,12 +103,11 @@ namespace GC3D
 
 	VertexFormatID CreateVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader)
 	{
-		int numAttribs = util::bitcount(attribFlags & ~1);
+		int numAttribs = util::bitcount(attribFlags);
 		FormatDesc formatBuf[MAX_VERTEX_ATTRIBS];
 
 		int formatBufIndex = 0;
-		// Start i at 1 to skip MATRICES, which is a patch attribute but not a vertex attribute
-		for (int i = 1; i < MAX_VERTEX_ATTRIBS; ++i) 
+		for (int i = 0; i < MAX_VERTEX_ATTRIBS; ++i) 
 		{
 			if ( attribFlags & (1 << i) )
 			{
