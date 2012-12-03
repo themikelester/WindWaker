@@ -69,7 +69,7 @@ static RESULT createAsset(Chunk* chnk, foundation::Allocator* alctr,
 		*ppAsset = MAKE_NEW(*alctr, GCModel);
 	} else
 	{
-		r = E_FAIL;
+		r = E_NOTIMPL;
 	}
 
 cleanup:
@@ -133,16 +133,19 @@ cleanup:
 	return r;
 }
 
-RESULT AssetManager::Load(Package* pkg, int startIndex, int numAssets)
+RESULT AssetManager::Load(Package* pkg, int startIndex, int numAssets, const char** nodepaths)
 {
 	RESULT r = S_OK;
 	const char* nodepath;
 
-	for (int i = startIndex; i < numAssets; ++i)
+	for (int i = 0; i < numAssets; ++i)
 	{
 		Chunk* chnk;
-		IFC(pkg->Read(i, &chnk, &nodepath));
+		IFC(pkg->Read(startIndex+i, &chnk, &nodepath));
 		IFC(LoadChunk(chnk, nodepath));
+		if (nodepaths != NULL)
+			nodepaths[i] = nodepath;
+
 		delete chnk;
 	}
 

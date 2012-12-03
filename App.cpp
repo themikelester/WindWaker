@@ -86,14 +86,16 @@ bool App::onKey(const uint key, const bool pressed)
 {
 	static int curModel = 0;
 	int numAssets = 92;
+	const char* nodepath;
 
 	if (pressed && key == KEY_RIGHT)
 	{
 		do {
-			//m_AssMan.Unload(m_Model);
 			++curModel;
-		} while( (m_AssMan.Load(m_Pkg, (curModel % numAssets)) != S_OK) );
+		} while( (m_AssMan.Load(m_Pkg, (curModel % numAssets), 1, &nodepath) != S_OK) );
 		
+		m_Model.~AssetPtr();
+		m_AssMan.Get(nodepath, &m_Model); 
 		m_Model->Init(renderer);
 	}
 
@@ -101,8 +103,10 @@ bool App::onKey(const uint key, const bool pressed)
 	{
 		do {
 			if(--curModel == -1) curModel = 92;		
-		} while( (m_AssMan.Load(m_Pkg, curModel) != S_OK) );
+		} while( (m_AssMan.Load(m_Pkg, curModel, 1, &nodepath) != S_OK) );
 		
+		m_Model.~AssetPtr();
+		m_AssMan.Get(nodepath, &m_Model); 
 		m_Model->Init(renderer);
 	}
 

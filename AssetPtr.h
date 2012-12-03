@@ -31,6 +31,15 @@ private:
 };
 
 template <class AssetType>
+AssetPtr<AssetType>& AssetPtr<AssetType>::operator= (const AssetPtr<AssetType>& ptr)
+{
+	this->~AssetPtr( );
+	m_pAssetSlot = ptr.m_pAssetSlot;
+	m_pAssetSlot->_incRef();
+	return *this;
+}
+
+template <class AssetType>
 AssetPtr<AssetType>::AssetPtr( AssetSlot* pSlot ):m_pAssetSlot(pSlot)
 {
 	m_pAssetSlot->_incRef();
