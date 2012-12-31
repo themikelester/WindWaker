@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common\common.h"
 #include "Asset.h"
 #include "BMDLoader\BMDLoader.h"
 #include <Foundation\memory_types.h>
@@ -46,6 +47,8 @@ public:
 
 	RESULT Init(Renderer *renderer);
 	RESULT Draw(Renderer *renderer, ID3D10Device *device);
+
+	int _debugDrawBatch;
 
 private:
 	RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph);

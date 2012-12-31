@@ -110,6 +110,12 @@ bool App::onKey(const uint key, const bool pressed)
 		m_Model->Init(renderer);
 	}
 
+	if ( pressed && (KEY_0 <= key && key <= KEY_9) )
+	{
+		int batchNum = key - KEY_0;
+		m_Model->_debugDrawBatch = batchNum;
+	}
+
 	return BaseApp::onKey(key, pressed);
 }
 

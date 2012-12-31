@@ -30,6 +30,12 @@ RESULT GCModel::Unload()
 
 void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex, const mat4 &parentMatrix)
 {
+#ifdef DEBUG
+	// Only draw the selected batch
+	if (_debugDrawBatch >= 0 && batchIndex != _debugDrawBatch)
+		return;
+#endif
+
 	Batch1& batch = m_BDL->shp1.batches[batchIndex];
 	mat4 matrixTable[10];
 	bool isMatrixWeighted[10];
@@ -56,7 +62,8 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 	}
 }
 
-void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& scenegraph, const mat4& parentMatrix, bool onDown, int matIndex)
+void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& scenegraph, 
+							 const mat4& parentMatrix, bool onDown, int matIndex)
 {
 	mat4 tempMat = parentMatrix;
 
@@ -241,11 +248,18 @@ RESULT GCModel::Init(Renderer *renderer)
 		mat = frameMatrix(frame);
 	}
 
+	DEBUG_ONLY( _debugDrawBatch = -1 );
+
 	return initBatches(renderer, m_Scenegraph);
 }
 
 RESULT GCModel::Draw(Renderer *renderer, ID3D10Device *device)
 {
+#ifdef DEBUG
+	for (uint i = 0; i < m_BDL->jnt1.isMatrixValid.size(); i++)
+		m_BDL->jnt1.isMatrixValid[i] = false;
+#endif 
+
 	drawScenegraph(renderer, device, m_Scenegraph);
 
 	return S_OK;
@@ -317,14 +331,15 @@ void adjustMatrix(mat4& mat, u8 matrixType)
 
 mat4 localMatrix(int i, const BModel* bm)
 {
-  mat4 s = scale(bm->jnt1.frames[i].sx, bm->jnt1.frames[i].sy, bm->jnt1.frames[i].sz);
+	DEBUG_ONLY( ASSERT(bm->jnt1.isMatrixValid[i]) );
+	mat4 s = scale(bm->jnt1.frames[i].sx, bm->jnt1.frames[i].sy, bm->jnt1.frames[i].sz);
 
-  //TODO: I don't know which of these two return values are the right ones
-  //(if it's the first, then what is scale used for at all?)
+	//TODO: I don't know which of these two return values are the right ones
+	//(if it's the first, then what is scale used for at all?)
 
-  //looks wrong in certain circumstances...
-  return bm->jnt1.matrices[i]; //this looks better with vf_064l.bdl (from zelda)
-  return bm->jnt1.matrices[i]*s; //this looks a bit better with mario's bottle_in animation
+	//looks wrong in certain circumstances...
+	return bm->jnt1.matrices[i]; //this looks better with vf_064l.bdl (from zelda)
+	return bm->jnt1.matrices[i]*s; //this looks a bit better with mario's bottle_in animation
 }
 
 void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, mat4* matrixTable,
@@ -364,6 +379,7 @@ void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, m
 			}
 			else
 			{
+				//ASSERT(bmd->jnt1.isMatrixValid[bmd->drw1.data[index]]);
 				matrixTable[i] = bmd->jnt1.matrices[bmd->drw1.data[index]];
 								
 				if(isMatrixWeighted != NULL)
