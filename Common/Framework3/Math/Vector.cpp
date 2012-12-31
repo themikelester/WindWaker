@@ -886,10 +886,10 @@ mat4 rotateY(const float angle){
 	float cosA = cosf(angle), sinA = sinf(angle);
 
 	return mat4(
-		cosA, 0, -sinA, 0,
-		0,    1,  0,    0,
-		sinA, 0,  cosA, 0,
-		0,    0,  0,    1);
+		cosA,  0, sinA, 0,
+		0,     1, 0,    0,
+		-sinA, 0, cosA, 0,
+		0,     0, 0,    1);
 }
 
 mat4 rotateZ(const float angle){
