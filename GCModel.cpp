@@ -342,6 +342,14 @@ mat4 localMatrix(int i, const BModel* bm)
 	return bm->jnt1.matrices[i]*s; //this looks a bit better with mario's bottle_in animation
 }
 
+mat4& mad(mat4& r, const mat4& m, float f)
+{
+	for(int j = 0; j < 3; ++j)
+		for(int k = 0; k < 4; ++k)
+			r.rows[j][k] += f*m.rows[j][k];
+	return r;
+}
+
 void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, mat4* matrixTable,
                        bool* isMatrixWeighted)
 {
@@ -369,9 +377,9 @@ void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, m
 				{
 					const mat4 evpMat = bmd->evp1.matrices[mm.indices[r]];
 					const mat4 localMat = localMatrix(mm.indices[r], bmd);
-					m = m + localMat * evpMat * mm.weights[r];
+					mad(m, localMat*evpMat, mm.weights[r]);
 				}
-				m.rows[3][3] = 1;
+				m.rows[3] = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 				matrixTable[i] = m;
 				if(isMatrixWeighted != NULL)
