@@ -220,6 +220,7 @@ enum AttributeFormat {
 	FORMAT_FLOAT = 0,
 	FORMAT_HALF  = 1,
 	FORMAT_UBYTE = 2,
+	FORMAT_UINT  = 3,
 };
 
 struct FormatDesc {

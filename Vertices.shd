@@ -1,5 +1,11 @@
 #define HAS_POSITIONS
 
+#ifdef HAS_MATRICES
+	#define IF_MATRICES(x) x
+#else
+	#define IF_MATRICES(x) 
+#endif 
+
 #ifdef HAS_POSITIONS
 	#define IF_POSITION(x) x
 #else
@@ -76,19 +82,17 @@
 cbuffer g_PerFrame
 {
 	float4x4 WorldViewProj;
-}
-
-// Global constant that can be accessed from many shaders
-cbuffer g_Test
-{
-	float anotherConstantInSeperateCBuffer;
 	float4 globalColor;
 }
 
-float scale;
+cbuffer PerBatch
+{
+	float4x4 ModelMat[10];
+}
 
 struct VsIn
 {
+	IF_MATRICES(	uint   MatIndex : Generic   ;)
 	IF_POSITION(	float3 Position : Position	;)
 	IF_NORMAL(		float3 Normal	: Normal	;)
 	IF_COLOR0(		uint4  Color0	: Color0	;)
@@ -110,31 +114,17 @@ struct PsIn
 
 [Vertex shader]
 
-float4 Position(float3 position)
-{
-	return scale*anotherConstantInSeperateCBuffer * mul(WorldViewProj, float4(position, 1.0f));
-}
-
-float3 Normal(float3 normal)
-{
-	return normal;
-}
-
-float4 Color(uint4 rgba)
-{
-	return rgba;
-}
-
-float4 TexCoord(float2 uv)
-{
-	return 1.0;
-}
-
 PsIn main(VsIn In)
 {
 	PsIn Out;
+	float4 position = float4(In.Position, 1.0);
+	uint matIndex = 0;
 
-	Out.Position = Position(In.Position);
+	// Use first matrix as default, unless we have a matrix index
+	IF_MATRICES( matIndex = In.MatIndex);
+
+	position = mul(ModelMat[matIndex], position);
+	Out.Position = mul(WorldViewProj, position);
 
 	return Out;
 }

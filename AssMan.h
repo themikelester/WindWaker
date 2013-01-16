@@ -30,8 +30,8 @@ public:
 	// Load a specific asset from a package into the Asset Manager
 	// pkg		[in]	- package in which the asset risides. Get this pointer by calling OpenPkg();
 	// nodepath	[in]	- path to the asset inside the package. E.g. "models/myModel.obj"
-	RESULT Load(Package* pkg, int startIndex, int numAssets = 1);
 	RESULT Load(Package* pkg, char* nodepath);
+	RESULT Load(Package* pkg, int startIndex, int numAssets = 1, const char** nodepaths = NULL);
 	
 	RESULT AssetManager::Unload(Package* pkg, char* nodepath);
 

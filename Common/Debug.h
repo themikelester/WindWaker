@@ -1,6 +1,12 @@
 #pragma once
 #include <assert.h>
 
+#ifdef DEBUG
+#	define DEBUG_ONLY(x) (x)
+#else
+#	define DEBUG_ONLY(x)
+#endif 
+
 // debugging macros so we can pin down message origin at a glance
 #define WHERESTR  " [file %s, line %d]: "
 #define WHEREARG  __FILE__, __LINE__

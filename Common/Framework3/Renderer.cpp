@@ -352,7 +352,7 @@ ShaderID Renderer::addShader(const char *fileName, const char **attributeNames, 
 }
 
 int Renderer::getFormatSize(const AttributeFormat format) const {
-	static int formatSize[] = { sizeof(float), sizeof(half), sizeof(ubyte) };
+	static int formatSize[] = { sizeof(float), sizeof(half), sizeof(ubyte), sizeof(uint) };
 	return formatSize[format];
 }
 

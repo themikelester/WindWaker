@@ -56,7 +56,7 @@ bool App::load()
 	RESULT r;
 
 	char* filename = "C:\\Users\\Michael\\Dropbox\\Code\\Wind Waker Assets\\Link.rarc";
-	char* nodeName = "/bdl/bow.bdl";
+	char* nodeName = "/bdl/cl.bdl";
 
 	IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
 	IFC(m_AssMan.Load(m_Pkg, nodeName));
@@ -86,14 +86,16 @@ bool App::onKey(const uint key, const bool pressed)
 {
 	static int curModel = 0;
 	int numAssets = 92;
+	const char* nodepath;
 
 	if (pressed && key == KEY_RIGHT)
 	{
 		do {
-			//m_AssMan.Unload(m_Model);
 			++curModel;
-		} while( (m_AssMan.Load(m_Pkg, (curModel % numAssets)) != S_OK) );
+		} while( (m_AssMan.Load(m_Pkg, (curModel % numAssets), 1, &nodepath) != S_OK) );
 		
+		m_Model.~AssetPtr();
+		m_AssMan.Get(nodepath, &m_Model); 
 		m_Model->Init(renderer);
 	}
 
@@ -101,9 +103,17 @@ bool App::onKey(const uint key, const bool pressed)
 	{
 		do {
 			if(--curModel == -1) curModel = 92;		
-		} while( (m_AssMan.Load(m_Pkg, curModel) != S_OK) );
+		} while( (m_AssMan.Load(m_Pkg, curModel, 1, &nodepath) != S_OK) );
 		
+		m_Model.~AssetPtr();
+		m_AssMan.Get(nodepath, &m_Model); 
 		m_Model->Init(renderer);
+	}
+
+	if ( pressed && (KEY_0 <= key && key <= KEY_9) )
+	{
+		int batchNum = key - KEY_0;
+		m_Model->_debugDrawBatch = batchNum;
 	}
 
 	return BaseApp::onKey(key, pressed);
@@ -124,7 +134,6 @@ void App::drawFrame()
 	
 	renderer->reset();
 		renderer->setGlobalConstant4x4f("WorldViewProj", view_proj);
-		renderer->setGlobalConstant1f("anotherConstantInSeperateCBuffer", 1.0f);
 		renderer->setGlobalConstant4f("globalColor", float4(0, 1, 1, 1));
 	renderer->apply();
 
