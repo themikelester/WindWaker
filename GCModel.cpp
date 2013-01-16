@@ -58,7 +58,7 @@ void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex
 		renderer->apply();
 
 		device->DrawIndexed(packet->indexCount, numIndicesSoFar, 0);	
-		numIndicesSoFar = packet->indexCount;
+		numIndicesSoFar += packet->indexCount;
 	}
 }
 
