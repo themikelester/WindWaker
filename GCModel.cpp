@@ -401,7 +401,7 @@ void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, m
 static RESULT buildVertex(ubyte* dst, Index &point, u16 attribs, BModel* bdl)
 {
 	// For now, only use position
-	if ( attribs != HAS_POSITIONS )
+	if ( (attribs & HAS_POSITIONS) == false )
 		WARN("Model does not have required attributes");
 
 	// TODO: Fix the uint cast. Perhaps we can keep it as a u16 somehow? Depends on HLSL

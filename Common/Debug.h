@@ -11,7 +11,7 @@
 #define WHERESTR  " [file %s, line %d]: "
 #define WHEREARG  __FILE__, __LINE__
 
-#define DEBUGPRINT(type, ...) {fprintf(stderr, type##WHERESTR##, WHEREARG); fprintf(stderr, __VA_ARGS__);}
+#define DEBUGPRINT(type, ...) {fprintf(stderr, type##WHERESTR##, WHEREARG); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n");}
 
 //#if ENABLE_ASSERTIONS
 //	#define ASSERT(exp) assert(exp)
