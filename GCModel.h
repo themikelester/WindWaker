@@ -4,6 +4,7 @@
 #include "Asset.h"
 #include "BMDLoader\BMDLoader.h"
 #include <Foundation\memory_types.h>
+#include <Foundation\collection_types.h>
 #include <Framework3\Direct3D10\Direct3D10Renderer.h>
 
 class Renderer;
@@ -20,18 +21,53 @@ protected:
 	static foundation::Allocator* _allocator;
 };
 
+struct GCBatch 
+{
+	struct GCIndexBuffer
+	{
+		IndexBufferID	id;		// ID of buffer in rendering engine
+		u16*			data;	// pointer to actual data stored in buffer... 
+								//		Debug only, a copy is made so this is not needed.
+		uint			size;	// number of elements in buffer
+	};
+
+	struct GCVertexBuffer
+	{
+		VertexBufferID	id;		// ID of buffer in rendering engine
+		ubyte*			data;	// pointer to actual data stored in buffer... 
+								//		Debug only, a copy is made so this is not needed.
+		uint			size;	// number of vertices in buffer
+	};
+	
+	foundation::Hash<u16>* indexMap;
+	
+	// TODO: Remove BModel as a dependency. Convert frames to matrices at load time and never look back
+	BModel*			bmd;
+
+	u16				attribs;	// flags describing layout and size of each vertex. See BatchAttributeFlags
+	u8				matrixType; // standard, billboard, y-billboard...
+	std::vector<Packet> packets;
+	
+	GCIndexBuffer	indexBuffer;
+	GCVertexBuffer	vertexBuffer;
+	ShaderID		shader;
+	VertexFormatID	vertexFormat;
+
+	// Debug
+	uint batchIndex; // Batch index in relation to the whole bmodel
+	
+	RESULT Init(uint index, BModel *bdl, Renderer *renderer);
+	RESULT Shutdown();
+	RESULT Draw(Renderer *renderer, ID3D10Device *device, const mat4 &parentMatrix);
+};
+
 class GCModel : public Asset
 {
 private:
 	SceneGraph		m_Scenegraph;
 	BModel*			m_BDL;
-	
-	std::vector<IndexBufferID>	m_IndexBuffers;
-	std::vector<VertexBufferID>	m_VertBuffers;
-	std::vector<void*>			m_VertexData;
-	std::vector<void*>			m_IndexData;
-	std::vector<ShaderID>		m_Shaders;
-	std::vector<VertexFormatID>	m_VertFormats;
+
+	std::vector<GCBatch> m_Batches;
 
 protected:
 	RESULT GCModel::Load(Chunk* data);
@@ -39,23 +75,21 @@ protected:
 	RESULT GCModel::Unload();
 
 public:
+	GCModel() : m_BDL(NULL) {}
 	~GCModel() 
 	{
-		for (uint i = 0; i < m_VertexData.size(); i++) {	free(m_VertexData[i]); }
-		for (uint i = 0; i < m_IndexData.size(); i++) {	free(m_IndexData[i]); }
+		for (uint i = 0; i < m_Batches.size(); i++) 
+		{	
+			free(m_Batches[i].vertexBuffer.data); 
+			free(m_Batches[i].indexBuffer.data); 
+		}
 	}
 
 	RESULT Init(Renderer *renderer);
 	RESULT Draw(Renderer *renderer, ID3D10Device *device);
 
-	int _debugDrawBatch;
+	DEBUG_ONLY(static int _debugDrawBatch);
 
 private:
-	RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph);
-
 	void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& s, const mat4& p = identity4(), bool onDown = true, int matIndex = 0);
-	void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex, const mat4 &parentMatrix);
-	
-	RESULT GCModel::findMatchingIndex(Index &point, int* index);
-
 };

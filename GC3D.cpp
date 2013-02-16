@@ -38,6 +38,23 @@ namespace GC3D
 		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 7
 	};
 
+	uint __AttribComponentSize[MAX_VERTEX_ATTRIBS] =
+	{
+		sizeof(uint) , // Matrix Index
+		sizeof(float), // Position
+		sizeof(float), // Normal
+		sizeof(ubyte), // Color 0
+		sizeof(ubyte), // Color 1
+		sizeof(float), // Texture Coordinate 0
+		sizeof(float), // Texture Coordinate 1
+		sizeof(float), // Texture Coordinate 2
+		sizeof(float), // Texture Coordinate 3
+		sizeof(float), // Texture Coordinate 4
+		sizeof(float), // Texture Coordinate 5
+		sizeof(float), // Texture Coordinate 6
+		sizeof(float), // Texture Coordinate 7
+	};
+
 	const char* __ShaderSwitches[MAX_VERTEX_ATTRIBS] =
 	{
 		"#define HAS_MATRICES\n",

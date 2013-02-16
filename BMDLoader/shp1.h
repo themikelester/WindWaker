@@ -25,11 +25,11 @@ enum BatchAttributeFlags
 
 struct Index
 {
-  u16 matrixIndex;
-  u16 posIndex;
-  u16 normalIndex;
-  u16 colorIndex[2];
-  u16 texCoordIndex[8];
+  u16 matrixIndex;		// Index into matrix table. Divide by 3 to find real index. 0 > i > 10
+  u16 posIndex;			// Index into vertex list in vtx1.positions . 0 > i > vtx1.positions.length
+  u16 normalIndex;		// Index into normal list in vtx1.normals . 0 > i > vtx1.normals.length
+  u16 colorIndex[2];	// Index into colors list in vtx1.colors . 0 > i > vtx1.colors.length
+  u16 texCoordIndex[8];	// Index into texture coordinate list in vtx1.texCoords . 0 > i > vtx1.texCoords.length
 };
 
 enum PrimType_t
