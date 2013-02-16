@@ -23,6 +23,7 @@ namespace GC3D
 
 	FormatDesc __GCformat[MAX_VERTEX_ATTRIBS] =
 	{
+		// Stream, Type, Format, Size
 		{ 0, TYPE_GENERIC,	FORMAT_UINT,  1 }, // Matrix Index
 		{ 0, TYPE_VERTEX,   FORMAT_FLOAT, 3 }, // Position
 		{ 0, TYPE_NORMAL,   FORMAT_FLOAT, 3 }, // Normal
@@ -65,6 +66,12 @@ namespace GC3D
 	{
 		MAKE_DELETE(ALLOC_DEFAULT, Hash<ShaderID>, __shaderMap);
 		MAKE_DELETE(ALLOC_DEFAULT, Hash<VertexFormatID>, __vertexFormatMap);
+	}
+
+	int GetAttributeSize (Renderer* renderer, u16 attrib)
+	{
+		uint attribIndex = log10(attrib) / log10(2);
+		return __GCformat[attribIndex].size * renderer->getFormatSize(__GCformat[attribIndex].format);
 	}
 
 	int GetVertexSize (Renderer* renderer, u16 attribFlags)

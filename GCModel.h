@@ -56,6 +56,7 @@ private:
 	void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& s, const mat4& p = identity4(), bool onDown = true, int matIndex = 0);
 	void GCModel::drawBatch(Renderer *renderer, ID3D10Device *device, int batchIndex, const mat4 &parentMatrix);
 	
+	RESULT GCModel::buildVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs);
 	RESULT GCModel::findMatchingIndex(Index &point, int* index);
 
 };

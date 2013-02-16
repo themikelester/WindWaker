@@ -8,7 +8,8 @@ namespace GC3D
 {
 	void Init();
 	void Shutdown();
-
+	
+	int GetAttributeSize (Renderer* renderer, u16 attrib);
 	int GetVertexSize (Renderer* renderer, u16 attribFlags);
 
 	ShaderID CreateShader (Renderer* renderer, u16 attribFlags);

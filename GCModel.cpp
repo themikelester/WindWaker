@@ -8,7 +8,6 @@ void adjustMatrix(mat4& mat, u8 matrixType);
 mat4 localMatrix(int i, const BModel* bm);
 void updateMatrixTable(const BModel* bmd, const Packet& packet, 
 					   u8 matrixType, mat4* matrixTable, bool* isMatrixWeighted);
-RESULT buildVertex(ubyte* dst, Index &point, u16 attribs, BModel* bdl);
 // ------------------------------------------------------------------------------ //
 
 RESULT GCModel::Load(Chunk* data) 
@@ -141,9 +140,6 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 		int batchIndex = node->index;
 		Batch1& batch = m_BDL->shp1.batches[batchIndex];
 		
-		// TODO: LIMIT BATCH ATTRIBUTES TO POSITION AND MATRICES RIGHT NOW
-		batch.attribs &= (HAS_POSITIONS | HAS_MATRIX_INDICES);
-
 		int pointCount = 0;
 		int primCount = 0;
 
@@ -196,7 +192,7 @@ RESULT GCModel::initBatches(Renderer *renderer, const SceneGraph& scenegraph)
 					{
 						// Build the vertex and add it to the buffer
 						ubyte* nextVertex = &vertexBuffer[vertexSize * vertexCount];
-						buildVertex(nextVertex, *point, batch.attribs, m_BDL);
+						buildVertex(renderer, nextVertex, *point, batch.attribs);
 						
 						vertexCount += 1;
 						vbIndex = vertexCount - 1;
@@ -398,28 +394,68 @@ void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, m
 	}
 }
 
-static RESULT buildVertex(ubyte* dst, Index &point, u16 attribs, BModel* bdl)
+RESULT GCModel::buildVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs)
 {
+	uint attribSize;
+	
 	// For now, only use position
 	if ( (attribs & HAS_POSITIONS) == false )
 		WARN("Model does not have required attributes");
 
 	// TODO: Fix the uint cast. Perhaps we can keep it as a u16 somehow? Depends on HLSL
 	if (attribs & HAS_MATRIX_INDICES) {
+		attribSize = GC3D::GetAttributeSize(renderer, HAS_MATRIX_INDICES);
 		ASSERT(point.matrixIndex/3 < 10); 
 		uint matrixIndex = point.matrixIndex/3;
-		memcpy(dst, &matrixIndex, sizeof(uint));
-		dst += sizeof(uint);
+		memcpy(dst, &matrixIndex, attribSize);
+		dst += attribSize;
 	}
 
 	if (attribs & HAS_POSITIONS) {
-		memcpy(dst, bdl->vtx1.positions[point.posIndex], sizeof(float3));
-		dst += sizeof(float3);
+		attribSize = GC3D::GetAttributeSize(renderer, HAS_POSITIONS);
+		memcpy(dst, m_BDL->vtx1.positions[point.posIndex], attribSize);
+		dst += attribSize;
 	}
 
 	if (attribs & HAS_NORMALS) {
-		memcpy(dst, bdl->vtx1.normals[point.normalIndex], sizeof(float3));
-		dst += sizeof(float3);
+		attribSize = GC3D::GetAttributeSize(renderer, HAS_NORMALS);
+		memcpy(dst, m_BDL->vtx1.normals[point.normalIndex], attribSize);
+		dst += attribSize;
+	}
+
+	for (uint i = 0; i < 2; i++)
+	{
+		u16 colorAttrib = HAS_COLORS0 << i;
+
+		if (attribs & colorAttrib) {
+			Color c = m_BDL->vtx1.colors[i][point.colorIndex[i]];
+
+			ASSERT(sizeof(c.a) == sizeof(dst[0]));
+			dst[0] = c.r;
+			dst[1] = c.g;
+			dst[2] = c.b;
+			dst[3] = c.a;
+			
+			attribSize = GC3D::GetAttributeSize(renderer, colorAttrib);
+			ASSERT(attribSize == sizeof(c.r) + sizeof(c.g) + sizeof(c.b) + sizeof(c.a));
+			dst += attribSize;
+		}
+	}
+
+	for (uint i = 0; i < 8; i++)
+	{
+		u16 texAttrib = HAS_TEXCOORDS0 << i;
+		float* dstFloat = (float*)dst;
+
+		if (attribs & texAttrib) {
+			TexCoord t = m_BDL->vtx1.texCoords[i][point.texCoordIndex[i]];
+			dstFloat[0] = t.s;
+			dstFloat[1] = t.t;
+			
+			attribSize = GC3D::GetAttributeSize(renderer, texAttrib);
+			ASSERT(attribSize == sizeof(t.s) + sizeof(t.t));
+			dst += attribSize;
+		}
 	}
 
 	return S_OK;
