@@ -28,7 +28,7 @@ struct GCBatch
 		IndexBufferID	id;		// ID of buffer in rendering engine
 		u16*			data;	// pointer to actual data stored in buffer... 
 								//		Debug only, a copy is made so this is not needed.
-		uint			size;	// number of elements in buffer
+		uint			count;	// number of elements in buffer
 	};
 
 	struct GCVertexBuffer
@@ -36,7 +36,7 @@ struct GCBatch
 		VertexBufferID	id;		// ID of buffer in rendering engine
 		ubyte*			data;	// pointer to actual data stored in buffer... 
 								//		Debug only, a copy is made so this is not needed.
-		uint			size;	// number of vertices in buffer
+		uint			count;	// number of vertices in buffer
 	};
 	
 	foundation::Hash<u16>* indexMap;

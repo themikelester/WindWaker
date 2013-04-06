@@ -222,8 +222,8 @@ RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer)
 				static const uint64_t seed = 101;
 
 				// Add the index of this vertex to our index buffer (every time)
-				uint64_t hashKey = foundation::murmur_hash_64(&point, sizeof(point), seed);
-				if (false && foundation::hash::has(*indexMap, hashKey))
+				uint64_t hashKey = foundation::murmur_hash_64(point._Ptr, sizeof(Index), seed);
+				if (foundation::hash::has(*indexMap, hashKey))
 				{
 					// An equivalent vertex already exists, use that index
 					index = foundation::hash::get(*indexMap, hashKey, u16(0));
@@ -250,13 +250,13 @@ RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer)
 	}
 		
 	// Register our vertex buffer
-	vertexBuffer.id = renderer->addVertexBuffer(bufferSize, STATIC, vertices);
+	vertexBuffer.id = renderer->addVertexBuffer(vertexCount * vertexSize, STATIC, vertices);
 	vertexBuffer.data = vertices;
-	vertexBuffer.size = vertexCount;
+	vertexBuffer.count = vertexCount;
 
 	indexBuffer.id = renderer->addIndexBuffer(indexCount, 2, STATIC, indices);
 	indexBuffer.data = indices;
-	indexBuffer.size = indexCount;
+	indexBuffer.count = indexCount;
 
 	return S_OK;
 }
