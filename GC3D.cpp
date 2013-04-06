@@ -87,7 +87,7 @@ namespace GC3D
 
 	int GetAttributeSize (Renderer* renderer, u16 attrib)
 	{
-		uint attribIndex = log10(attrib) / log10(2);
+		uint attribIndex = uint(log10(attrib) / log10(2));
 		return __GCformat[attribIndex].size * renderer->getFormatSize(__GCformat[attribIndex].format);
 	}
 
