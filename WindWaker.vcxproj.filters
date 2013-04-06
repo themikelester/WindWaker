@@ -175,9 +175,6 @@
     <ClInclude Include="Package.h">
       <Filter>Assets</Filter>
     </ClInclude>
-    <ClInclude Include="GCModel.h">
-      <Filter>Assets</Filter>
-    </ClInclude>
     <ClInclude Include="AssMan.h">
       <Filter>Assets</Filter>
     </ClInclude>
@@ -232,6 +229,7 @@
       <Filter>Assets</Filter>
     </ClInclude>
     <ClInclude Include="Util.h" />
+    <ClInclude Include="GCModel.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Framework3">

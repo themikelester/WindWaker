@@ -1,8 +1,8 @@
 #pragma once
 #include <assert.h>
 
-#ifdef DEBUG
-#	define DEBUG_ONLY(x) (x)
+#ifdef _DEBUG
+#	define DEBUG_ONLY(x) x
 #else
 #	define DEBUG_ONLY(x)
 #endif 
