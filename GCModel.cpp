@@ -72,7 +72,6 @@ RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &paren
 
 		device->DrawIndexed(packet->indexCount, numIndicesSoFar, 0);	
 		numIndicesSoFar += packet->indexCount;
-		return S_OK;
 	}
 
 	return S_OK;
@@ -179,7 +178,7 @@ RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer)
 	// A point is a struct of indexes that point to each attribute of the 3D vertex
 	// pointCount represents the maximum number of vertices needed. If we find dups, there may be less.
 	// TODO: Move this to loading code
-	STL_FOR_EACH(packet, batch->packets)
+	STL_FOR_EACH(packet, packets)
 	{
 		STL_FOR_EACH(prim, packet->primitives)
 		{
@@ -213,7 +212,7 @@ RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer)
 	int indexCount = 0;
 	int vertexCount = 0; 
 	int packetIndexOffset = 0;
-	STL_FOR_EACH(packet, batch->packets)
+	STL_FOR_EACH(packet, packets)
 	{
 		STL_FOR_EACH(prim, packet->primitives)
 		{
