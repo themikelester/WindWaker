@@ -108,6 +108,7 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="AssMan.cpp" />
+    <ClCompile Include="Common\Debug.cpp" />
     <ClCompile Include="Common\Foundation\memory.cpp" />
     <ClCompile Include="Common\Foundation\murmur_hash.cpp" />
     <ClCompile Include="Common\Foundation\string_stream.cpp" />
