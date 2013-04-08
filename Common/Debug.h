@@ -7,11 +7,14 @@
 #	define DEBUG_ONLY(x)
 #endif 
 
+extern char _DEBUG_BUFFER[256];
+
 // debugging macros so we can pin down message origin at a glance
 #define WHERESTR  " [file %s, line %d]: "
 #define WHEREARG  __FILE__, __LINE__
 
-#define DEBUGPRINT(type, ...) {fprintf(stderr, type##WHERESTR##, WHEREARG); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n");}
+#define DEBUGPRINT(type, ...) { snprintf(_DEBUG_BUFFER, 256, __VA_ARGS__); outputDebugString(_DEBUG_BUFFER);}
+//fprintf(stderr, type##WHERESTR##, WHEREARG); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n");
 
 //#if ENABLE_ASSERTIONS
 //	#define ASSERT(exp) assert(exp)
