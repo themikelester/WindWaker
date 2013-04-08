@@ -87,6 +87,15 @@ cbuffer g_PerFrame
 
 cbuffer PerBatch
 {
+	//FORMAT_R8;
+	//FORMAT_RG8;
+	//FORMAT_RGBA8;
+	//FORMAT_DXT1;
+	int TexFormat;
+}
+
+cbuffer PerPacket
+{
 	float4x4 ModelMat[10];
 }
 	
@@ -128,6 +137,8 @@ struct VsIn
 struct PsIn
 {
 	float4 Position : SV_Position;
+	IF_COLOR0(		uint4  Color0	: Color0	;)
+	IF_COLOR1(		uint4  Color1	: Color1	;)
 	IF_TEXCOORD0(	float2 TexCoord0: Texcoord0	;)
 	IF_TEXCOORD1(	float2 TexCoord1: Texcoord1	;)
 	IF_TEXCOORD2(	float2 TexCoord2: Texcoord2	;)
@@ -169,6 +180,8 @@ PsIn main(VsIn In)
 
 float4 main(PsIn In) : SV_Target
 {
+	float4 color;
+
 	IF_TEXCOORD0( float4 tex0 = Texture0.Sample( Sampler0, In.TexCoord0 ); )
 	IF_TEXCOORD1( float4 tex1 = Texture1.Sample( Sampler1, In.TexCoord1 ); )
 	IF_TEXCOORD2( float4 tex2 = Texture2.Sample( Sampler2, In.TexCoord2 ); )
@@ -179,7 +192,12 @@ float4 main(PsIn In) : SV_Target
 	IF_TEXCOORD7( float4 tex7 = Texture7.Sample( Sampler7, In.TexCoord7 ); )
 
 	// TODO: Use the TEV properties from the material to combine these
-	IF_TEXCOORD0( return tex0; )
+	IF_TEXCOORD0( color = tex0; )
 
-	return globalColor;
+	if (TexFormat == 3)
+	{
+		color.rgba = color.rrrg;
+	}
+
+	return color;
 }

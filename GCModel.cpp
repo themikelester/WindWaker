@@ -51,7 +51,8 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 	char textureName[9];
 
 	Material& mat = bmd->mat3.materials[bmd->mat3.indexToMatIndex[matIndex]];
-
+	
+	// Textures
 	for (uint i = 0; i < 8; i++)
 	{
 		uint stageIndex = mat.texStages[i];
@@ -68,6 +69,8 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 		//TODO: we'll need separate indexes once we stop creating a texture for every sampler
 		renderer->setSamplerState(samplerName, model->m_Samplers[texIndex]);
 		renderer->setTexture(textureName, model->m_Textures[texIndex]);
+		
+		renderer->setShaderConstant1i("TexFormat", bmd->tex1.imageHeaders[texIndex].data->format);
 
 		ImageHeader& tex = bmd->tex1.imageHeaders[texIndex];
 	}
@@ -92,12 +95,13 @@ RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &paren
 	{
 		// Setup Matrix table
 		updateMatrixTable(bmd, *packet, matrixType, matrixTable, isMatrixWeighted);	
-		
+
 		renderer->reset();
 			renderer->setShader(shader);
 			renderer->setVertexFormat(vertexFormat);
 			renderer->setVertexBuffer(0, vertexBuffer.id);
 			renderer->setIndexBuffer(indexBuffer.id);
+			renderer->setBlendState(model->SrcAlphaBlendState);
 			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, packet->matrixTable.size());
 			applyMaterial(renderer, matIndex);
 		renderer->apply();
@@ -400,6 +404,10 @@ RESULT GCModel::Init(Renderer *renderer)
 
 	// Load textures
 	initTextures(renderer);
+
+	// Load Materials
+	// TODO: HACK: This blend state should probably be based on the material
+	SrcAlphaBlendState = renderer->addBlendState(SRC_ALPHA, ONE_MINUS_SRC_ALPHA);
 
 	// Init all batches
 	int numBatches = m_BDL->shp1.batches.size();

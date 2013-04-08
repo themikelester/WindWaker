@@ -76,6 +76,9 @@ private:
 	SceneGraph		m_Scenegraph;
 	BModel*			m_BDL;
 
+	//TODO: Remove, this is a hack!
+	BlendStateID SrcAlphaBlendState;
+
 	std::vector<GCBatch> m_Batches;
 	std::vector<TextureID> m_Textures;
 	std::vector<SamplerStateID> m_Samplers;
