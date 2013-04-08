@@ -83,6 +83,7 @@
     <ClCompile Include="GC3D.cpp" />
     <ClCompile Include="Util.cpp" />
     <ClCompile Include="Common\Debug.cpp" />
+    <ClCompile Include="GeneratePS.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />

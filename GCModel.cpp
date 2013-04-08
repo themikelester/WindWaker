@@ -409,6 +409,9 @@ RESULT GCModel::Init(Renderer *renderer)
 	// TODO: HACK: This blend state should probably be based on the material
 	SrcAlphaBlendState = renderer->addBlendState(SRC_ALPHA, ONE_MINUS_SRC_ALPHA);
 
+	// Let's just try this real quick...
+	std::string ps = GC3D::GeneratePS(&m_BDL->mat3, 0);
+
 	// Init all batches
 	int numBatches = m_BDL->shp1.batches.size();
 	m_Batches.resize(numBatches);

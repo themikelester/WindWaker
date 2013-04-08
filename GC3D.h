@@ -4,6 +4,7 @@
 #include "Foundation\collection_types.h"
 #include "Common\Types.h"
 #include "BMDLoader\tex1.h"
+#include "BMDLoader\mat3.h"
 
 namespace GC3D
 {
@@ -21,5 +22,7 @@ namespace GC3D
 	
 	ShaderID GetShader (Renderer* renderer, u16 attribFlags);
 	VertexFormatID GetVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader);
+
+	std::string GeneratePS(Mat3* matInfo, int index);
 
 } // namespace GC3D
