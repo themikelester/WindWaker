@@ -42,7 +42,38 @@ RESULT GCModel::Unload()
 	return r;
 }
 
-RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &parentMatrix)
+void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
+{
+	static const char constSamplerName[] = "SamplerI";
+	static const char constTextureName[] = "TextureI";
+	
+	char samplerName[9];
+	char textureName[9];
+
+	Material& mat = bmd->mat3.materials[bmd->mat3.indexToMatIndex[matIndex]];
+
+	for (uint i = 0; i < 8; i++)
+	{
+		uint stageIndex = mat.texStages[i];
+		if (stageIndex == 0xffff)
+			continue;
+
+		uint texIndex = bmd->mat3.texStageIndexToTextureIndex[stageIndex];
+
+		memcpy(samplerName, constSamplerName, 9);
+		memcpy(textureName, constTextureName, 9);
+		samplerName[7] = '0' + i;
+		textureName[7] = '0' + i;
+
+		//TODO: we'll need separate indexes once we stop creating a texture for every sampler
+		renderer->setSamplerState(samplerName, model->m_Samplers[texIndex]);
+		renderer->setTexture(textureName, model->m_Textures[texIndex]);
+
+		ImageHeader& tex = bmd->tex1.imageHeaders[texIndex];
+	}
+}
+
+RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &parentMatrix, int matIndex)
 {
 #ifdef _DEBUG
 	// Only draw the selected batch
@@ -63,11 +94,12 @@ RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &paren
 		updateMatrixTable(bmd, *packet, matrixType, matrixTable, isMatrixWeighted);	
 		
 		renderer->reset();
-		renderer->setShader(shader);
-		renderer->setVertexFormat(vertexFormat);
-		renderer->setVertexBuffer(0, vertexBuffer.id);
-		renderer->setIndexBuffer(indexBuffer.id);
-		renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, packet->matrixTable.size());
+			renderer->setShader(shader);
+			renderer->setVertexFormat(vertexFormat);
+			renderer->setVertexBuffer(0, vertexBuffer.id);
+			renderer->setIndexBuffer(indexBuffer.id);
+			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, packet->matrixTable.size());
+			applyMaterial(renderer, matIndex);
 		renderer->apply();
 
 		device->DrawIndexed(packet->indexCount, numIndicesSoFar, 0);	
@@ -110,8 +142,7 @@ void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const Sce
 		{
 			//TODO: it's not sure that all matrices required by this call
 			//are already calculated...
-			//applyMaterial(matIndex, m, *m.oglBlock);
-			m_Batches[scenegraph.index].Draw(renderer, device, tempMat);
+			m_Batches[scenegraph.index].Draw(renderer, device, tempMat, matIndex);
 		} 
 	}
 	}
@@ -121,8 +152,7 @@ void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const Sce
 
 	if (scenegraph.type == SG_PRIM && !onDown) 
 	{
-		//applyMaterial(matIndex, m, *m.oglBlock);
-		m_Batches[scenegraph.index].Draw(renderer, device, tempMat);
+		m_Batches[scenegraph.index].Draw(renderer, device, tempMat, matIndex);
 	}
 }
 
@@ -193,14 +223,14 @@ RESULT buildVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs, Vt
 	return S_OK;
 }
 
-RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer)
+RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer, GCModel* model)
 {
 	// Initialize members that need initializing
+	this->model = model;
 	indexMap = new foundation::Hash<u16>(foundation::memory_globals::default_allocator());
 
 	Batch1* batch = &bdl->shp1.batches[index];
 
-	// TODO: REMOVE LIMIT BATCH ATTRIBUTES TO POSITION AND MATRICES
 	attribs = batch->attribs;
 	batchIndex = index;
 	bmd = bdl;
@@ -310,6 +340,47 @@ RESULT GCBatch::Shutdown()
 	return r;
 }
 
+
+RESULT GCModel::initTextures(Renderer *renderer)
+{
+	HRESULT r = S_OK;
+
+	// TODO: We don't need to create a new texture every time, because sometimes the imgHdr->data pointers will be duplicates
+	STL_FOR_EACH(imgHdr, m_BDL->tex1.imageHeaders)
+	{
+		TextureID tid = GC3D::CreateTexture(renderer, imgHdr->data);
+		if (tid == TEXTURE_NONE)
+		{
+			// TODO: Assign default texture
+			WARN("Failed to load texture");
+			//hr = S_FALSE;
+			IFC(E_FAIL);
+		}
+
+		SamplerStateID ssid = GC3D::CreateSamplerState(renderer, imgHdr._Ptr);
+		if (ssid == SS_NONE)
+		{
+			// TODO: Assign default sampler
+			WARN("Failed to create sampler state");
+			//hr = S_FALSE;
+			IFC(E_FAIL);
+		}
+
+		m_Textures.push_back(tid);
+		m_Samplers.push_back(ssid);
+	}
+cleanup:
+	if FAILED(r)
+	{
+		STL_FOR_EACH(tex, m_Textures)
+		{
+			renderer->removeTexture(*tex);
+		}
+	}
+
+	return r;
+}
+
 RESULT GCModel::Init(Renderer *renderer)
 {	
 	RESULT r = S_OK; 
@@ -327,6 +398,9 @@ RESULT GCModel::Init(Renderer *renderer)
 
 	DEBUG_ONLY( GCModel::_debugDrawBatch = -1 );
 
+	// Load textures
+	initTextures(renderer);
+
 	// Init all batches
 	int numBatches = m_BDL->shp1.batches.size();
 	m_Batches.resize(numBatches);
@@ -336,7 +410,7 @@ RESULT GCModel::Init(Renderer *renderer)
 		if (node->type != SG_PRIM) continue;
 
 		int batchIndex = node->index;
-		IFC( m_Batches[batchIndex].Init(batchIndex, m_BDL, renderer) );
+		IFC( m_Batches[batchIndex].Init(batchIndex, m_BDL, renderer, this) );
 	}
 
 cleanup:

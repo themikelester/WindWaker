@@ -176,4 +176,86 @@ namespace GC3D
 		return vfID;
 	}
 
+	FORMAT ConvertGCFormat(int format)
+	{
+		switch (format)
+		{
+		//TODO: Are these supposed to be signed formats or not?
+		case I8:	return FORMAT_R8;
+		case I8_A8:	return FORMAT_RG8;
+		case RGBA8: return FORMAT_RGBA8;
+		case DXT1:	return FORMAT_DXT1;
+		case 0xff: //Error case, fall through to default
+		default: WARN("Unknown texture format %u. Refusing to load.", format); return FORMAT_NONE;
+		}
+	}
+	
+	// TODO: DX has support for Mirror address mode. Add support for this in the renderer
+	AddressMode ConvertGCAddressMode(int addressMode)
+	{
+	    //from gx.h:
+	    //0: clamp to edge
+	    //1: repeat
+	    //2: mirror
+		switch (addressMode)
+		{
+		case 0: return CLAMP;
+		case 1: return WRAP;
+		case 2: WARN("Address mode 'Mirror' is currently unsupported. Defaulting to 'Clamp'"); return CLAMP;
+		default: WARN("Adress mode not found. Defaulting to 'Clamp'"); return CLAMP;
+		}
+	}
+	
+	// TODO: DX supports min and mag filters. Add support to the renderer so that we can use both.
+	Filter ConvertGCTextureFilters(int minFilter, int magFilter)
+	{
+		if (magFilter != minFilter)
+			WARN("Renderer does not support different texture filter types for Minification and Magnification. Rendering may be incorrect");
+
+		//0 - nearest
+		//1 - linear
+		//2 - near_mip_near
+		//3 - lin_mip_near
+		//4 - near_mip_lin
+		//5 - lin_mip_lin
+		switch (magFilter)
+		{
+		case 0: return NEAREST;
+		case 1: return LINEAR; 
+		case 2: return NEAREST;
+		case 3: return LINEAR; 
+		case 4: return TRILINEAR;
+		case 5: return TRILINEAR;
+		default: WARN("Unknown filter type. Reverting to NEAREST"); 
+			return NEAREST; 
+		}
+	}
+
+	SamplerStateID CreateSamplerState(Renderer* renderer, ImageHeader* imgHdr)
+	{
+		return renderer->addSamplerState(
+					ConvertGCTextureFilters(imgHdr->magFilter, imgHdr->minFilter), 
+					ConvertGCAddressMode(imgHdr->wrapS), 
+					ConvertGCAddressMode(imgHdr->wrapT),
+					CLAMP);
+	}
+
+	TextureID CreateTexture (Renderer* renderer, Image1* img)
+	{
+		Image imgResource;
+
+		FORMAT format = ConvertGCFormat(img->format);
+		if (format == FORMAT_NONE)
+		{
+			// Fail if we can't determine the format
+			return TEXTURE_NONE;
+		}
+
+		// This is probably reading the mipmap data incorrectly
+		imgResource.loadFromMemory(&img->imageData[0], format, 
+			img->width, img->height, 1, img->mipmaps.size(), false);
+		
+		return renderer->addTexture(imgResource);
+	}
+
 } // namespace GC3D

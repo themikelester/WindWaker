@@ -21,6 +21,8 @@ protected:
 	static foundation::Allocator* _allocator;
 };
 
+class GCModel;
+
 struct GCBatch 
 {
 	struct GCIndexBuffer
@@ -53,21 +55,30 @@ struct GCBatch
 	ShaderID		shader;
 	VertexFormatID	vertexFormat;
 
+	GCModel*		model;
+
 	// Debug
 	uint batchIndex; // Batch index in relation to the whole bmodel
 	
-	RESULT Init(uint index, BModel *bdl, Renderer *renderer);
+	RESULT Init(uint index, BModel *bdl, Renderer *renderer, GCModel* model);
 	RESULT Shutdown();
-	RESULT Draw(Renderer *renderer, ID3D10Device *device, const mat4 &parentMatrix);
+	RESULT Draw(Renderer *renderer, ID3D10Device *device, const mat4 &parentMatrix, int matIndex);
+
+	void applyMaterial(Renderer* renderer, int matIndex);
+
 };
 
 class GCModel : public Asset
 {
+	friend struct GCBatch;
+
 private:
 	SceneGraph		m_Scenegraph;
 	BModel*			m_BDL;
 
 	std::vector<GCBatch> m_Batches;
+	std::vector<TextureID> m_Textures;
+	std::vector<SamplerStateID> m_Samplers;
 
 protected:
 	RESULT GCModel::Load(Chunk* data);
@@ -92,4 +103,5 @@ public:
 
 private:
 	void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& s, const mat4& p = identity4(), bool onDown = true, int matIndex = 0);
+	RESULT GCModel::initTextures(Renderer *renderer);
 };

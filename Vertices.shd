@@ -89,6 +89,24 @@ cbuffer PerBatch
 {
 	float4x4 ModelMat[10];
 }
+	
+IF_TEXCOORD0( Texture2D Texture0;)
+IF_TEXCOORD1( Texture2D Texture1;)
+IF_TEXCOORD2( Texture2D Texture2;)
+IF_TEXCOORD3( Texture2D Texture3;)
+IF_TEXCOORD4( Texture2D Texture4;)
+IF_TEXCOORD5( Texture2D Texture5;)
+IF_TEXCOORD6( Texture2D Texture6;)
+IF_TEXCOORD7( Texture2D Texture7;)
+	
+IF_TEXCOORD0( SamplerState Sampler0;)
+IF_TEXCOORD1( SamplerState Sampler1;)
+IF_TEXCOORD2( SamplerState Sampler2;)
+IF_TEXCOORD3( SamplerState Sampler3;)
+IF_TEXCOORD4( SamplerState Sampler4;)
+IF_TEXCOORD5( SamplerState Sampler5;)
+IF_TEXCOORD6( SamplerState Sampler6;)
+IF_TEXCOORD7( SamplerState Sampler7;)
 
 struct VsIn
 {
@@ -110,6 +128,14 @@ struct VsIn
 struct PsIn
 {
 	float4 Position : SV_Position;
+	IF_TEXCOORD0(	float2 TexCoord0: Texcoord0	;)
+	IF_TEXCOORD1(	float2 TexCoord1: Texcoord1	;)
+	IF_TEXCOORD2(	float2 TexCoord2: Texcoord2	;)
+	IF_TEXCOORD3(	float2 TexCoord3: Texcoord3	;)
+	IF_TEXCOORD4(	float2 TexCoord4: Texcoord4	;)
+	IF_TEXCOORD5(	float2 TexCoord5: Texcoord5	;)
+	IF_TEXCOORD6(	float2 TexCoord6: Texcoord6	;)
+	IF_TEXCOORD7(	float2 TexCoord7: Texcoord7	;)
 };
 
 [Vertex shader]
@@ -125,6 +151,15 @@ PsIn main(VsIn In)
 
 	position = mul(ModelMat[matIndex], position);
 	Out.Position = mul(WorldViewProj, position);
+	
+	IF_TEXCOORD0( Out.TexCoord0 = In.TexCoord0 ;)
+	IF_TEXCOORD1( Out.TexCoord0 = In.TexCoord1 ;)
+	IF_TEXCOORD2( Out.TexCoord0 = In.TexCoord2 ;)
+	IF_TEXCOORD3( Out.TexCoord0 = In.TexCoord3 ;)
+	IF_TEXCOORD4( Out.TexCoord0 = In.TexCoord4 ;)
+	IF_TEXCOORD5( Out.TexCoord0 = In.TexCoord5 ;)
+	IF_TEXCOORD6( Out.TexCoord0 = In.TexCoord6 ;)
+	IF_TEXCOORD7( Out.TexCoord0 = In.TexCoord7 ;)
 
 	return Out;
 }
@@ -134,5 +169,17 @@ PsIn main(VsIn In)
 
 float4 main(PsIn In) : SV_Target
 {
+	IF_TEXCOORD0( float4 tex0 = Texture0.Sample( Sampler0, In.TexCoord0 ); )
+	IF_TEXCOORD1( float4 tex1 = Texture1.Sample( Sampler1, In.TexCoord1 ); )
+	IF_TEXCOORD2( float4 tex2 = Texture2.Sample( Sampler2, In.TexCoord2 ); )
+	IF_TEXCOORD3( float4 tex3 = Texture3.Sample( Sampler3, In.TexCoord3 ); )
+	IF_TEXCOORD4( float4 tex4 = Texture4.Sample( Sampler4, In.TexCoord4 ); )
+	IF_TEXCOORD5( float4 tex5 = Texture5.Sample( Sampler5, In.TexCoord5 ); )
+	IF_TEXCOORD6( float4 tex6 = Texture6.Sample( Sampler6, In.TexCoord6 ); )
+	IF_TEXCOORD7( float4 tex7 = Texture7.Sample( Sampler7, In.TexCoord7 ); )
+
+	// TODO: Use the TEV properties from the material to combine these
+	IF_TEXCOORD0( return tex0; )
+
 	return globalColor;
 }
