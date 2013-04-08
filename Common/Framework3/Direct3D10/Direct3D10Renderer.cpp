@@ -2133,14 +2133,14 @@ void Direct3D10Renderer::applyConstants(){
 		}
 		for (uint i = 0; i < shader->nGSCBuffers; i++){
 			if (shader->gsDirty[i]){
-				ASSERT(shader->vsConstMem[i] != NULL); // Ensure this is not a global buffer
+				ASSERT(shader->gsConstMem[i] != NULL); // Ensure this is not a global buffer
 				device->UpdateSubresource(shader->gsConstants[i], 0, NULL, shader->gsConstMem[i], 0, 0);
 				shader->gsDirty[i] = false;
 			}
 		}
 		for (uint i = 0; i < shader->nPSCBuffers; i++){
 			if (shader->psDirty[i]){
-				ASSERT(shader->vsConstMem[i] != NULL); // Ensure this is not a global buffer
+				ASSERT(shader->psConstMem[i] != NULL); // Ensure this is not a global buffer
 				device->UpdateSubresource(shader->psConstants[i], 0, NULL, shader->psConstMem[i], 0, 0);
 				shader->psDirty[i] = false;
 			}
