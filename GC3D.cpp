@@ -171,7 +171,7 @@ namespace GC3D
 		case GX_GEQUAL:	 depthFunc = GEQUAL;   break;
 		case GX_ALWAYS:	 depthFunc = ALWAYS;   break;
 		default:
-			WARN("unknown compare mode %d. Defaulting to 'ALWAYS'", mode.zFunc);
+			WARN("Unknown compare mode %d. Defaulting to 'ALWAYS'", mode.zFunc);
 			depthFunc = ALWAYS;
 		}
 
@@ -189,7 +189,7 @@ namespace GC3D
 		case GX_CULL_FRONT: cullMode = CULL_BACK; break;
 		case GX_CULL_ALL:   
 		default:
-			WARN("Unsupported cull mode. Defaulting to 'CULL_NONE'");
+			WARN("Unsupported cull mode %u. Defaulting to 'CULL_NONE'", gcCullMode);
 			cullMode = CULL_NONE;
 		}
 
@@ -209,7 +209,7 @@ namespace GC3D
 			case GX_BL_DSTALPHA		: return DST_ALPHA;
 			case GX_BL_INVDSTALPHA	: return ONE_MINUS_DST_ALPHA;
 			default:
-				WARN("Unknown blend factor. Defaulting to 'ONE'");
+				WARN("Unknown blend factor %u. Defaulting to 'ONE'", blendFactor);
 				return ONE;
 		}
 	}
@@ -239,7 +239,7 @@ namespace GC3D
 			case GX_BM_LOGIC:
 			case GX_MAX_BLENDMODE:
 			default:
-				WARN("Unsupported blend mode. Defaulting to 'BM_ADD'");
+				WARN("Unsupported blend mode %u. Defaulting to 'BM_ADD'", blendInfo.blendMode);
 				blendOp = BM_ADD;
 		}
 
@@ -290,7 +290,7 @@ namespace GC3D
 		case RGBA8: return FORMAT_RGBA8;
 		case DXT1:	return FORMAT_DXT1;
 		case 0xff: //Error case, fall through to default
-		default: WARN("Unknown texture format %u. Refusing to load.", format); return FORMAT_NONE;
+		default: WARN("Unknown texture format %u. Refusing to load", format); return FORMAT_NONE;
 		}
 	}
 	
@@ -306,7 +306,7 @@ namespace GC3D
 		case 0: return CLAMP;
 		case 1: return WRAP;
 		case 2: WARN("Address mode 'Mirror' is currently unsupported. Defaulting to 'Clamp'"); return CLAMP;
-		default: WARN("Adress mode not found. Defaulting to 'Clamp'"); return CLAMP;
+		default: WARN("Unsupported Address mode %u. Defaulting to 'Clamp'", addressMode); return CLAMP;
 		}
 	}
 	
@@ -330,7 +330,7 @@ namespace GC3D
 		case 3: return LINEAR; 
 		case 4: return TRILINEAR;
 		case 5: return TRILINEAR;
-		default: WARN("Unknown filter type. Reverting to NEAREST"); 
+		default: WARN("Unknown filter type %u. Reverting to NEAREST", magFilter); 
 			return NEAREST; 
 		}
 	}
