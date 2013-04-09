@@ -107,36 +107,39 @@ struct TevStageInfo
 struct Material
 {
   u8 flag;
-  u8 cullIndex;
+
+  // Unknown/Unused
   u8 numChansIndex;
-  u8 texGenCountIndex;
-  u8 tevCountIndex;
-
-  u8 zModeIndex;
-
+  
   u16 color1[2];
   u16 chanControls[4];
   u16 color2[2];
+  
+  // State settings
+  u16 alphaCompIndex;
+  u16 blendIndex;
+  u8 zModeIndex;
+  u8 cullIndex;
 
+  // Texture Units (8)
+  u8 texGenCountIndex;
   u16 texGenInfos[8];
-
   u16 texMtxInfos[8];
-
   u16 texStages[8];
-  //constColor (GX_TEV_KCSEL_K0-3)
-  u16 color3[4];
-  u8 constColorSel[16]; //0x0c most of the time (const color sel, GX_TEV_KCSEL_*)
-  u8 constAlphaSel[16]; //0x1c most of the time (const alpha sel, GX_TEV_KASEL_*)
+
+  // TEV Units (16)
+  u8 tevCountIndex;
+  u16 tevStageInfo[16];
   u16 tevOrderInfo[16];
+  u16 tevSwapModeInfo[16]; // TODO: Add WARN messages that this is unsupported
+  u16 tevSwapModeTable[4]; // TODO: Add WARN messages that this is unsupported
   //this is to be loaded into
   //GX_CC_CPREV - GX_CC_A2??
   u16 colorS10[4];
-  u16 tevStageInfo[16];
-  u16 tevSwapModeInfo[16];
-  u16 tevSwapModeTable[4];
 
-  u16 alphaCompIndex;
-  u16 blendIndex;
+  u16 color3[4]; // The Konst Color Registers. This is an index into the actual colors stored in Mat3::color3
+  u8 constColorSel[16]; //Inputs to GX_SetTevKColorSel. For each TEV Stage, binds a constant or a Konst Color Register value to the KONST register.
+  u8 constAlphaSel[16]; //Inputs to GX_SetTevKColorSel. For each TEV Stage, binds a constant or a Konst Color Register value to the KONST register.
 };
 
 struct Mat3

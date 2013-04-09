@@ -28,11 +28,11 @@ std::string GetVertColorString(const TevOrderInfo* texMapping)
 	{
 		case GX_COLOR0: return "In.Color0.rgb";
 		case GX_COLOR1: return "In.Color1.rgb";
-		case GX_ALPHA0: return "In.Color0.a";
-		case GX_ALPHA1: return "In.Color1.a";
+		case GX_ALPHA0: return "In.Color0.aaaa";
+		case GX_ALPHA1: return "In.Color1.aaaa";
 		case GX_COLOR0A0: return "In.Color0.rgba";
 		case GX_COLOR1A1: return "In.Color1.rgba";
-		case GX_COLORZERO: return "float3(0.0f)";
+		case GX_COLORZERO: return "0.0f.rrrr";
 		case GX_BUMP:
 		case GX_BUMPN:
 		case GX_COLORNULL:  
@@ -48,34 +48,34 @@ std::string GetKonstColorString(uint konst)
 {
 	switch (konst)
 	{
-		case GX_TEV_KCSEL_1:	return "float4(1.0f  ,1.0f   ,1.0f   ,1.0f)";
-		case GX_TEV_KCSEL_7_8:	return "float4(0.875f,0.875f ,0.875f ,0.875f)";
-		case GX_TEV_KCSEL_3_4:	return "float4(0.75f ,0.75f	 ,0.75f	 ,0.75f)";
-		case GX_TEV_KCSEL_5_8:	return "float4(0.625f,0.625f ,0.625f ,0.625f)";
-		case GX_TEV_KCSEL_1_2:	return "float4(0.5f	 ,0.5f	 ,0.5f	 ,0.5f)";	
-		case GX_TEV_KCSEL_3_8:	return "float4(0.375f,0.375f ,0.375f ,0.375f)";
-		case GX_TEV_KCSEL_1_4:	return "float4(0.25f ,0.25f	 ,0.25f	 ,0.25f)";
-		case GX_TEV_KCSEL_1_8:	return "float4(0.125f,0.125f ,0.125f ,0.125f)";
+		case GX_TEV_KCSEL_1:	return "1.0f.rrrr";
+		case GX_TEV_KCSEL_7_8:	return "0.875f.rrrr";
+		case GX_TEV_KCSEL_3_4:	return "0.75f.rrrr";
+		case GX_TEV_KCSEL_5_8:	return "0.625f.rrrr";
+		case GX_TEV_KCSEL_1_2:	return "0.5f.rrrr";	
+		case GX_TEV_KCSEL_3_8:	return "0.375f.rrrr";
+		case GX_TEV_KCSEL_1_4:	return "0.25f.rrrr";
+		case GX_TEV_KCSEL_1_8:	return "0.125f.rrrr";
 		case GX_TEV_KCSEL_K0:	return "konst0.rgba";
 		case GX_TEV_KCSEL_K1:	return "konst1.rgba";
 		case GX_TEV_KCSEL_K2:	return "konst2.rgba";
 		case GX_TEV_KCSEL_K3:	return "konst3.rgba";
-		case GX_TEV_KCSEL_K0_R: return "konst0.r";
-		case GX_TEV_KCSEL_K1_R:	return "konst1.r";
-		case GX_TEV_KCSEL_K2_R:	return "konst2.r";
-		case GX_TEV_KCSEL_K3_R:	return "konst3.r";
-		case GX_TEV_KCSEL_K0_G:	return "konst0.g";
-		case GX_TEV_KCSEL_K1_G:	return "konst1.g";
-		case GX_TEV_KCSEL_K2_G:	return "konst2.g";
-		case GX_TEV_KCSEL_K3_G:	return "konst3.g";
-		case GX_TEV_KCSEL_K0_B:	return "konst0.b";
-		case GX_TEV_KCSEL_K1_B:	return "konst1.b";
-		case GX_TEV_KCSEL_K2_B:	return "konst2.b";
-		case GX_TEV_KCSEL_K3_B:	return "konst3.b";
-		case GX_TEV_KCSEL_K0_A:	return "konst0.a";
-		case GX_TEV_KCSEL_K1_A:	return "konst1.a";
-		case GX_TEV_KCSEL_K2_A:	return "konst2.a";
-		case GX_TEV_KCSEL_K3_A:	return "konst3.a";
+		case GX_TEV_KCSEL_K0_R: return "konst0.rrrr";
+		case GX_TEV_KCSEL_K1_R:	return "konst1.rrrr";
+		case GX_TEV_KCSEL_K2_R:	return "konst2.rrrr";
+		case GX_TEV_KCSEL_K3_R:	return "konst3.rrrr";
+		case GX_TEV_KCSEL_K0_G:	return "konst0.gggg";
+		case GX_TEV_KCSEL_K1_G:	return "konst1.gggg";
+		case GX_TEV_KCSEL_K2_G:	return "konst2.gggg";
+		case GX_TEV_KCSEL_K3_G:	return "konst3.gggg";
+		case GX_TEV_KCSEL_K0_B:	return "konst0.bbbb";
+		case GX_TEV_KCSEL_K1_B:	return "konst1.bbbb";
+		case GX_TEV_KCSEL_K2_B:	return "konst2.bbbb";
+		case GX_TEV_KCSEL_K3_B:	return "konst3.bbbb";
+		case GX_TEV_KCSEL_K0_A:	return "konst0.aaaa";
+		case GX_TEV_KCSEL_K1_A:	return "konst1.aaaa";
+		case GX_TEV_KCSEL_K2_A:	return "konst2.aaaa";
+		case GX_TEV_KCSEL_K3_A:	return "konst3.aaaa";
 		default:
 			WARN("GetKonstColorString(): Unknown konstIndex 0x%x", konst);
 			return "float4(0.0f, 1.0f, 0.0f, 1.0f)";
@@ -132,13 +132,13 @@ std::string GetColorInString(uint inputType, uint konst, const TevOrderInfo* tex
 		case GX_CC_TEXA:	return GetTexTapString(texMapping) + ".aaa";
 		case GX_CC_RASC:	return GetVertColorString(texMapping) + ".rgb";
 		case GX_CC_RASA:	return GetVertColorString(texMapping) + ".aaa";
-		case GX_CC_ONE:		return "float3(1.0f, 1.0f, 1.0f)";
-		case GX_CC_HALF:	return "float3(0.5f, 0.5f, 0.5f)";
+		case GX_CC_ONE:		return "1.0f.rrr";
+		case GX_CC_HALF:	return "0.5f.rrr";
 		case GX_CC_KONST:	return GetKonstColorString(konst) + ".rgb";
-		case GX_CC_ZERO:	return "float3(0.0f, 0.0f, 0.0f)";
+		case GX_CC_ZERO:	return "0.0f.rrr";
 		default:
 			WARN("GetColorInString(): Unknown inputType %d", (u32)inputType);
-			return "float4(0.0f, 0.0f, 0.0f, 0.0f)";
+			return "0.0f.rrr";
 	}
 }
 
@@ -156,7 +156,7 @@ std::string GetAlphaInString(uint inputType, uint konst, const TevOrderInfo* tex
 	case GX_CA_ZERO:	return "0.0f";
 	default:
 		WARN("GetAlphaInString(): Unknown inputType %d", (u32)inputType);
-			return "float4(0.0f, 0.0f, 0.0f, 0.0f)";
+			return "0.0f";
 	}
 }
 
@@ -317,9 +317,9 @@ std::string GetAlphaOpString(uint op, uint bias, uint scale, uint clamp, uint ou
 	case GX_TEV_COMP_A8_EQ:
 		//out = (d + ((a.a > b.a) ? c : 0))
 		str << dest << " = " << "(" << input[3] << " + ((" 
-			<< input[0]+".a" 
-			<< (op == GX_TEV_COMP_R8_GT ? " > " : " == ") 
-			<< input[1]+".a" 
+			<< input[0] // This is guaranteed to be a single float, so we don't need a ".a"
+			<< (op == GX_TEV_COMP_A8_GT ? " > " : " == ") 
+			<< input[1] // This is guaranteed to be a single float, so we don't need a ".a"
 			<< ") ? " << input[2] << " : 0));\n";
 		break;
 
@@ -391,7 +391,7 @@ std::string GeneratePS(Mat3* matInfo, int index)
 	out << "float4 main(PsIn In) : SV_Target" << "\n";
 	out << "{" << "\n";
 
-	// Output registers. There are only 4.
+	// Define initial values of the TEV registers. There are only 4.
 	for (uint i = 0; i < 4; i++)
 	{
 		// TODO: Verify that this is correct

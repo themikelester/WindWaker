@@ -505,12 +505,14 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 	// Shaders
 	for (uint i = 0; i < nMaterials; i++)
 	{
+		// TODO: Create default on fail
 		shaders.push_back(GC3D::CreateShader(renderer, &m_BDL->mat3, i));
 	}
 	
 	// Depth State
 	for (uint i = 0; i < m_BDL->mat3.zModes.size(); i++)
 	{
+		// TODO: Create default on fail
 		ZMode gcZMode = m_BDL->mat3.zModes[i];
 		depthModes.push_back(GC3D::CreateDepthState(renderer, gcZMode));
 	}
@@ -518,6 +520,7 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 	// Cull State
 	for (uint i = 0; i < m_BDL->mat3.cullModes.size(); i++)
 	{
+		// TODO: Create default on fail
 		uint gcCullMode = m_BDL->mat3.cullModes[i];
 		cullModes.push_back(GC3D::CreateRasterizerState(renderer, gcCullMode));
 	}
@@ -525,6 +528,7 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 	// Blend State
 	for (uint i = 0; i < m_BDL->mat3.blendInfos.size(); i++)
 	{
+		// TODO: Create default on fail
 		BlendInfo gcBlendInfo = m_BDL->mat3.blendInfos[i];
 		blendModes.push_back(GC3D::CreateBlendState(renderer, gcBlendInfo));
 	}
