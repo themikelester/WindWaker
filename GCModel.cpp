@@ -60,6 +60,8 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 	renderer->setVertexFormat(model->hackFullVertFormat);
 
 	renderer->setDepthState(gcMat.depthState);
+	renderer->setBlendState(gcMat.blendState);
+	renderer->setRasterizerState(gcMat.rasterState);
 
 	// Textures
 	for (uint i = 0; i < 8; i++)
@@ -500,6 +502,13 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 		cullModes.push_back(GC3D::CreateRasterizerState(renderer, gcCullMode));
 	}
 
+	// Blend State
+	for (uint i = 0; i < m_BDL->mat3.blendInfos.size(); i++)
+	{
+		BlendInfo gcBlendInfo = m_BDL->mat3.blendInfos[i];
+		blendModes.push_back(GC3D::CreateBlendState(renderer, gcBlendInfo));
+	}
+
 	// Fixup our actual materials
 	for (uint i = 0; i < nMaterials; i++)
 	{
@@ -509,6 +518,7 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 		m_Materials[i].name = m_BDL->mat3.stringtable[i];
 		m_Materials[i].depthState = depthModes[mat.zModeIndex];
 		m_Materials[i].rasterState = cullModes[mat.cullIndex];
+		m_Materials[i].blendState = blendModes[mat.blendIndex];
 	}
 
 	return S_OK;

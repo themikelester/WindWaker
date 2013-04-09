@@ -185,8 +185,8 @@ namespace GC3D
 		switch(gcCullMode)
 		{
 		case GX_CULL_NONE:  cullMode = CULL_NONE; break;
-		case GX_CULL_BACK:  cullMode = CULL_BACK; break;
-		case GX_CULL_FRONT: cullMode = CULL_FRONT; break;
+		case GX_CULL_BACK:  cullMode = CULL_FRONT; break;
+		case GX_CULL_FRONT: cullMode = CULL_BACK; break;
 		case GX_CULL_ALL:   
 		default:
 			WARN("Unsupported cull mode. Defaulting to 'CULL_NONE'");
@@ -194,6 +194,56 @@ namespace GC3D
 		}
 
 		return renderer->addRasterizerState(cullMode);
+	}
+
+	int ConvertGCBlendFactor(int blendFactor)
+	{
+		switch (blendFactor)
+		{
+			case GX_BL_ZERO			: return ZERO;
+			case GX_BL_ONE			: return ONE;
+			case GX_BL_SRCCLR		: return SRC_COLOR;
+			case GX_BL_INVSRCCLR	: return ONE_MINUS_SRC_COLOR;
+			case GX_BL_SRCALPHA		: return SRC_ALPHA;
+			case GX_BL_INVSRCALPHA	: return ONE_MINUS_SRC_ALPHA;
+			case GX_BL_DSTALPHA		: return DST_ALPHA;
+			case GX_BL_INVDSTALPHA	: return ONE_MINUS_DST_ALPHA;
+			default:
+				WARN("Unknown blend factor. Defaulting to 'ONE'");
+				return ONE;
+		}
+	}
+
+	BlendStateID CreateBlendState (Renderer* renderer, BlendInfo blendInfo)
+	{
+		int srcFactor = ConvertGCBlendFactor(blendInfo.srcFactor);
+		int dstFactor = ConvertGCBlendFactor(blendInfo.dstFactor);
+		int blendOp;
+
+		switch (blendInfo.blendMode)
+		{
+			case GX_BM_NONE: 
+				srcFactor = ONE;
+				dstFactor = ZERO;
+				blendOp = BM_ADD;
+				break;
+
+			case GX_BM_BLEND: 
+				blendOp = BM_ADD; 
+				break;
+
+			case GX_BM_SUBSTRACT: 
+				blendOp = BM_SUBTRACT; 
+				break;
+
+			case GX_BM_LOGIC:
+			case GX_MAX_BLENDMODE:
+			default:
+				WARN("Unsupported blend mode. Defaulting to 'BM_ADD'");
+				blendOp = BM_ADD;
+		}
+
+		return renderer->addBlendState(srcFactor, dstFactor, blendOp);
 	}
 
 	ShaderID GetShader (Renderer* renderer, u16 attribFlags)

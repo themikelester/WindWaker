@@ -73,6 +73,7 @@ struct GCMaterial
 
 	ShaderID shader;
 	DepthStateID depthState;
+	BlendStateID blendState;
 	RasterizerStateID rasterState;
 };
 
