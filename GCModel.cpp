@@ -471,23 +471,44 @@ cleanup:
 
 RESULT GCModel::initMaterials(Renderer* renderer)
 {
-	for (uint i = 0; i < m_BDL->mat3.materials.size(); i++)
+	uint nMaterials = m_BDL->mat3.materials.size();
+	m_Materials.resize(nMaterials);
+	
+	std::vector<ShaderID> shaders;
+	std::vector<std::string> names;
+	std::vector<DepthStateID> depthModes;
+	std::vector<BlendStateID> blendModes;
+	std::vector<RasterizerStateID> cullModes;
+
+	// Shaders
+	for (uint i = 0; i < nMaterials; i++)
 	{
-		GCMaterial gcMat;
-		Material& mat = m_BDL->mat3.materials[m_BDL->mat3.indexToMatIndex[i]];
+		shaders.push_back(GC3D::CreateShader(renderer, &m_BDL->mat3, i));
+	}
+	
+	// Depth State
+	for (uint i = 0; i < m_BDL->mat3.zModes.size(); i++)
+	{
+		ZMode gcZMode = m_BDL->mat3.zModes[i];
+		depthModes.push_back(GC3D::CreateDepthState(renderer, gcZMode));
+	}
+	
+	// Cull State
+	for (uint i = 0; i < m_BDL->mat3.cullModes.size(); i++)
+	{
+		uint gcCullMode = m_BDL->mat3.cullModes[i];
+		cullModes.push_back(GC3D::CreateRasterizerState(renderer, gcCullMode));
+	}
 
-		// Generate and load a shader that will represent this material
-		gcMat.shader = GC3D::CreateShader(renderer, &m_BDL->mat3, i);
+	// Fixup our actual materials
+	for (uint i = 0; i < nMaterials; i++)
+	{
+		Material& mat = m_BDL->mat3.materials[i];
 
-		// Depth State
-		ZMode gcZMode = m_BDL->mat3.zModes[mat.zModeIndex];
-		gcMat.depthState = GC3D::CreateDepthState(renderer, gcZMode);
-
-		// Cull State
-		uint gcCullMode = m_BDL->mat3.cullModes[mat.cullIndex];
-		gcMat.rasterState = GC3D::CreateRasterizerState(renderer, gcCullMode);
-		
-		m_Materials.push_back(gcMat);
+		m_Materials[i].shader = shaders[i];
+		m_Materials[i].name = m_BDL->mat3.stringtable[i];
+		m_Materials[i].depthState = depthModes[mat.zModeIndex];
+		m_Materials[i].rasterState = cullModes[mat.cullIndex];
 	}
 
 	return S_OK;

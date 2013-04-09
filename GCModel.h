@@ -69,6 +69,8 @@ struct GCBatch
 
 struct GCMaterial
 {
+	std::string name;
+
 	ShaderID shader;
 	DepthStateID depthState;
 	RasterizerStateID rasterState;
