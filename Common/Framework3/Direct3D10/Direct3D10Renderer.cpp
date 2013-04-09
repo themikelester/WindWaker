@@ -1630,10 +1630,11 @@ VertexFormatID Direct3D10Renderer::addVertexFormat(const FormatDesc *formatDesc,
 		"Normal",
 		"Tangent",
 		"Binormal",
+		"Color",
 	};
 
 
-	int index[6];
+	int index[7];
 	memset(index, 0, sizeof(index));
 
 	VertexFormat vf;

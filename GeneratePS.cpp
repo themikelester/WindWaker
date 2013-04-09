@@ -2,13 +2,12 @@
 #include "gx.h"
 #include "BMDLoader\mat3.h"
 #include <sstream>
-#include "GC3D.h"
 
 
-const std::string varResultName = "out";
+const std::string varResultName = "result";
 const std::string varRegisterName[3] = {"r0", "r1", "r2"};
 
-std::string GetRegisterString(int regIndex)
+std::string GetRegisterString(uint regIndex)
 {
 	if (regIndex == 0) return varResultName;
 	else return varRegisterName[regIndex-1];
@@ -46,18 +45,18 @@ std::string GetVertColorString(const TevOrderInfo* texMapping)
 	}
 }
 
-std::string GetKonstColorString(int konst)
+std::string GetKonstColorString(uint konst)
 {
 	switch (konst)
 	{
-		case GX_TEV_KCSEL_1:	return "float4(1.0f)";
-		case GX_TEV_KCSEL_7_8:	return "float4(0.875f)";
-		case GX_TEV_KCSEL_3_4:	return "float4(0.75f)";
-		case GX_TEV_KCSEL_5_8:	return "float4(0.625f)";
-		case GX_TEV_KCSEL_1_2:	return "float4(0.5f)";
-		case GX_TEV_KCSEL_3_8:	return "float4(0.375f)";
-		case GX_TEV_KCSEL_1_4:	return "float4(0.25f)";
-		case GX_TEV_KCSEL_1_8:	return "float4(0.125f)";
+		case GX_TEV_KCSEL_1:	return "float4(1.0f  ,1.0f   ,1.0f   ,1.0f)";
+		case GX_TEV_KCSEL_7_8:	return "float4(0.875f,0.875f ,0.875f ,0.875f)";
+		case GX_TEV_KCSEL_3_4:	return "float4(0.75f ,0.75f	 ,0.75f	 ,0.75f)";
+		case GX_TEV_KCSEL_5_8:	return "float4(0.625f,0.625f ,0.625f ,0.625f)";
+		case GX_TEV_KCSEL_1_2:	return "float4(0.5f	 ,0.5f	 ,0.5f	 ,0.5f)";	
+		case GX_TEV_KCSEL_3_8:	return "float4(0.375f,0.375f ,0.375f ,0.375f)";
+		case GX_TEV_KCSEL_1_4:	return "float4(0.25f ,0.25f	 ,0.25f	 ,0.25f)";
+		case GX_TEV_KCSEL_1_8:	return "float4(0.125f,0.125f ,0.125f ,0.125f)";
 		case GX_TEV_KCSEL_K0:	return "konst0.rgba";
 		case GX_TEV_KCSEL_K1:	return "konst1.rgba";
 		case GX_TEV_KCSEL_K2:	return "konst2.rgba";
@@ -84,7 +83,7 @@ std::string GetKonstColorString(int konst)
 	}
 }
 
-std::string GetKonstAlphaString(int konst)
+std::string GetKonstAlphaString(uint konst)
 {
 	switch (konst)
 	{
@@ -118,7 +117,7 @@ std::string GetKonstAlphaString(int konst)
 	}						
 }							
 							
-std::string GetColorInString(int inputType, int konst, const TevOrderInfo* texMapping)
+std::string GetColorInString(uint inputType, uint konst, const TevOrderInfo* texMapping)
 {
 	switch (inputType)
 	{
@@ -134,17 +133,17 @@ std::string GetColorInString(int inputType, int konst, const TevOrderInfo* texMa
 		case GX_CC_TEXA:	return GetTexTapString(texMapping) + ".aaa";
 		case GX_CC_RASC:	return GetVertColorString(texMapping) + ".rgb";
 		case GX_CC_RASA:	return GetVertColorString(texMapping) + ".aaa";
-		case GX_CC_ONE:		return "float3(1.0f)";
-		case GX_CC_HALF:	return "float3(0.5f)";
+		case GX_CC_ONE:		return "float3(1.0f, 1.0f, 1.0f)";
+		case GX_CC_HALF:	return "float3(0.5f, 0.5f, 0.5f)";
 		case GX_CC_KONST:	return GetKonstColorString(konst) + ".rgb";
-		case GX_CC_ZERO:	return "float3(0.0f)";
+		case GX_CC_ZERO:	return "float3(0.0f, 0.0f, 0.0f)";
 		default:
 			WARN("GetColorInString(): Unknown inputType %d", (u32)inputType);
-			return "float4(0.0f)";
+			return "float4(0.0f, 0.0f, 0.0f, 0.0f)";
 	}
 }
 
-std::string GetAlphaInString(int inputType, int konst, const TevOrderInfo* texMapping)
+std::string GetAlphaInString(uint inputType, uint konst, const TevOrderInfo* texMapping)
 {
 	switch (inputType)
 	{
@@ -154,31 +153,63 @@ std::string GetAlphaInString(int inputType, int konst, const TevOrderInfo* texMa
 	case GX_CA_A2:		return GetRegisterString(3) + ".a";
 	case GX_CA_TEXA:	return GetTexTapString(texMapping) + ".a";
 	case GX_CA_RASA:	return GetVertColorString(texMapping) + ".a";
-	case GX_CA_KONST:	return GetKonstAlphaString(konst) + ".a";
+	case GX_CA_KONST:	return GetKonstAlphaString(konst);
 	case GX_CA_ZERO:	return "0.0f";
 	default:
 		WARN("GetAlphaInString(): Unknown inputType %d", (u32)inputType);
-		return "float4(0.0f)";
+			return "float4(0.0f, 0.0f, 0.0f, 0.0f)";
 	}
 }
 
-std::string GetModString(int outputRegIndex, int bias, int scale, bool clamp, bool isAlpha)
-{
-	static const float biasLUT[3] = {0, 0.5f, -0.5f};
-	static const float scaleLUT[4] = {1, 2, 4, 0.5f};
+std::string GetModString(uint outputRegIndex, uint bias, uint scale, uint clamp, bool isAlpha)
+{     
+	float biasVal = 0.0f;
+	float scaleVal = 1.0f;
+
+	switch (bias)
+	{
+	case GX_TB_ZERO:	 biasVal = 0.0f;  break;
+	case GX_TB_ADDHALF:	 biasVal = 0.5f;  break;
+	case GX_TB_SUBHALF:	 biasVal = -0.5f; break;
+	case GX_MAX_TEVBIAS: 
+	default: 
+		WARN("GetModString(): Unrecognized bias value. Defaulting to 0.0f");
+		biasVal = 0.0f;
+	}
+
+	switch (scale)
+	{
+	case GX_CS_SCALE_1:	 scaleVal = 1.0f; break;
+	case GX_CS_SCALE_2:	 scaleVal = 2.0f; break;
+	case GX_CS_SCALE_4:	 scaleVal = 4.0f; break;
+	case GX_CS_DIVIDE_2: scaleVal = 0.5f; break;
+	case GX_MAX_TEVSCALE:
+	default: 
+		WARN("GetModString(): Unrecognized scale value. Defaulting to 1.0f");
+		scaleVal = 1.0f;
+	}
+
+	if (scaleVal == 1.0f && biasVal == 0.0f && clamp == 0)
+		return "";
 	
 	std::string channelSelect = (isAlpha ? ".a" : ".rgb");
 	std::ostringstream out;
 	std::string dest = GetRegisterString(outputRegIndex) + channelSelect;
+	
+	// result = saturate(result);
+	if (scaleVal == 1.0f && biasVal == 0.0f)
+		out << dest << " = saturate(" << dest << ");";
+	else
+	{
+		// result = saturate(result * scale  + bias * scale);
+		out << dest << " = " << (clamp ? "saturate(" : "(") << dest << " * " 
+			<< scaleVal << " + " << biasVal * scaleVal << ");";
+	}
 
-	// result = saturate(result * scale  + bias * scale);
-	out << dest << " = " << (clamp ? "saturate(" : "(") << dest << " * " << scaleLUT[scale] 
-		<< " + " << biasLUT[bias] * scaleLUT[scale] << ");";
-
-	return out.str();
+	return out.str() + "\n";
 }
 
-std::string GetColorOpString(int op, int bias, int scale, bool clamp, int outputRegIndex, std::string input[4])
+std::string GetColorOpString(uint op, uint bias, uint scale, uint clamp, uint outputRegIndex, std::string input[4])
 {
 	std::string channelSelect = ".rgb";
 	std::ostringstream str;
@@ -190,14 +221,14 @@ std::string GetColorOpString(int op, int bias, int scale, bool clamp, int output
 		//out = (d + lerp(a, b, c));
 		str << dest << " = " << "(" << input[3] << " + lerp(" 
 			<< input[0] + ", " << input[1] + ", "  << input[2] << "));\n";
-		str << GetModString(outputRegIndex, bias, scale, clamp, false) + "\n";
+		str << GetModString(outputRegIndex, bias, scale, clamp, false);
 		break;
 
 	case GX_TEV_SUB:		
 		//out = (d - lerp(a, b, c));
 		//out = saturate(out * scale + result * scale);
 		str << dest << " = " << "(" << input[3] << " - lerp(" << input[0] + ", " << input[1] + ", " << input[2] << "));\n";
-		str << GetModString(outputRegIndex, bias, scale, clamp, false) + "\n";
+		str << GetModString(outputRegIndex, bias, scale, clamp, false);
 		break;
 
 	case GX_TEV_COMP_R8_GT:
@@ -254,14 +285,14 @@ std::string GetColorOpString(int op, int bias, int scale, bool clamp, int output
 	if (op > GX_TEV_SUB)
 	{
         //if(bias != 3 || scale != 1 || clamp != 1)
-		if(bias != 3 || scale != 0 || clamp != true)
+		if(bias != 3 || scale != 0 || clamp != 1)
           WARN("GetOpString(): Unexpected bias %d, scale %d, clamp %d for Comparison Operation", bias, scale, clamp);
 	}
 
-	return str.str();
+	return str.str() + "\n";
 }
 
-std::string GetAlphaOpString(int op, int bias, int scale, bool clamp, int outputRegIndex, std::string input[4])
+std::string GetAlphaOpString(uint op, uint bias, uint scale, uint clamp, uint outputRegIndex, std::string input[4])
 {
 	std::string channelSelect = ".a";
 	std::ostringstream str;
@@ -273,14 +304,14 @@ std::string GetAlphaOpString(int op, int bias, int scale, bool clamp, int output
 		//out = (d + lerp(a, b, c));
 		str << dest << " = " << "(" << input[3] << " + lerp(" 
 			<< input[0] + ", " << input[1] + ", "  << input[2] << "));\n";
-		str << GetModString(outputRegIndex, bias, scale, clamp, true) + "\n";
+		str << GetModString(outputRegIndex, bias, scale, clamp, true);
 		break;
 
 	case GX_TEV_SUB:		
 		//out = (d - lerp(a, b, c));
 		//out = saturate(out * scale + result * scale);
 		str << dest << " = " << "(" << input[3] << " - lerp(" << input[0] + ", "  << input[1] + ", "  << input[2] << "));\n";
-		str << GetModString(outputRegIndex, bias, scale, clamp, true) + "\n";
+		str << GetModString(outputRegIndex, bias, scale, clamp, true);
 		break;
 
 	case GX_TEV_COMP_A8_GT:	
@@ -298,17 +329,17 @@ std::string GetAlphaOpString(int op, int bias, int scale, bool clamp, int output
 		str << "ERROR! Unsupported TEV operation. Aborting\n";
 	}
 	
-	if (op == GX_TEV_COMP_A8_GT || GX_TEV_COMP_A8_EQ)
+	if (op == GX_TEV_COMP_A8_GT || op == GX_TEV_COMP_A8_EQ)
 	{
         //if(bias != 3 || scale != 1 || clamp != 1)
-		if(bias != 3 || scale != 0 || clamp != true)
+		if(bias != 3 || scale != 0 || clamp != 1)
           WARN("GetOpString(): Unexpected bias %d, scale %d, clamp %d for Comparison Operation", bias, scale, clamp);
 	}
 
-	return str.str();
+	return str.str() + "\n";
 }
 
-std::string GC3D::GeneratePS(Mat3* matInfo, int index)
+std::string GeneratePS(Mat3* matInfo, int index)
 {
 	Material& mat = matInfo->materials[index];
 
@@ -316,10 +347,37 @@ std::string GC3D::GeneratePS(Mat3* matInfo, int index)
 	out.setf(std::ios::fixed, std::ios::floatfield);
 	out.setf(std::ios::showpoint);
 
-	// Scale and Bias lookup tables
-	out << "const float bias[3] = {0, 0.5f, -0.5f};" << "\n";
-	out << "const float scale[4] = {1, 2, 4, 0.5f};" << "\n";
+	// Input structure
+	out << "struct PsIn" << "\n";
+	out << "{" << "\n";
+	out << "float4 Position : SV_Position;" << "\n";
+	out << "uint4  Color0	: Color0;" << "\n";
+	out << "uint4  Color1	: Color1;" << "\n";
+	out << "float2 TexCoord0: Texcoord0;" << "\n";
+	out << "float2 TexCoord1: Texcoord1;" << "\n";
+	out << "float2 TexCoord2: Texcoord2;" << "\n";
+	out << "float2 TexCoord3: Texcoord3;" << "\n";
+	out << "float2 TexCoord4: Texcoord4;" << "\n";
+	out << "float2 TexCoord5: Texcoord5;" << "\n";
+	out << "float2 TexCoord6: Texcoord6;" << "\n";
+	out << "float2 TexCoord7: Texcoord7;" << "\n";
+	out << "};" << "\n";
 	out << "\n";
+
+	// Textures and Samplers
+	for(uint i = 0; i < 8; i++)
+	{
+		//Texture2D Texture0;
+		//SamplerState Sampler0;
+		if(mat.texStages[i] != 0xffff)
+		{
+			out << "SamplerState Sampler" << i << ";\n";
+			out << "Texture2D Texture" << i << "; //"
+				<< mat.texStages[i] << " -> "
+				<< matInfo->texStageIndexToTextureIndex[mat.texStages[i]] << "\n";
+			out << "\n";
+		}
+	}
 
 	out << "float4 main(PsIn In) : SV_Target" << "\n";
 	out << "{" << "\n";
@@ -357,7 +415,7 @@ std::string GC3D::GeneratePS(Mat3* matInfo, int index)
 		colorInputs[2] = GetColorInString(stage.colorIn[2], mat.constColorSel[i], &order);
 		colorInputs[3] = GetColorInString(stage.colorIn[3], mat.constColorSel[i], &order);
 
-		out << GetColorOpString(stage.colorOp, stage.colorBias, stage.colorScale, stage.colorClamp, stage.colorRegId, colorInputs);
+		out << GetColorOpString(uint(stage.colorOp), uint(stage.colorBias), uint(stage.colorScale), uint(stage.colorClamp), uint(stage.colorRegId), colorInputs);
 
 		std::string alphaInputs[4];
 		alphaInputs[0] = GetAlphaInString(stage.alphaIn[0], mat.constAlphaSel[i], &order);
@@ -365,12 +423,12 @@ std::string GC3D::GeneratePS(Mat3* matInfo, int index)
 		alphaInputs[2] = GetAlphaInString(stage.alphaIn[2], mat.constAlphaSel[i], &order);
 		alphaInputs[3] = GetAlphaInString(stage.alphaIn[3], mat.constAlphaSel[i], &order);
 
-		out << GetAlphaOpString(stage.alphaOp, stage.alphaBias, stage.alphaScale, stage.alphaClamp, stage.alphaRegId, alphaInputs);
+		out << GetAlphaOpString(uint(stage.alphaOp), uint(stage.alphaBias), uint(stage.alphaScale), uint(stage.alphaClamp), uint(stage.alphaRegId), alphaInputs);
 	}
 
 	//TODO: Alpha testing
 
-	out << "return out;\n" << "}";
+	out << "return " << GetRegisterString(0) <<";\n" << "}";
 
 	return out.str();
 }

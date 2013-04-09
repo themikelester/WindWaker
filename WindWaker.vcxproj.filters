@@ -84,6 +84,7 @@
     <ClCompile Include="Util.cpp" />
     <ClCompile Include="Common\Debug.cpp" />
     <ClCompile Include="GeneratePS.cpp" />
+    <ClCompile Include="GenerateVS.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -288,5 +289,8 @@
     <Image Include="Common\Framework3\Windows\mainicon.ico">
       <Filter>Framework3\Windows</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="test.hlsl" />
   </ItemGroup>
 </Project>

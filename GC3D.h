@@ -16,13 +16,14 @@ namespace GC3D
 	
 	SamplerStateID CreateSamplerState(Renderer* renderer, ImageHeader* imgHdr);
 	TextureID CreateTexture (Renderer* renderer, Image1* imgHdr);
-
+	
+	ShaderID CreateShader (Renderer* renderer, Mat3* matInfo, int matIndex);
 	ShaderID CreateShader (Renderer* renderer, u16 attribFlags);
 	VertexFormatID CreateVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader);
 	
 	ShaderID GetShader (Renderer* renderer, u16 attribFlags);
 	VertexFormatID GetVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader);
 
-	std::string GeneratePS(Mat3* matInfo, int index);
+	DepthStateID CreateDepthState (Renderer* renderer, ZMode mode);
 
 } // namespace GC3D

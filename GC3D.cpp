@@ -7,6 +7,7 @@
 #include "Foundation\memory.h"
 #include "Types.h"
 #include "util.h"
+#include "gx.h"
 
 using namespace foundation;
 
@@ -15,6 +16,10 @@ using namespace foundation;
 
 static Hash<ShaderID>* __shaderMap;
 static Hash<VertexFormatID>* __vertexFormatMap;
+
+// These are in separate files because they're quite large
+extern std::string GenerateVS(Mat3* matInfo, int index);
+extern std::string GeneratePS(Mat3* matInfo, int index);
 
 namespace GC3D
 {
@@ -125,6 +130,13 @@ namespace GC3D
 		return renderer->addShader("../Vertices.shd", string_stream::c_str(shaderDefines));
 	}
 
+	ShaderID CreateShader (Renderer* renderer, Mat3* matInfo, int matIndex)
+	{
+		std::string vs = GenerateVS(matInfo, matIndex);
+		std::string ps = GeneratePS(matInfo, matIndex);
+		return renderer->addShader(vs.c_str(), nullptr, ps.c_str(), 0, 0, 0); 
+	}
+
 	VertexFormatID CreateVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader)
 	{
 		int numAttribs = util::bitcount(attribFlags);
@@ -140,6 +152,30 @@ namespace GC3D
 		}
 
 		return renderer->addVertexFormat(formatBuf, numAttribs, shader); 
+	}
+	
+	DepthStateID CreateDepthState (Renderer* renderer, ZMode mode)
+	{
+		bool depthTestEnable = mode.enable;
+		bool depthWriteEnable = mode.enableUpdate;
+		int depthFunc;
+
+		switch(mode.zFunc)
+		{
+		case GX_NEVER:	 depthFunc = NEVER;	   break;
+		case GX_LESS:	 depthFunc = LESS;	   break;
+		case GX_EQUAL:	 depthFunc = EQUAL;	   break;
+		case GX_LEQUAL:	 depthFunc = LEQUAL;   break;
+		case GX_GREATER: depthFunc = GREATER;  break;
+		case GX_NEQUAL:	 depthFunc = NOTEQUAL; break;
+		case GX_GEQUAL:	 depthFunc = GEQUAL;   break;
+		case GX_ALWAYS:	 depthFunc = ALWAYS;   break;
+		default:
+			WARN("unknown compare mode %d. Defaulting to 'ALWAYS'", mode.zFunc);
+			depthFunc = ALWAYS;
+		}
+
+		return renderer->addDepthState(depthTestEnable, depthWriteEnable, depthFunc);
 	}
 
 	ShaderID GetShader (Renderer* renderer, u16 attribFlags)

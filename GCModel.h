@@ -52,7 +52,6 @@ struct GCBatch
 	
 	GCIndexBuffer	indexBuffer;
 	GCVertexBuffer	vertexBuffer;
-	ShaderID		shader;
 	VertexFormatID	vertexFormat;
 
 	GCModel*		model;
@@ -68,6 +67,12 @@ struct GCBatch
 
 };
 
+struct GCMaterial
+{
+	ShaderID shader;
+	DepthStateID depthState;
+};
+
 class GCModel : public Asset
 {
 	friend struct GCBatch;
@@ -76,9 +81,11 @@ private:
 	SceneGraph		m_Scenegraph;
 	BModel*			m_BDL;
 
-	//TODO: Remove, this is a hack!
+	//TODO: Remove, these are hacks!
 	BlendStateID SrcAlphaBlendState;
+	VertexFormatID hackFullVertFormat;
 
+	std::vector<GCMaterial> m_Materials;
 	std::vector<GCBatch> m_Batches;
 	std::vector<TextureID> m_Textures;
 	std::vector<SamplerStateID> m_Samplers;
@@ -107,4 +114,5 @@ public:
 private:
 	void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& s, const mat4& p = identity4(), bool onDown = true, int matIndex = 0);
 	RESULT GCModel::initTextures(Renderer *renderer);
+	RESULT GCModel::initMaterials(Renderer* renderer);
 };

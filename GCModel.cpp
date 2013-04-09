@@ -50,8 +50,17 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 	char samplerName[9];
 	char textureName[9];
 
+	// TODO: Remove all drawtime dependencies on bmd. 
+	//		 This information should all be loaded into a GCMaterial at load time
 	Material& mat = bmd->mat3.materials[bmd->mat3.indexToMatIndex[matIndex]];
-	
+	GCMaterial gcMat = model->m_Materials[bmd->mat3.indexToMatIndex[matIndex]];
+
+	// Shader
+	renderer->setShader(gcMat.shader);
+	renderer->setVertexFormat(model->hackFullVertFormat);
+
+	renderer->setDepthState(gcMat.depthState);
+
 	// Textures
 	for (uint i = 0; i < 8; i++)
 	{
@@ -69,8 +78,6 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 		//TODO: we'll need separate indexes once we stop creating a texture for every sampler
 		renderer->setSamplerState(samplerName, model->m_Samplers[texIndex]);
 		renderer->setTexture(textureName, model->m_Textures[texIndex]);
-		
-		renderer->setShaderConstant1i("TexFormat", bmd->tex1.imageHeaders[texIndex].data->format);
 
 		ImageHeader& tex = bmd->tex1.imageHeaders[texIndex];
 	}
@@ -97,13 +104,11 @@ RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &paren
 		updateMatrixTable(bmd, *packet, matrixType, matrixTable, isMatrixWeighted);	
 
 		renderer->reset();
-			renderer->setShader(shader);
-			renderer->setVertexFormat(vertexFormat);
+			applyMaterial(renderer, matIndex);
 			renderer->setVertexBuffer(0, vertexBuffer.id);
 			renderer->setIndexBuffer(indexBuffer.id);
 			renderer->setBlendState(model->SrcAlphaBlendState);
 			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, packet->matrixTable.size());
-			applyMaterial(renderer, matIndex);
 		renderer->apply();
 
 		device->DrawIndexed(packet->indexCount, numIndicesSoFar, 0);	
@@ -160,6 +165,83 @@ void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const Sce
 	}
 }
 
+#define FULL_VERTEX_ATTRIBS 0x1fff
+
+RESULT buildInflatedVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs, Vtx1* vtx)
+{
+	uint attribSize;
+	uint vtxSize = GC3D::GetVertexSize(renderer, FULL_VERTEX_ATTRIBS);
+
+	// Clear the vertex so that all of our missing data is zero'd
+	memset(dst, 0, vtxSize);
+	
+	if ( (attribs & HAS_POSITIONS) == false )
+		WARN("Model does not have required attributes");
+
+	// TODO: Fix the uint cast. Perhaps we can keep it as a u16 somehow? Depends on HLSL
+	// Always set this attribute. The default is 0.
+	// TODO: We can save a uint in the vertex structure if we remove this force
+	attribSize = GC3D::GetAttributeSize(renderer, HAS_MATRIX_INDICES);
+	if (attribs & HAS_MATRIX_INDICES) {
+		ASSERT(point.matrixIndex/3 < 10); 
+		uint matrixIndex = point.matrixIndex/3;
+		memcpy(dst, &matrixIndex, attribSize);
+	}
+	else
+	{
+		memset(dst, 0, attribSize);
+	}
+	dst += attribSize;
+	
+	attribSize = GC3D::GetAttributeSize(renderer, HAS_POSITIONS);
+	if (attribs & HAS_POSITIONS) {
+		memcpy(dst, vtx->positions[point.posIndex], attribSize);
+	}
+	dst += attribSize;
+	
+	attribSize = GC3D::GetAttributeSize(renderer, HAS_NORMALS);
+	if (attribs & HAS_NORMALS) {
+		memcpy(dst, vtx->normals[point.normalIndex], attribSize);
+	}
+	dst += attribSize;
+
+	for (uint i = 0; i < 2; i++)
+	{
+		u16 colorAttrib = HAS_COLORS0 << i;
+		attribSize = GC3D::GetAttributeSize(renderer, colorAttrib);
+		
+		if (attribs & colorAttrib) {
+			Color c = vtx->colors[i][point.colorIndex[i]];
+
+			ASSERT(sizeof(c.a) == sizeof(dst[0]));
+			dst[0] = c.r;
+			dst[1] = c.g;
+			dst[2] = c.b;
+			dst[3] = c.a;
+			
+			ASSERT(attribSize == sizeof(c.r) + sizeof(c.g) + sizeof(c.b) + sizeof(c.a));
+		}
+		dst += attribSize;
+	}
+
+	for (uint i = 0; i < 8; i++)
+	{
+		u16 texAttrib = HAS_TEXCOORDS0 << i;
+		float* dstFloat = (float*)dst;
+		attribSize = GC3D::GetAttributeSize(renderer, texAttrib);
+
+		if (attribs & texAttrib) {
+			TexCoord t = vtx->texCoords[i][point.texCoordIndex[i]];
+			dstFloat[0] = t.s;
+			dstFloat[1] = t.t;
+			ASSERT(attribSize == sizeof(t.s) + sizeof(t.t));
+		}
+		dst += attribSize;
+	}
+
+	return S_OK;
+}
+
 RESULT buildVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs, Vtx1* vtx)
 {
 	uint attribSize;
@@ -169,13 +251,19 @@ RESULT buildVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs, Vt
 		WARN("Model does not have required attributes");
 
 	// TODO: Fix the uint cast. Perhaps we can keep it as a u16 somehow? Depends on HLSL
+	// Always set this attribute. The default is 0.
+	// TODO: We can save a uint in the vertex structure if we remove this force
+	attribSize = GC3D::GetAttributeSize(renderer, HAS_MATRIX_INDICES);
 	if (attribs & HAS_MATRIX_INDICES) {
-		attribSize = GC3D::GetAttributeSize(renderer, HAS_MATRIX_INDICES);
 		ASSERT(point.matrixIndex/3 < 10); 
 		uint matrixIndex = point.matrixIndex/3;
 		memcpy(dst, &matrixIndex, attribSize);
-		dst += attribSize;
 	}
+	else
+	{
+		memset(dst, 0, attribSize);
+	}
+	dst += attribSize;
 
 	if (attribs & HAS_POSITIONS) {
 		attribSize = GC3D::GetAttributeSize(renderer, HAS_POSITIONS);
@@ -240,10 +328,6 @@ RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer, GCModel* model
 	bmd = bdl;
 	packets = batch->packets;
 	matrixType = batch->matrixType;
-
-	// Load the vertex format and shader for this vertex type (so it doesn't have to load at draw time)
-	shader = GC3D::GetShader(renderer, attribs);
-	vertexFormat = GC3D::GetVertexFormat(renderer, attribs, shader);
 	
 	int pointCount = 0;
 	int primCount = 0;
@@ -275,7 +359,7 @@ RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer, GCModel* model
 	}
 
 	// Create vertex buffer for this batch based on available attributes
-	int vertexSize = GC3D::GetVertexSize(renderer, attribs);
+	int vertexSize = GC3D::GetVertexSize(renderer, FULL_VERTEX_ATTRIBS);
 	int bufferSize = pointCount * vertexSize; // we may not need all this space, see pointCount above
 		
 	ubyte*	vertices = (ubyte*)malloc( bufferSize );
@@ -304,7 +388,7 @@ RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer, GCModel* model
 				} else {
 					// This points to a new vertex. Construct it.
 					index = vertexCount++;
-					buildVertex(renderer, vertices + vertexSize*index, *point, attribs, &bdl->vtx1);
+					buildInflatedVertex(renderer, vertices + vertexSize*index, *point, attribs, &bdl->vtx1);
 					foundation::hash::set(*indexMap, hashKey, index);
 				}
 
@@ -385,6 +469,26 @@ cleanup:
 	return r;
 }
 
+RESULT GCModel::initMaterials(Renderer* renderer)
+{
+	for (uint i = 0; i < m_BDL->mat3.materials.size(); i++)
+	{
+		GCMaterial gcMat;
+		Material& mat = m_BDL->mat3.materials[m_BDL->mat3.indexToMatIndex[i]];
+
+		// Generate and load a shader that will represent this material
+		gcMat.shader = GC3D::CreateShader(renderer, &m_BDL->mat3, i);
+
+		// Create Depth States
+		ZMode gcZMode = m_BDL->mat3.zModes[mat.zModeIndex];
+		gcMat.depthState = GC3D::CreateDepthState(renderer, gcZMode);
+
+		m_Materials.push_back(gcMat);
+	}
+
+	return S_OK;
+}
+
 RESULT GCModel::Init(Renderer *renderer)
 {	
 	RESULT r = S_OK; 
@@ -402,20 +506,18 @@ RESULT GCModel::Init(Renderer *renderer)
 
 	DEBUG_ONLY( GCModel::_debugDrawBatch = -1 );
 
-	// Load textures
 	initTextures(renderer);
+	initMaterials(renderer);
 
-	// Load Materials
 	// TODO: HACK: This blend state should probably be based on the material
 	SrcAlphaBlendState = renderer->addBlendState(SRC_ALPHA, ONE_MINUS_SRC_ALPHA);
-
-	// Let's just try this real quick...
-	std::string ps = GC3D::GeneratePS(&m_BDL->mat3, 0);
-
+	
+	// TODO: HACK: Force all vertices to be fully inflated (all attributes) and use a single vert format
+	hackFullVertFormat = GC3D::CreateVertexFormat(renderer, FULL_VERTEX_ATTRIBS, m_Materials[0].shader);
+	
 	// Init all batches
 	int numBatches = m_BDL->shp1.batches.size();
 	m_Batches.resize(numBatches);
-
 	STL_FOR_EACH(node, m_BDL->inf1.scenegraph)
 	{
 		if (node->type != SG_PRIM) continue;
