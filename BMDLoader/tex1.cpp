@@ -285,7 +285,7 @@ void dumpTex1(Chunk* f, Tex1& dst)
   //read image data
   dst.imageHeaders.resize(h.numImages);
   dst.images.resize(imageOffsets.size());
-  map<long, Image1*> loadedImages;
+  map<long, uint> loadedImages;
   int j = 0;
   for(i = 0; i < h.numImages; ++i)
   {
@@ -300,16 +300,17 @@ void dumpTex1(Chunk* f, Tex1& dst)
     //check if the image needed by current header is
     //already loaded, if not, load it
     int effectiveOffset = texHeaders[i].dataOffset + 0x20*i;
-    map<long, Image1*>::iterator it = loadedImages.find(effectiveOffset);
+    map<long, uint>::iterator it = loadedImages.find(effectiveOffset);
     if(it != loadedImages.end())
-      dst.imageHeaders[i].data = it->second;
+      dst.imageHeaders[i].imageIndex = it->second;
     else
     {
       Image1* curr = &dst.images[j];
-      ++j;
 
-      dst.imageHeaders[i].data = curr;
-      loadedImages[effectiveOffset] = curr;
+      dst.imageHeaders[i].imageIndex = j;
+      loadedImages[effectiveOffset] = j;
+
+      ++j;
       
       loadAndConvertImage(f, texHeaders[i],
                           tex1Offset + h.textureHeaderOffset + 0x20*i, *curr);

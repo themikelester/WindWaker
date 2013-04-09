@@ -7,6 +7,8 @@
 #include <Foundation\collection_types.h>
 #include <Framework3\Direct3D10\Direct3D10Renderer.h>
 
+#define GCMODEL_NAME_MAX_CHARS 32
+
 class Renderer;
 
 class ModelManager
@@ -67,9 +69,24 @@ struct GCBatch
 
 };
 
+struct GCTexture
+{
+	char name[GCMODEL_NAME_MAX_CHARS];
+
+	TextureID tex;
+	SamplerStateID sampler;
+
+	// Defined in tex1.h 
+	//const int I8 = 1;
+	//const int I8_A8 = 3;
+	//const int RGBA8 = 6;
+	//const int DXT1 = 14;
+	int gcFormat;
+};
+
 struct GCMaterial
 {
-	std::string name;
+	char name[GCMODEL_NAME_MAX_CHARS];
 
 	ShaderID shader;
 	DepthStateID depthState;
@@ -91,8 +108,7 @@ private:
 
 	std::vector<GCMaterial> m_Materials;
 	std::vector<GCBatch> m_Batches;
-	std::vector<TextureID> m_Textures;
-	std::vector<SamplerStateID> m_Samplers;
+	std::vector<GCTexture> m_Textures;
 
 protected:
 	RESULT GCModel::Load(Chunk* data);

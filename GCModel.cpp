@@ -64,6 +64,8 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 	renderer->setRasterizerState(gcMat.rasterState);
 
 	// Textures
+	uint gIsAFlags = 0; // Green is Alpha Flags. If the texture has format I8_A8, then we sample that as R8G8. 
+						// Thus the shader needs to know to treat the G channel as A. One bit for each bound texture.
 	for (uint i = 0; i < 8; i++)
 	{
 		uint stageIndex = mat.texStages[i];
@@ -71,18 +73,23 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 			continue;
 
 		uint texIndex = bmd->mat3.texStageIndexToTextureIndex[stageIndex];
+		GCTexture tex = model->m_Textures[texIndex];
 
 		memcpy(samplerName, constSamplerName, 9);
 		memcpy(textureName, constTextureName, 9);
 		samplerName[7] = '0' + i;
 		textureName[7] = '0' + i;
 
-		//TODO: we'll need separate indexes once we stop creating a texture for every sampler
-		renderer->setSamplerState(samplerName, model->m_Samplers[texIndex]);
-		renderer->setTexture(textureName, model->m_Textures[texIndex]);
+		renderer->setSamplerState(samplerName, tex.sampler);
+		renderer->setTexture(textureName, tex.tex);
 
-		ImageHeader& tex = bmd->tex1.imageHeaders[texIndex];
+		if (tex.gcFormat == I8_A8)
+		{
+			gIsAFlags |= 1 << i;
+		}
 	}
+	
+	renderer->setShaderConstant1i("GisAFlags", gIsAFlags);
 }
 
 RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &parentMatrix, int matIndex)
@@ -435,34 +442,47 @@ RESULT GCModel::initTextures(Renderer *renderer)
 {
 	HRESULT r = S_OK;
 
-	// TODO: We don't need to create a new texture every time, because sometimes the imgHdr->data pointers will be duplicates
-	STL_FOR_EACH(imgHdr, m_BDL->tex1.imageHeaders)
+	// For our purposes, a "Texture" is a sampler and texture data pairing
+	uint nTextures = m_BDL->tex1.imageHeaders.size();
+	m_Textures.resize(nTextures);
+
+	std::vector<SamplerStateID> ssIDs;
+	std::vector<TextureID> texIDs;
+
+	ssIDs.resize(m_BDL->tex1.imageHeaders.size());
+	for (uint i = 0; i < m_BDL->tex1.imageHeaders.size(); i++)
 	{
-		TextureID tid = GC3D::CreateTexture(renderer, imgHdr->data);
-		if (tid == TEXTURE_NONE)
+		ImageHeader* hdr = &m_BDL->tex1.imageHeaders[i];
+		ssIDs[i] = GC3D::CreateSamplerState(renderer, hdr);
+	}
+
+	texIDs.resize(m_BDL->tex1.images.size());
+	for (uint i = 0; i < m_BDL->tex1.images.size(); i++)
+	{
+		texIDs[i] = GC3D::CreateTexture(renderer, &m_BDL->tex1.images[i]);
+		if (texIDs[i] == TEXTURE_NONE)
 		{
 			// TODO: Assign default texture
-			WARN("Failed to load texture");
+			WARN("Failed to load texture data at index %u", i);
 			//hr = S_FALSE;
 			IFC(E_FAIL);
 		}
-
-		SamplerStateID ssid = GC3D::CreateSamplerState(renderer, imgHdr._Ptr);
-		if (ssid == SS_NONE)
-		{
-			// TODO: Assign default sampler
-			WARN("Failed to create sampler state");
-			//hr = S_FALSE;
-			IFC(E_FAIL);
-		}
-
-		m_Textures.push_back(tid);
-		m_Samplers.push_back(ssid);
 	}
+
+	for (uint i = 0; i < nTextures; i++)
+	{
+		ImageHeader* hdr = &m_BDL->tex1.imageHeaders[i];
+
+		strncpy(m_Textures[i].name, hdr->name.c_str(), GCMODEL_NAME_MAX_CHARS);
+		m_Textures[i].tex = texIDs[hdr->imageIndex];
+		m_Textures[i].sampler = ssIDs[i];
+		m_Textures[i].gcFormat = m_BDL->tex1.images[hdr->imageIndex].format;
+	}
+
 cleanup:
 	if FAILED(r)
 	{
-		STL_FOR_EACH(tex, m_Textures)
+		STL_FOR_EACH(tex, texIDs)
 		{
 			renderer->removeTexture(*tex);
 		}
@@ -514,8 +534,9 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 	{
 		Material& mat = m_BDL->mat3.materials[i];
 
+		strncpy(m_Materials[i].name, m_BDL->mat3.stringtable[i].c_str(), GCMODEL_NAME_MAX_CHARS);
+
 		m_Materials[i].shader = shaders[i];
-		m_Materials[i].name = m_BDL->mat3.stringtable[i];
 		m_Materials[i].depthState = depthModes[mat.zModeIndex];
 		m_Materials[i].rasterState = cullModes[mat.cullIndex];
 		m_Materials[i].blendState = blendModes[mat.blendIndex];

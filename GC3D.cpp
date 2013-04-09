@@ -250,7 +250,9 @@ namespace GC3D
 	{
 		ShaderID shdID;
 		u64 hashKey;
-
+		
+		//TODO: Move all hashing functionality like this up one level
+		//		GC3D should only be handling the creation. This is app logic.
 		hashKey = murmur_hash_64(&attribFlags, sizeof(attribFlags), hashSeed);
 		shdID = hash::get(*__shaderMap, hashKey, SHADER_NONE);
 
@@ -268,6 +270,8 @@ namespace GC3D
 		VertexFormatID vfID;
 		u64 hashKey;
 		
+		//TODO: Move all hashing functionality like this up one level
+		//		GC3D should only be handling the creation. This is app logic.
 		hashKey = murmur_hash_64(&attribFlags, sizeof(attribFlags), hashSeed);
 		vfID = hash::get(*__vertexFormatMap, hashKey, VF_NONE);
 

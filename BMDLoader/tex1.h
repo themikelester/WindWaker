@@ -9,7 +9,7 @@
 struct Image1;
 struct ImageHeader
 {
-  Image1* data;
+  uint imageIndex;
   std::string name;
 
   /*
@@ -48,9 +48,6 @@ struct Image1
 
   //TODO: gl image conversions (rgba -> abgr, ai -> ia
   //somewhere else?)
-
-  //TODO: this is temporary and belongs somewhere else:
-  unsigned int texId;
   
   int originalFormat, paletteFormat;
 };

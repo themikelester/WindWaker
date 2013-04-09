@@ -15,10 +15,9 @@ std::string GetRegisterString(uint regIndex)
 
 std::string GetTexTapString(const TevOrderInfo* texMapping)
 {
-	// "Texture0.Sample( Sampler0, In.TexCoord0 )"
+	// "SAMPLE(0, 0)"
 	std::ostringstream out;
-	out << "Texture" << (int)texMapping->texMap << ".Sample( Sampler" << (int)texMapping->texMap 
-		<< ", In.TexCoord" << (int)texMapping->texCoordId << " )";
+	out << "SAMPLE(" << (int)texMapping->texMap << ", " << (int)texMapping->texCoordId << ")";
 	return out.str();
 }
 
@@ -347,6 +346,10 @@ std::string GeneratePS(Mat3* matInfo, int index)
 	out.setf(std::ios::fixed, std::ios::floatfield);
 	out.setf(std::ios::showpoint);
 
+	// Helper macros
+	out << "#define _SAMPLE(texIdx, uvIdx) Texture##texIdx.Sample( Sampler##texIdx, In.TexCoord##uvIdx )\n";
+	out << "#define SAMPLE(texIdx, uvIdx) ( GisAFlags & (1 << texIdx) ? _SAMPLE(texIdx, uvIdx).rrrg : _SAMPLE(texIdx, uvIdx) )\n";
+
 	// Input structure
 	out << "struct PsIn" << "\n";
 	out << "{" << "\n";
@@ -362,6 +365,12 @@ std::string GeneratePS(Mat3* matInfo, int index)
 	out << "float2 TexCoord6: Texcoord6;" << "\n";
 	out << "float2 TexCoord7: Texcoord7;" << "\n";
 	out << "};" << "\n";
+	out << "\n";
+
+	out << "cbuffer PerBatch" << "\n";
+	out << "{" << "\n";
+	out << "int GisAFlags;" << "\n";
+	out << "}" << "\n";
 	out << "\n";
 
 	// Textures and Samplers
