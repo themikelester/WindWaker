@@ -479,10 +479,14 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 		// Generate and load a shader that will represent this material
 		gcMat.shader = GC3D::CreateShader(renderer, &m_BDL->mat3, i);
 
-		// Create Depth States
+		// Depth State
 		ZMode gcZMode = m_BDL->mat3.zModes[mat.zModeIndex];
 		gcMat.depthState = GC3D::CreateDepthState(renderer, gcZMode);
 
+		// Cull State
+		uint gcCullMode = m_BDL->mat3.cullModes[mat.cullIndex];
+		gcMat.rasterState = GC3D::CreateRasterizerState(renderer, gcCullMode);
+		
 		m_Materials.push_back(gcMat);
 	}
 

@@ -290,7 +290,4 @@
       <Filter>Framework3\Windows</Filter>
     </Image>
   </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="test.hlsl" />
-  </ItemGroup>
 </Project>

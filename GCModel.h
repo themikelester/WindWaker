@@ -71,6 +71,7 @@ struct GCMaterial
 {
 	ShaderID shader;
 	DepthStateID depthState;
+	RasterizerStateID rasterState;
 };
 
 class GCModel : public Asset

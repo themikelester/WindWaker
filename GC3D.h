@@ -25,5 +25,6 @@ namespace GC3D
 	VertexFormatID GetVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader);
 
 	DepthStateID CreateDepthState (Renderer* renderer, ZMode mode);
+	RasterizerStateID CreateRasterizerState (Renderer* renderer, uint cullMode);
 
 } // namespace GC3D

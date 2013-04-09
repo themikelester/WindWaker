@@ -177,6 +177,24 @@ namespace GC3D
 
 		return renderer->addDepthState(depthTestEnable, depthWriteEnable, depthFunc);
 	}
+	
+	RasterizerStateID CreateRasterizerState (Renderer* renderer, uint gcCullMode)
+	{
+		uint cullMode;
+
+		switch(gcCullMode)
+		{
+		case GX_CULL_NONE:  cullMode = CULL_NONE; break;
+		case GX_CULL_BACK:  cullMode = CULL_BACK; break;
+		case GX_CULL_FRONT: cullMode = CULL_FRONT; break;
+		case GX_CULL_ALL:   
+		default:
+			WARN("Unsupported cull mode. Defaulting to 'CULL_NONE'");
+			cullMode = CULL_NONE;
+		}
+
+		return renderer->addRasterizerState(cullMode);
+	}
 
 	ShaderID GetShader (Renderer* renderer, u16 attribFlags)
 	{
