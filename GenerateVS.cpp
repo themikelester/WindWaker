@@ -87,7 +87,17 @@ std::string GenerateVS(Mat3* matInfo, int index)
 
 	// TODO: Handle Color transforms
 	//Color pass-through
-	out << "Out.Color0 = In.Color0;\n";
+	ColorChanInfo& chanInfo = matInfo->colorChanInfos[mat.chanControls[0]];
+    if(chanInfo.matColorSource == 1)
+      out << "Out.Color0 = In.Color0;\n";
+    else
+    {
+      const MColor& c = matInfo->ambColor[mat.ambColor[0]];
+      out << "Out.Color0 = float4("
+          << c.r/255.f << ", " << c.g/255.f << ", " << c.b/255.f << ", "
+          << c.a/255.f << ");\n";
+    }
+
 	out << "Out.Color1 = In.Color1;\n";
 	out << "\n";
 

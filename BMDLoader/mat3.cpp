@@ -32,10 +32,10 @@ struct Mat3Header
     2 - string table
 *   3 - MatIndirectTexturingEntry array, count many for all files i've seen
     4 - cull mode                               (indexed by MatEntry.unk[1])
-  5 - color1 (rgba8) (amb color??)
+  5 - ambColor (rgba8) (amb color??)
   6 - numChans (?)                              (indexed by MatEntry.unk[2])
   7 - colorChanInfo
-* 8 - color2 (rgba8) (mat color??)
+* 8 - matColor (rgba8) (mat color??)
 * 9 - light
     10 - texgen counts (-> vr_back_cloud.bdl)   (indexed by MatEntry.unk[3])
     11 - TexGen
@@ -79,14 +79,14 @@ struct MatEntry
   //enable/disable blend alphatest depthtest, ...)
   u8 unk[8];
 
-  // 0, 1 - index into color1 (e.g. map_delfino3.bmd)
-  // 6, 7 - index into color2 (e.g. mo.bdl)
+  // 0, 1 - index into ambColor (e.g. map_delfino3.bmd)
+  // 6, 7 - index into matColor (e.g. mo.bdl)
   // 2, 3, 4, 5 - index into chanControls
   //u16 chanControls[8];
 
-  u16 color1[2];
+  u16 ambColor[2];
   u16 chanControls[4];
-  u16 color2[2]; //not in MAT2 block
+  u16 matColor[2]; //not in MAT2 block
 
   u16 lights[8]; //all 0xffff most of the time, not in MAT2 block
 
@@ -466,10 +466,10 @@ void writeMat3Data(ostream& debugOut, Chunk* f, int mat3Offset,
   //2: string table
   displaySize(debugOut, "IndirectTexturing", lengths[3], 312);
   displayData(debugOut, "cull mode", f, mat3Offset + h.offsets[4], lengths[4], 4);
-  displayData(debugOut, "color1", f, mat3Offset + h.offsets[5], lengths[5], 4);
+  displayData(debugOut, "ambColor", f, mat3Offset + h.offsets[5], lengths[5], 4);
   displayData(debugOut, "numChans (?) (unk[2])", f, mat3Offset + h.offsets[6], lengths[6], 1);
   displayData(debugOut, "colorChanInfo", f, mat3Offset + h.offsets[7], lengths[7], 8);
-  displayData(debugOut, "color2", f, mat3Offset + h.offsets[8], lengths[8], 4);
+  displayData(debugOut, "matColor", f, mat3Offset + h.offsets[8], lengths[8], 4);
   displayData(debugOut, "light", f, mat3Offset + h.offsets[9], lengths[9], 52); //there's one dr_comp.bdl
   displayData(debugOut, "texCounts (unk[3])", f, mat3Offset + h.offsets[10], lengths[10], 1);
   displayData(debugOut, "TexGen", f, mat3Offset + h.offsets[11], lengths[11], 4);
@@ -500,14 +500,14 @@ void writeMatEntry(ostream& debugOut, const bmd::MatEntry& init)
   debugOut << "unk: unk1, cull, numChans, texCounts, tevCounts, matData6Index, zMode, matData7Index:";
   for(j = 0; j < 8; ++j) debugOut << " " << hex << setw(2) << (int)init.unk[j]; debugOut << endl;
 
-  debugOut << "color1 (?): ";
-  for(j = 0; j < 2; ++j) debugOut << setw(4) << init.color1[j]; debugOut << endl;
+  debugOut << "ambColor (?): ";
+  for(j = 0; j < 2; ++j) debugOut << setw(4) << init.ambColor[j]; debugOut << endl;
 
   debugOut << "chanControls (?): ";
   for(j = 0; j < 4; ++j) debugOut << setw(4) << init.chanControls[j]; debugOut << endl;
 
-  debugOut << "color2 (?): ";
-  for(j = 0; j < 2; ++j) debugOut << setw(4) << init.color2[j]; debugOut << endl;
+  debugOut << "matColor (?): ";
+  for(j = 0; j < 2; ++j) debugOut << setw(4) << init.matColor[j]; debugOut << endl;
 
   debugOut << "lights: ";
   for(j = 0; j < 8; ++j) debugOut << setw(4) << init.lights[j]; debugOut << endl;
@@ -631,12 +631,12 @@ void readMatEntry(Chunk* f, bmd::MatEntry& init, bool isMat2)
 {
   int j;
   DRead(init.unk, 1, 8, f);
-  for(j = 0; j < 2; ++j) readWORD(f, init.color1[j]);
+  for(j = 0; j < 2; ++j) readWORD(f, init.ambColor[j]);
   for(j = 0; j < 4; ++j) readWORD(f, init.chanControls[j]);
   
   //these two fields are only in mat3 headers, not in mat2
-  if(!isMat2) for(j = 0; j < 2; ++j) readWORD(f, init.color2[j]);
-  else memset(init.color2, 0xff, 2*2);
+  if(!isMat2) for(j = 0; j < 2; ++j) readWORD(f, init.matColor[j]);
+  else memset(init.matColor, 0xff, 2*2);
   if(!isMat2) for(j = 0; j < 8; ++j) readWORD(f, init.lights[j]);
   else memset(init.lights, 0xff, 8*2);
   
@@ -773,16 +773,16 @@ void dumpMat3(Chunk* f, Mat3& dst)
     dst.cullModes[i] = tmp;
   }
 
-  //offset[5] (color1)
+  //offset[5] (ambColor)
   DSeek(f, mat3Offset + h.offsets[5], SEEK_SET);
-  dst.color1.resize(lengths[5]/4);
-  for(i = 0; i < dst.color1.size(); ++i)
+  dst.ambColor.resize(lengths[5]/4);
+  for(i = 0; i < dst.ambColor.size(); ++i)
   {
     u8 col[4]; DRead(col, 1, 4, f);
-    dst.color1[i].r = col[0];
-    dst.color1[i].g = col[1];
-    dst.color1[i].b = col[2];
-    dst.color1[i].a = col[3];
+    dst.ambColor[i].r = col[0];
+    dst.ambColor[i].g = col[1];
+    dst.ambColor[i].b = col[2];
+    dst.ambColor[i].a = col[3];
   }
 
   //offset[6] (numChans)
@@ -818,14 +818,14 @@ void dumpMat3(Chunk* f, Mat3& dst)
 
   //offset[8] (color2)
   DSeek(f, mat3Offset + h.offsets[8], SEEK_SET);
-  dst.color2.resize(lengths[8]/4);
-  for(i = 0; i < dst.color2.size(); ++i)
+  dst.matColor.resize(lengths[8]/4);
+  for(i = 0; i < dst.matColor.size(); ++i)
   {
     u8 col[4]; DRead(col, 1, 4, f);
-    dst.color2[i].r = col[0];
-    dst.color2[i].g = col[1];
-    dst.color2[i].b = col[2];
-    dst.color2[i].a = col[3];
+    dst.matColor[i].r = col[0];
+    dst.matColor[i].g = col[1];
+    dst.matColor[i].b = col[2];
+    dst.matColor[i].a = col[3];
   }
 
   //offset[0] (MatEntries)
@@ -865,8 +865,8 @@ void dumpMat3(Chunk* f, Mat3& dst)
     }
     for(j = 0; j < 2; ++j)
     {
-      dstMat.color1[j] = init.color1[j];
-      dstMat.color2[j] = init.color2[j];
+      dstMat.ambColor[j] = init.ambColor[j];
+      dstMat.matColor[j] = init.matColor[j];
     }
     for(j = 0; j < 16; ++j)
     {

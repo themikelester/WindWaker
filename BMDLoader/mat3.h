@@ -111,9 +111,9 @@ struct Material
   // Unknown/Unused
   u8 numChansIndex;
   
-  u16 color1[2];
+  u16 ambColor[2];
   u16 chanControls[4];
-  u16 color2[2];
+  u16 matColor[2];
   
   // State settings
   u16 alphaCompIndex;
@@ -144,10 +144,10 @@ struct Material
 
 struct Mat3
 {
-  std::vector<MColor> color1;
+  std::vector<MColor> ambColor;
   std::vector<u8> numChans;
   std::vector<ColorChanInfo> colorChanInfos;
-  std::vector<MColor> color2;
+  std::vector<MColor> matColor;
 
   std::vector<Material> materials;
   std::vector<int> indexToMatIndex;
