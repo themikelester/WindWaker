@@ -17,7 +17,7 @@ namespace GC3D
 	SamplerStateID CreateSamplerState(Renderer* renderer, ImageHeader* imgHdr);
 	TextureID CreateTexture (Renderer* renderer, Image1* imgHdr);
 	
-	ShaderID CreateShader (Renderer* renderer, Mat3* matInfo, int matIndex);
+	ShaderID CreateShader (Renderer* renderer, Tex1* texInfo, Mat3* matInfo, int matIndex);
 	ShaderID CreateShader (Renderer* renderer, u16 attribFlags);
 	VertexFormatID CreateVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader);
 	

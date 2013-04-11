@@ -1,6 +1,7 @@
 #include "common.h"
 #include "gx.h"
 #include "BMDLoader\mat3.h"
+#include "BMDLoader\tex1.h"
 #include <sstream>
 
 
@@ -13,12 +14,26 @@ std::string GetRegisterString(uint regIndex)
 	else return varRegisterName[regIndex-1];
 }
 
-std::string GetTexTapString(const TevOrderInfo* texMapping)
+std::string GetTexTapString(const TevOrderInfo* texMapping, uint formats[8])
 {
+	uint texIndex = texMapping->texMap;
+
+	std::string swizzle;
+	switch (formats[texIndex])
+	{
+	case I8: swizzle = ".rrrr"; break;
+	case I8_A8: swizzle = ".rrrg"; break;
+	case RGBA8: swizzle = ""; break;
+	case DXT1: swizzle = ""; break;
+	default:
+		WARN("GetTexTapString(): Unknown texture format %u. Defaulting to tap with no swizzling", formats[texIndex]);
+		swizzle = "";
+	}
+
 	// "SAMPLE(0, 0)"
 	std::ostringstream out;
-	out << "SAMPLE(" << (int)texMapping->texMap << ", " << (int)texMapping->texCoordId << ")";
-	return out.str();
+	out << "SAMPLE(" << (int)texIndex << ", " << (int)texMapping->texCoordId << ")";
+	return out.str() + swizzle;
 }
 
 std::string GetVertColorString(const TevOrderInfo* texMapping)
@@ -116,7 +131,7 @@ std::string GetKonstAlphaString(uint konst)
 	}						
 }							
 							
-std::string GetColorInString(uint inputType, uint konst, const TevOrderInfo* texMapping)
+std::string GetColorInString(uint inputType, uint konst, const TevOrderInfo* texMapping, uint formats[8])
 {
 	switch (inputType)
 	{
@@ -128,8 +143,8 @@ std::string GetColorInString(uint inputType, uint konst, const TevOrderInfo* tex
 		case GX_CC_A1:		return varRegisterName[1] + ".aaa";
 		case GX_CC_C2:		return varRegisterName[2] + ".rgb";
 		case GX_CC_A2:		return varRegisterName[2] + ".aaa";
-		case GX_CC_TEXC:	return GetTexTapString(texMapping) + ".rgb";
-		case GX_CC_TEXA:	return GetTexTapString(texMapping) + ".aaa";
+		case GX_CC_TEXC:	return GetTexTapString(texMapping, formats) + ".rgb";
+		case GX_CC_TEXA:	return GetTexTapString(texMapping, formats) + ".aaa";
 		case GX_CC_RASC:	return GetVertColorString(texMapping) + ".rgb";
 		case GX_CC_RASA:	return GetVertColorString(texMapping) + ".aaa";
 		case GX_CC_ONE:		return "1.0f.rrr";
@@ -142,7 +157,7 @@ std::string GetColorInString(uint inputType, uint konst, const TevOrderInfo* tex
 	}
 }
 
-std::string GetAlphaInString(uint inputType, uint konst, const TevOrderInfo* texMapping)
+std::string GetAlphaInString(uint inputType, uint konst, const TevOrderInfo* texMapping, uint formats[8])
 {
 	switch (inputType)
 	{
@@ -150,7 +165,7 @@ std::string GetAlphaInString(uint inputType, uint konst, const TevOrderInfo* tex
 	case GX_CA_A0:		return GetRegisterString(1) + ".a";
 	case GX_CA_A1:		return GetRegisterString(2) + ".a";
 	case GX_CA_A2:		return GetRegisterString(3) + ".a";
-	case GX_CA_TEXA:	return GetTexTapString(texMapping) + ".a";
+	case GX_CA_TEXA:	return GetTexTapString(texMapping, formats) + ".a";
 	case GX_CA_RASA:	return GetVertColorString(texMapping) + ".a";
 	case GX_CA_KONST:	return GetKonstAlphaString(konst);
 	case GX_CA_ZERO:	return "0.0f";
@@ -340,7 +355,7 @@ std::string GetAlphaOpString(uint op, uint bias, uint scale, uint clamp, uint ou
 	return str.str() + "\n";
 }
 
-std::string GeneratePS(Mat3* matInfo, int index)
+std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 {
 	Material& mat = matInfo->materials[index];
 
@@ -349,8 +364,7 @@ std::string GeneratePS(Mat3* matInfo, int index)
 	out.setf(std::ios::showpoint);
 
 	// Helper macros
-	out << "#define _SAMPLE(texIdx, uvIdx) Texture##texIdx.Sample( Sampler##texIdx, In.TexCoord##uvIdx )\n";
-	out << "#define SAMPLE(texIdx, uvIdx) ( GisAFlags & (1 << texIdx) ? _SAMPLE(texIdx, uvIdx).rrrg : _SAMPLE(texIdx, uvIdx) )\n";
+	out << "#define SAMPLE(texIdx, uvIdx) Texture##texIdx.Sample( Sampler##texIdx, In.TexCoord##uvIdx )\n";
 	out << "\n";
 
 	// Input structure
@@ -370,25 +384,25 @@ std::string GeneratePS(Mat3* matInfo, int index)
 	out << "};" << "\n";
 	out << "\n";
 
-	out << "cbuffer PerBatch" << "\n";
-	out << "{" << "\n";
-	out << "int GisAFlags;" << "\n";
-	out << "}" << "\n";
-	out << "\n";
+	uint texFormats[8];
 
 	// Textures and Samplers
 	for(uint i = 0; i < 8; i++)
 	{
+		if(mat.texStages[i] == 0xffff)
+			continue;
+
+		uint texHdrIndex = matInfo->texStageIndexToTextureIndex[mat.texStages[i]];
+		uint texImgIndex = texInfo->imageHeaders[texHdrIndex].imageIndex;
+		texFormats[i] = texInfo->images[texImgIndex].format;
+
 		//Texture2D Texture0;
 		//SamplerState Sampler0;
-		if(mat.texStages[i] != 0xffff)
-		{
-			out << "SamplerState Sampler" << i << ";\n";
-			out << "Texture2D Texture" << i << "; //"
-				<< mat.texStages[i] << " -> "
-				<< matInfo->texStageIndexToTextureIndex[mat.texStages[i]] << "\n";
-			out << "\n";
-		}
+		out << "SamplerState Sampler" << i << ";\n";
+		out << "Texture2D Texture" << i << "; //"
+			<< mat.texStages[i] << " -> "
+			<< texHdrIndex << ", " << texInfo->imageHeaders[texHdrIndex].name << "\n";
+		out << "\n";
 	}
 
 	out << "float4 main(PsIn In) : SV_Target" << "\n";
@@ -422,10 +436,10 @@ std::string GeneratePS(Mat3* matInfo, int index)
 		const TevStageInfo& stage = matInfo->tevStageInfos[mat.tevStageInfo[i]];
 
 		std::string colorInputs[4];
-		colorInputs[0] = GetColorInString(stage.colorIn[0], mat.constColorSel[i], &order);
-		colorInputs[1] = GetColorInString(stage.colorIn[1], mat.constColorSel[i], &order);
-		colorInputs[2] = GetColorInString(stage.colorIn[2], mat.constColorSel[i], &order);
-		colorInputs[3] = GetColorInString(stage.colorIn[3], mat.constColorSel[i], &order);
+		colorInputs[0] = GetColorInString(stage.colorIn[0], mat.constColorSel[i], &order, texFormats);
+		colorInputs[1] = GetColorInString(stage.colorIn[1], mat.constColorSel[i], &order, texFormats);
+		colorInputs[2] = GetColorInString(stage.colorIn[2], mat.constColorSel[i], &order, texFormats);
+		colorInputs[3] = GetColorInString(stage.colorIn[3], mat.constColorSel[i], &order, texFormats);
 
 		out << GetColorOpString(uint(stage.colorOp), uint(stage.colorBias), uint(stage.colorScale), uint(stage.colorClamp), uint(stage.colorRegId), colorInputs);
 	}
@@ -436,10 +450,10 @@ std::string GeneratePS(Mat3* matInfo, int index)
 		const TevStageInfo& stage = matInfo->tevStageInfos[mat.tevStageInfo[i]];
 
 		std::string alphaInputs[4];
-		alphaInputs[0] = GetAlphaInString(stage.alphaIn[0], mat.constAlphaSel[i], &order);
-		alphaInputs[1] = GetAlphaInString(stage.alphaIn[1], mat.constAlphaSel[i], &order);
-		alphaInputs[2] = GetAlphaInString(stage.alphaIn[2], mat.constAlphaSel[i], &order);
-		alphaInputs[3] = GetAlphaInString(stage.alphaIn[3], mat.constAlphaSel[i], &order);
+		alphaInputs[0] = GetAlphaInString(stage.alphaIn[0], mat.constAlphaSel[i], &order, texFormats);
+		alphaInputs[1] = GetAlphaInString(stage.alphaIn[1], mat.constAlphaSel[i], &order, texFormats);
+		alphaInputs[2] = GetAlphaInString(stage.alphaIn[2], mat.constAlphaSel[i], &order, texFormats);
+		alphaInputs[3] = GetAlphaInString(stage.alphaIn[3], mat.constAlphaSel[i], &order, texFormats);
 
 		out << GetAlphaOpString(uint(stage.alphaOp), uint(stage.alphaBias), uint(stage.alphaScale), uint(stage.alphaClamp), uint(stage.alphaRegId), alphaInputs);
 	}

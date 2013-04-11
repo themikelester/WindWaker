@@ -19,7 +19,7 @@ static Hash<VertexFormatID>* __vertexFormatMap;
 
 // These are in separate files because they're quite large
 extern std::string GenerateVS(Mat3* matInfo, int index);
-extern std::string GeneratePS(Mat3* matInfo, int index);
+extern std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index);
 
 namespace GC3D
 {
@@ -129,11 +129,11 @@ namespace GC3D
 
 		return renderer->addShader("../Vertices.shd", string_stream::c_str(shaderDefines));
 	}
-
-	ShaderID CreateShader (Renderer* renderer, Mat3* matInfo, int matIndex)
+	
+	ShaderID CreateShader (Renderer* renderer, Tex1* texInfo, Mat3* matInfo, int matIndex)
 	{
 		std::string vs = GenerateVS(matInfo, matIndex);
-		std::string ps = GeneratePS(matInfo, matIndex);
+		std::string ps = GeneratePS(texInfo, matInfo, matIndex);
 		return renderer->addShader(vs.c_str(), nullptr, ps.c_str(), 0, 0, 0); 
 	}
 

@@ -70,8 +70,6 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 	renderer->setShaderConstant4f("ambColor1", gcMat.ambColor[1]);
 
 	// Textures
-	uint gIsAFlags = 0; // Green is Alpha Flags. If the texture has format I8_A8, then we sample that as R8G8. 
-						// Thus the shader needs to know to treat the G channel as A. One bit for each bound texture.
 	for (uint i = 0; i < 8; i++)
 	{
 		uint stageIndex = mat.texStages[i];
@@ -88,14 +86,7 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 
 		renderer->setSamplerState(samplerName, tex.sampler);
 		renderer->setTexture(textureName, tex.tex);
-
-		if (tex.gcFormat == I8_A8)
-		{
-			gIsAFlags |= 1 << i;
-		}
 	}
-	
-	renderer->setShaderConstant1i("GisAFlags", gIsAFlags);
 }
 
 RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &parentMatrix, int matIndex)
@@ -514,7 +505,7 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 	for (uint i = 0; i < nMaterials; i++)
 	{
 		// TODO: Create default on fail
-		shaders.push_back(GC3D::CreateShader(renderer, &m_BDL->mat3, i));
+		shaders.push_back(GC3D::CreateShader(renderer, &m_BDL->tex1, &m_BDL->mat3, i));
 	}
 	
 	// Depth State

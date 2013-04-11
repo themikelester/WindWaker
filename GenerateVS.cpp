@@ -12,7 +12,10 @@ inline bool hasAttrib(int flags, BatchAttributeFlags attrib)
 // TODO: Diffuse lighting functions
 std::string getLightCalcString(uint litMask, uint attenuationFunc, uint diffuseFunc, bool alpha)
 {
-	return "1.0f";
+	if (litMask == 0)
+		return "0.0f";
+	else	
+		return "0.5f";
 }
 
 std::string GenerateVS(Mat3* matInfo, int index)
