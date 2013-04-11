@@ -134,6 +134,7 @@ void App::drawFrame()
 	
 	renderer->reset();
 		renderer->setGlobalConstant4x4f("WorldViewProj", view_proj);
+		renderer->setGlobalConstant4f("ambLightColor", float4(0.7f, 0.7f, 0.7f, 1.0f));
 	renderer->apply();
 
 	m_Model->Draw(renderer, device);

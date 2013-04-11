@@ -63,6 +63,12 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 	renderer->setBlendState(gcMat.blendState);
 	renderer->setRasterizerState(gcMat.rasterState);
 
+	// Colors
+	renderer->setShaderConstant4f("matColor0", gcMat.matColor[0]);
+	renderer->setShaderConstant4f("matColor1", gcMat.matColor[1]);
+	renderer->setShaderConstant4f("ambColor0", gcMat.ambColor[0]);
+	renderer->setShaderConstant4f("ambColor1", gcMat.ambColor[1]);
+
 	// Textures
 	uint gIsAFlags = 0; // Green is Alpha Flags. If the texture has format I8_A8, then we sample that as R8G8. 
 						// Thus the shader needs to know to treat the G channel as A. One bit for each bound texture.
@@ -501,6 +507,8 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 	std::vector<DepthStateID> depthModes;
 	std::vector<BlendStateID> blendModes;
 	std::vector<RasterizerStateID> cullModes;
+	std::vector<float4> matColors;
+	std::vector<float4> ambColors;
 
 	// Shaders
 	for (uint i = 0; i < nMaterials; i++)
@@ -533,12 +541,33 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 		blendModes.push_back(GC3D::CreateBlendState(renderer, gcBlendInfo));
 	}
 
+	// Material Colors
+	for (uint i = 0; i < m_BDL->mat3.matColor.size(); i++)
+	{
+		//TODO: This is only a 32-bit color, but we're packing it into a float4
+		// This could be a lot more efficient! (but it is only per material)
+		MColor mcol = m_BDL->mat3.matColor[i];
+		matColors.push_back(float4(mcol.r/255.0f, mcol.g/255.0f, mcol.b/255.0f, mcol.a/255.0f));
+	}
+
+	// Ambient Colors
+	for (uint i = 0; i < m_BDL->mat3.ambColor.size(); i++)
+	{
+		MColor mcol = m_BDL->mat3.ambColor[i];
+		ambColors.push_back(float4(mcol.r/255.0f, mcol.g/255.0f, mcol.b/255.0f, mcol.a/255.0f));
+	}
+
 	// Fixup our actual materials
 	for (uint i = 0; i < nMaterials; i++)
 	{
 		Material& mat = m_BDL->mat3.materials[i];
 
 		strncpy(m_Materials[i].name, m_BDL->mat3.stringtable[i].c_str(), GCMODEL_NAME_MAX_CHARS);
+
+		m_Materials[i].matColor[0] = matColors[mat.matColor[0]];
+		m_Materials[i].matColor[1] = matColors[mat.matColor[1]];
+		m_Materials[i].ambColor[0] = ambColors[mat.ambColor[0]];
+		m_Materials[i].ambColor[1] = ambColors[mat.ambColor[1]];
 
 		m_Materials[i].shader = shaders[i];
 		m_Materials[i].depthState = depthModes[mat.zModeIndex];

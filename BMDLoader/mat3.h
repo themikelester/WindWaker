@@ -15,13 +15,22 @@ struct Color16
   s16 r, g, b, a;
 };
 
+// MikeLest: See this site for details http://www.gamasutra.com/view/feature/2945/shader_integration_merging_.php?print=1
+// MikeLest: This has examples of GXSetChanCtrl: https://wire3d.googlecode.com/svn-history/r416/trunk/Wire/Renderer/GXRenderer/WireGXLight.cpp
+// These are the parameters to GXSetChanCtrl
 struct ColorChanInfo
 {
   //not sure if this is right
-  u8 ambColorSource;
-  u8 matColorSource;
-  u8 litMask;
+  u8 ambColorSource; // either GX_SRC_REG (use the ambColor from material) or GX_SRC_VTX (vertex color)
+  u8 matColorSource; // either GX_SRC_REG (use the matColor from material) or GX_SRC_VTX (vertex color)
+  u8 litMask;		 // a bitfield that enables lighting computation for lights 0-7
+
+  // This is probably the Attenuation Function, one of:
+  //GX_AF_SPEC, GX_AF_SPOT, GX_AF_NONE	
   u8 attenuationFracFunc;
+  
+  // And this is probably the Diffuse Function
+  //GX_DF_NONE, GX_DF_SIGNED, GX_DF_CLAMP		
   u8 diffuseAttenuationFunc;
 };
 
@@ -108,11 +117,11 @@ struct Material
 {
   u8 flag;
 
-  // Unknown/Unused
-  u8 numChansIndex;
-  
-  u16 ambColor[2];
-  u16 chanControls[4];
+  // Lighting Pipeline 
+  u16 chanControls[4]; // index into colorChanInfos. 
+  //I bet the indices are for GX_COLOR0, GX_COLOR1, GX_ALPHA0, GX_ALPHA1!
+  u8 numChansIndex;	   // index into numChans
+  u16 ambColor[2];		
   u16 matColor[2];
   
   // State settings
@@ -144,10 +153,12 @@ struct Material
 
 struct Mat3
 {
-  std::vector<MColor> ambColor;
-  std::vector<u8> numChans;
+  
+  // Controls the Lighting/Color calculations that feed in to the 2 TEV RAS color channels 
   std::vector<ColorChanInfo> colorChanInfos;
-  std::vector<MColor> matColor;
+  std::vector<u8> numChans;		// Number of these channels to enable (0, 1, or 2)
+  std::vector<MColor> matColor; // Each color channel has a mat color 
+  std::vector<MColor> ambColor;
 
   std::vector<Material> materials;
   std::vector<int> indexToMatIndex;

@@ -109,7 +109,7 @@ std::string GetKonstAlphaString(uint konst)
 	case GX_TEV_KASEL_K0_A:	return "konst0.a";
 	case GX_TEV_KASEL_K1_A:	return "konst1.a";
 	case GX_TEV_KASEL_K2_A:	return "konst2.a";
-	case GX_TEV_KASEL_K3_A:	return "konst2.a";
+	case GX_TEV_KASEL_K3_A:	return "konst3.a";
 	default:
 		WARN("GetKonstAlphaString(): Unknown konstIndex 0x%x", konst);
 		return "float(1.0f)";
@@ -208,6 +208,7 @@ std::string GetModString(uint outputRegIndex, uint bias, uint scale, uint clamp,
 	return out.str() + "\n";
 }
 
+// TODO: Detect and remove NOPs
 std::string GetColorOpString(uint op, uint bias, uint scale, uint clamp, uint outputRegIndex, std::string input[4])
 {
 	std::string channelSelect = ".rgb";
@@ -291,6 +292,7 @@ std::string GetColorOpString(uint op, uint bias, uint scale, uint clamp, uint ou
 	return str.str() + "\n";
 }
 
+// TODO: Detect and remove NOPs
 std::string GetAlphaOpString(uint op, uint bias, uint scale, uint clamp, uint outputRegIndex, std::string input[4])
 {
 	std::string channelSelect = ".a";
@@ -349,13 +351,14 @@ std::string GeneratePS(Mat3* matInfo, int index)
 	// Helper macros
 	out << "#define _SAMPLE(texIdx, uvIdx) Texture##texIdx.Sample( Sampler##texIdx, In.TexCoord##uvIdx )\n";
 	out << "#define SAMPLE(texIdx, uvIdx) ( GisAFlags & (1 << texIdx) ? _SAMPLE(texIdx, uvIdx).rrrg : _SAMPLE(texIdx, uvIdx) )\n";
+	out << "\n";
 
 	// Input structure
 	out << "struct PsIn" << "\n";
 	out << "{" << "\n";
 	out << "float4 Position : SV_Position;" << "\n";
-	out << "uint4  Color0	: Color0;" << "\n";
-	out << "uint4  Color1	: Color1;" << "\n";
+	out << "float4 Color0	: Color0;" << "\n";
+	out << "float4 Color1	: Color1;" << "\n";
 	out << "float2 TexCoord0: Texcoord0;" << "\n";
 	out << "float2 TexCoord1: Texcoord1;" << "\n";
 	out << "float2 TexCoord2: Texcoord2;" << "\n";
@@ -425,6 +428,12 @@ std::string GeneratePS(Mat3* matInfo, int index)
 		colorInputs[3] = GetColorInString(stage.colorIn[3], mat.constColorSel[i], &order);
 
 		out << GetColorOpString(uint(stage.colorOp), uint(stage.colorBias), uint(stage.colorScale), uint(stage.colorClamp), uint(stage.colorRegId), colorInputs);
+	}
+	
+	for(uint i = 0; i < matInfo->tevCounts[mat.tevCountIndex]; ++i)
+	{
+		const TevOrderInfo& order = matInfo->tevOrderInfos[mat.tevOrderInfo[i]];
+		const TevStageInfo& stage = matInfo->tevStageInfos[mat.tevStageInfo[i]];
 
 		std::string alphaInputs[4];
 		alphaInputs[0] = GetAlphaInString(stage.alphaIn[0], mat.constAlphaSel[i], &order);

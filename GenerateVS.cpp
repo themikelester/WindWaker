@@ -9,6 +9,12 @@ inline bool hasAttrib(int flags, BatchAttributeFlags attrib)
 	return (flags & attrib) == attrib;
 }
 
+// TODO: Diffuse lighting functions
+std::string getLightCalcString(uint litMask, uint attenuationFunc, uint diffuseFunc, bool alpha)
+{
+	return "1.0f";
+}
+
 std::string GenerateVS(Mat3* matInfo, int index)
 {
 	Material& mat = matInfo->materials[index];
@@ -21,9 +27,19 @@ std::string GenerateVS(Mat3* matInfo, int index)
 	out << "cbuffer g_PerFrame" << "\n";
 	out << "{" << "\n";
 	out << "  float4x4 WorldViewProj;" << "\n";
+	out << "  float4 ambLightColor;" << "\n";
 	out << "}" << "\n";
 	out << "\n";
-	
+
+	out << "cbuffer PerMaterial" << "\n";
+	out << "{" << "\n";
+	out << "  float4 matColor0; //Material" << "\n";
+	out << "  float4 matColor1; //Material" << "\n";
+	out << "  float4 ambColor0; //Ambient" << "\n";
+	out << "  float4 ambColor1; //Ambient" << "\n";
+	out << "}" << "\n";
+	out << "\n";
+
 	out << "cbuffer PerPacket" << "\n";
 	out << "{" << "\n";
 	out << "  float4x4 ModelMat[10];" << "\n";
@@ -35,8 +51,8 @@ std::string GenerateVS(Mat3* matInfo, int index)
 	out << "{" << "\n";
 	out << "uint   MatIndex : Generic;" << "\n";
 	out << "float3 Position : Position;" << "\n";
-	out << "float4 Color0	: Color0;" << "\n";
-	out << "float4 Color1	: Color1;" << "\n";
+	out << "float4 VtxColor0: Color0;" << "\n";
+	out << "float4 VtxColor1: Color1;" << "\n";
 	out << "float2 TexCoord0: Texcoord0;" << "\n";
 	out << "float2 TexCoord1: Texcoord1;" << "\n";
 	out << "float2 TexCoord2: Texcoord2;" << "\n";
@@ -51,8 +67,8 @@ std::string GenerateVS(Mat3* matInfo, int index)
 	out << "struct VsOut" << "\n";
 	out << "{" << "\n";
 	out << "float4 Position : SV_Position;" << "\n";
-	out << "uint4  Color0	: Color0;" << "\n";
-	out << "uint4  Color1	: Color1;" << "\n";
+	out << "float4 Color0	: Color0;" << "\n";
+	out << "float4 Color1	: Color1;" << "\n";
 	out << "float2 TexCoord0: Texcoord0;" << "\n";
 	out << "float2 TexCoord1: Texcoord1;" << "\n";
 	out << "float2 TexCoord2: Texcoord2;" << "\n";
@@ -84,22 +100,36 @@ std::string GenerateVS(Mat3* matInfo, int index)
 		out << "Out.TexCoord" << i << " = In.TexCoord" << i << ";\n";
 	}
 	out << "\n";
+	
+	for (uint chanSel = 0; chanSel < matInfo->numChans[mat.numChansIndex]; chanSel++)
+	{
+		ColorChanInfo& chanInfo = matInfo->colorChanInfos[mat.chanControls[chanSel]];
+		std::string chanTarget, vtxColor, ambColor, matColor, ambLight, diffLight;
+		std::string swizzle, chan;
+		bool alpha;
 
-	// TODO: Handle Color transforms
-	//Color pass-through
-	ColorChanInfo& chanInfo = matInfo->colorChanInfos[mat.chanControls[0]];
-    if(chanInfo.matColorSource == 1)
-      out << "Out.Color0 = In.Color0;\n";
-    else
-    {
-      const MColor& c = matInfo->ambColor[mat.ambColor[0]];
-      out << "Out.Color0 = float4("
-          << c.r/255.f << ", " << c.g/255.f << ", " << c.b/255.f << ", "
-          << c.a/255.f << ");\n";
-    }
+		switch (chanSel)
+		{
+		case GX_COLOR0: chan = "0"; swizzle = ".rgb"; alpha = true; break;
+		case GX_COLOR1: chan = "1"; swizzle = ".rgb"; alpha = true; break;
+		case GX_ALPHA0: chan = "0"; swizzle = ".a";   alpha = false; break;
+		case GX_ALPHA1: chan = "1"; swizzle = ".a";   alpha = false; break;
+		default:
+			WARN("Unknown vertex output color channel %u. Skipping", chanSel);
+			continue;
+		}
 
-	out << "Out.Color1 = In.Color1;\n";
-	out << "\n";
+		chanTarget = "Out.Color" + chan + swizzle;
+		ambColor = (chanInfo.ambColorSource == GX_SRC_VTX ? "In.VtxColor" : "ambColor") + chan + swizzle;
+		matColor = (chanInfo.matColorSource == GX_SRC_VTX ? "In.VtxColor" : "matColor") + chan + swizzle;
+		ambLight = "ambLightColor" + swizzle;
+		diffLight = getLightCalcString(chanInfo.litMask, chanInfo.attenuationFracFunc, chanInfo.diffuseAttenuationFunc, alpha);
+
+		//Out.Color0.rgb = ambient * ambLightColor + material * light;
+		out << "Out.Color" + chan << " = 1.0f;\n";
+		out << chanTarget << " = " << ambColor << " * " << ambLight << " + " << matColor << " * " << diffLight << ";\n";
+		out << "\n";
+	}
 
 	out << "return Out;" << "\n";
 	out << "}\n";

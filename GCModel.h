@@ -88,6 +88,9 @@ struct GCMaterial
 {
 	char name[GCMODEL_NAME_MAX_CHARS];
 
+	float4 matColor[2];
+	float4 ambColor[2];
+
 	ShaderID shader;
 	DepthStateID depthState;
 	BlendStateID blendState;
