@@ -17,6 +17,7 @@ struct Color16
 
 // MikeLest: See this site for details http://www.gamasutra.com/view/feature/2945/shader_integration_merging_.php?print=1
 // MikeLest: This has examples of GXSetChanCtrl: https://wire3d.googlecode.com/svn-history/r416/trunk/Wire/Renderer/GXRenderer/WireGXLight.cpp
+// MikeLest: Full gx.h documentation! http://libogc.devkitpro.org/gx_8h.html
 // These are the parameters to GXSetChanCtrl
 struct ColorChanInfo
 {
@@ -119,7 +120,7 @@ struct Material
 
   // Lighting Pipeline 
   u16 chanControls[4]; // index into colorChanInfos. 
-  //I bet the indices are for GX_COLOR0, GX_COLOR1, GX_ALPHA0, GX_ALPHA1!
+  //there can only be two chanControls. 0 is GX_COLOR0A0 and 1 is GX_COLOR1A1. Not sure why there are 4 indices here
   u8 numChansIndex;	   // index into numChans
   u16 ambColor[2];		
   u16 matColor[2];
