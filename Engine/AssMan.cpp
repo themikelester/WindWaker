@@ -1,5 +1,5 @@
 #include "AssMan.h"
-#include "RARCReader\RARCReader.h"
+#include "RARCRead\RARCReader.h"
 #include "Foundation\hash.h"
 #include "Foundation\murmur_hash.h"
 #include <Foundation\memory.h>

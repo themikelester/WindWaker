@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Common\common.h"
+#include "common.h"
 #include "Asset.h"
-#include "BMDLoader\BMDLoader.h"
+#include "BMDLoad\BMDLoader.h"
 #include <Foundation\memory_types.h>
 #include <Foundation\collection_types.h>
 #include <Framework3\Direct3D10\Direct3D10Renderer.h>
@@ -106,7 +106,6 @@ private:
 	BModel*			m_BDL;
 
 	//TODO: Remove, these are hacks!
-	BlendStateID SrcAlphaBlendState;
 	VertexFormatID hackFullVertFormat;
 
 	std::vector<GCMaterial> m_Materials;

@@ -1,7 +1,7 @@
 
 #include <Foundation\memory.h>
 #include "Package.h"
-#include "RARCReader\RARCReader.h"
+#include "RARCRead\RARCReader.h"
 
 using namespace foundation;
 

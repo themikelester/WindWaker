@@ -1,7 +1,7 @@
 #include "common.h"
 #include "gx.h"
-#include "BMDLoader\mat3.h"
-#include "BMDLoader\tex1.h"
+#include "BMDLoad\mat3.h"
+#include "BMDLoad\tex1.h"
 #include <sstream>
 
 

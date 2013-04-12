@@ -1,0 +1,282 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Windows">
+      <UniqueIdentifier>{0abe9f8b-567c-47ac-9ea5-db6e9ea78382}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Direct3D10">
+      <UniqueIdentifier>{1167706c-1933-4849-a318-967343739de5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Math">
+      <UniqueIdentifier>{2f5aaeb1-4799-4774-a0f0-2bbb9adb898b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Util">
+      <UniqueIdentifier>{e950c84c-1a84-442f-8dc8-bd065c217648}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libs">
+      <UniqueIdentifier>{08245455-ad13-43a4-8a8d-178e36d6c94f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Image">
+      <UniqueIdentifier>{2e605961-2a20-48db-9e2d-fe06473923bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GUI">
+      <UniqueIdentifier>{97ff3355-bd81-4725-9900-5576cc2be807}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BaseApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\WindowsBase.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Direct3D10\D3D10App.cpp">
+      <Filter>Direct3D10</Filter>
+    </ClCompile>
+    <ClCompile Include="Direct3D10\Direct3D10Renderer.cpp">
+      <Filter>Direct3D10</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\Frustum.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\MathTools.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\Noise.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\Reorder.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\Scissor.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\SphericalHarmonics.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\Vector.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\BSP.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\ConvexHull.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\Model.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\String.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\TexturePacker.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\Thread.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\Tokenizer.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Imaging\Image.cpp">
+      <Filter>Image</Filter>
+    </ClCompile>
+    <ClCompile Include="GUI\Button.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="GUI\CheckBox.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="GUI\Dialog.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="GUI\DropDownList.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="GUI\Label.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="GUI\Slider.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="GUI\Widget.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="BaseApp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CPU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Platform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Configuration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Debug.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\resource.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Direct3D10\D3D10App.h">
+      <Filter>Direct3D10</Filter>
+    </ClInclude>
+    <ClInclude Include="Direct3D10\Direct3D10Renderer.h">
+      <Filter>Direct3D10</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Frustum.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\MathTools.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\MyMath.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Noise.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Reorder.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Scissor.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\SphericalHarmonics.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Vector.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\Array.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\BSP.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\ConvexHull.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\Hash.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\KdTree.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\Model.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\Queue.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\String.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\TexturePacker.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\Thread.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\Tokenizer.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Imaging\Image.h">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="Imaging\jconfig.h">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="Imaging\jmorecfg.h">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="Imaging\jpeglib.h">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="Imaging\png.h">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="Imaging\pngconf.h">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="Imaging\zconf.h">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="Imaging\zlib.h">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\Button.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\CheckBox.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\Dialog.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\DropDownList.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\Label.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\Slider.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\Widget.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Windows\mainicon.ico">
+      <Filter>Windows</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Windows\Resources.aps">
+      <Filter>Windows</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Windows\Resources.rc">
+      <Filter>Windows</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

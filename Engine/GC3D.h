@@ -2,9 +2,9 @@
 
 #include <Framework3\Renderer.h>
 #include "Foundation\collection_types.h"
-#include "Common\Types.h"
-#include "BMDLoader\tex1.h"
-#include "BMDLoader\mat3.h"
+#include "Types.h"
+#include "BMDLoad\tex1.h"
+#include "BMDLoad\mat3.h"
 
 namespace GC3D
 {

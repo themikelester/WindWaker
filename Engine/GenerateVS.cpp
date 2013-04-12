@@ -1,7 +1,7 @@
 #include "common.h"
 #include "gx.h"
-#include "BMDLoader\mat3.h"
-#include "BMDLoader\shp1.h"
+#include "BMDLoad\mat3.h"
+#include "BMDLoad\shp1.h"
 #include <sstream>
 
 inline bool hasAttrib(int flags, BatchAttributeFlags attrib)

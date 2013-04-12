@@ -37,6 +37,8 @@ public:
 	bool load();
 	void unload();
 
+	void resetCamera();
+
 	void drawFrame();
 
 	bool onKey(const uint key, const bool pressed);

@@ -10,8 +10,8 @@
 #include <common.h>
 #include <gcio.h>
 
-// TODO: fix this weird header file dependncy
-#include "../Package.h"
+// TODO: fix this weird header file dependency
+#include "Package.h"
 
 namespace RARC {
 	struct RarcHeader

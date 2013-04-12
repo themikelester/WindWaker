@@ -55,7 +55,7 @@ bool App::load()
 {
 	RESULT r;
 
-	char* filename = "C:\\Users\\Michael\\Dropbox\\Code\\Wind Waker Assets\\Link.rarc";
+	char* filename = "..\\Assets\\Link.rarc";
 	char* nodeName = "/bdl/cl.bdl";
 
 	IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
@@ -117,6 +117,12 @@ bool App::onKey(const uint key, const bool pressed)
 	}
 
 	return BaseApp::onKey(key, pressed);
+}
+
+void App::resetCamera(){
+	camPos = vec3(0, 100.0f, -200.0f);
+	wx = 0.1f;
+	wy = 0;
 }
 
 void App::drawFrame()

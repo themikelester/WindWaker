@@ -113,7 +113,6 @@ RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &paren
 			applyMaterial(renderer, matIndex);
 			renderer->setVertexBuffer(0, vertexBuffer.id);
 			renderer->setIndexBuffer(indexBuffer.id);
-			renderer->setBlendState(model->SrcAlphaBlendState);
 			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, packet->matrixTable.size());
 		renderer->apply();
 
@@ -588,10 +587,7 @@ RESULT GCModel::Init(Renderer *renderer)
 
 	initTextures(renderer);
 	initMaterials(renderer);
-
-	// TODO: HACK: This blend state should probably be based on the material
-	SrcAlphaBlendState = renderer->addBlendState(SRC_ALPHA, ONE_MINUS_SRC_ALPHA);
-	
+		
 	// TODO: HACK: Force all vertices to be fully inflated (all attributes) and use a single vert format
 	hackFullVertFormat = GC3D::CreateVertexFormat(renderer, FULL_VERTEX_ATTRIBS, m_Materials[0].shader);
 	
