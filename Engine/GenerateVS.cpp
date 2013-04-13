@@ -10,7 +10,7 @@ inline bool hasAttrib(int flags, BatchAttributeFlags attrib)
 }
 
 // TODO: Diffuse lighting functions
-std::string getLightCalcString(uint litMask, uint attenuationFunc, uint diffuseFunc)
+std::string getLightCalcString(uint litMask, uint attenuationFunc, uint diffuseFunc, bool alpha)
 {
 	if (litMask == 0)
 		return "0.0f";
@@ -121,21 +121,32 @@ std::string GenerateVS(Mat3* matInfo, int index)
 	out << "Out.Position = mul(WorldViewProj, Out.Position);" << "\n";
 	out << "\n";
 	
-	// chanSel is 0, 1, or 2
 	for (uint chanSel = 0; chanSel < nChans; chanSel++)
 	{
 		ColorChanInfo& chanInfo = matInfo->colorChanInfos[mat.chanControls[chanSel]];
 		std::string chanTarget, vtxColor, ambColor, matColor, ambLight, diffLight;
-		std::string chan = (chanSel == 0 ? "0" : "1");
+		std::string swizzle, chan;
+		bool alpha;
 
+		switch (chanSel)
+		{
+		case /* Color0 */ 0: chan = "0"; swizzle = ".rgb"; alpha = false; break;
+		case /* Alpha0 */ 1: chan = "0"; swizzle = ".a";   alpha = true; break;
+		case /* Color1 */ 2: chan = "1"; swizzle = ".rgb"; alpha = false; break;
+		case /* Alpha1 */ 3: chan = "1"; swizzle = ".a";   alpha = true; break;
+		default:
+			WARN("Unknown vertex output color channel %u. Skipping", chanSel);
+			continue;
+		}
 
-		chanTarget = "Out.Color" + chan;
-		ambColor = (chanInfo.ambColorSource == GX_SRC_VTX ? "In.VtxColor" : "ambColor") + chan;
-		matColor = (chanInfo.matColorSource == GX_SRC_VTX ? "In.VtxColor" : "matColor") + chan;
-		ambLight = "ambLightColor";
-		diffLight = getLightCalcString(chanInfo.litMask, chanInfo.attenuationFracFunc, chanInfo.diffuseAttenuationFunc);
+		chanTarget = "Out.Color" + chan + swizzle;
+		ambColor = (chanInfo.ambColorSource == GX_SRC_VTX ? "In.VtxColor" : "ambColor") + chan + swizzle;
+		matColor = (chanInfo.matColorSource == GX_SRC_VTX ? "In.VtxColor" : "matColor") + chan + swizzle;
+		ambLight = "ambLightColor" + swizzle;
+		diffLight = getLightCalcString(chanInfo.litMask, chanInfo.attenuationFracFunc, chanInfo.diffuseAttenuationFunc, alpha);
 
-		//Out.Color0 = ambient * ambLightColor + material * light;
+		//Out.Color0.rgb = ambient * ambLightColor + material * light;
+		out << "Out.Color" + chan << " = 1.0f;\n";
 		out << chanTarget << " = " << ambColor << " * " << ambLight << " + " << matColor << " * " << diffLight << ";\n";
 		out << "\n";
 	}

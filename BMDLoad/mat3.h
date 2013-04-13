@@ -120,7 +120,9 @@ struct Material
 
   // Lighting Pipeline 
   u16 chanControls[4]; // index into colorChanInfos. 
-  //there can only be two chanControls. 0 is GX_COLOR0A0 and 1 is GX_COLOR1A1. Not sure why there are 4 indices here
+  //These indices are for GX_COLOR0, GX_ALPHA0, GX_COLOR1, GX_ALPHA1. 
+  //According to http://kuribo64.net/?page=thread&id=532&from=20
+
   u8 numChansIndex;	   // index into numChans
   u16 ambColor[2];		
   u16 matColor[2];
