@@ -371,16 +371,20 @@ std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 	out << "struct PsIn" << "\n";
 	out << "{" << "\n";
 	out << "float4 Position : SV_Position;" << "\n";
-	out << "float4 Color0	: Color0;" << "\n";
-	out << "float4 Color1	: Color1;" << "\n";
-	out << "float2 TexCoord0: Texcoord0;" << "\n";
-	out << "float2 TexCoord1: Texcoord1;" << "\n";
-	out << "float2 TexCoord2: Texcoord2;" << "\n";
-	out << "float2 TexCoord3: Texcoord3;" << "\n";
-	out << "float2 TexCoord4: Texcoord4;" << "\n";
-	out << "float2 TexCoord5: Texcoord5;" << "\n";
-	out << "float2 TexCoord6: Texcoord6;" << "\n";
-	out << "float2 TexCoord7: Texcoord7;" << "\n";
+	
+	uint nChans = matInfo->numChans[mat.numChansIndex];
+	uint nTexGens = matInfo->texGenCounts[mat.texGenCountIndex];
+
+	for (uint i = 0; i < nChans; i++)
+	{
+		out << "float4 Color" << i << " : Color" << i << ";\n";
+	}
+
+	for (uint i = 0; i < nTexGens; i++)
+	{
+		out << "float2 TexCoord" << i << ": Texcoord" << i << ";\n";
+	}
+
 	out << "};" << "\n";
 	out << "\n";
 

@@ -18,6 +18,29 @@ std::string getLightCalcString(uint litMask, uint attenuationFunc, uint diffuseF
 		return "0.5f";
 }
 
+std::string getMtxString(TexMtxInfo mtx, bool is4x3)
+{
+	std::ostringstream out;
+	out.setf(std::ios::fixed, std::ios::floatfield);
+	out.setf(std::ios::showpoint);
+
+	if (is4x3)
+	{
+		WARN("Non-identity 4x3 texture matrices definitely aren't yet supported. Applying identity (!)");
+		return "{ 1.0f, 0.0f, 0.0f, 0.0f,\n\
+				  0.0f, 1.0f, 0.0f, 0.0f,\n\
+				  0.0f, 0.0f, 1.0f, 0.0f }";
+	}
+	else
+	{
+		WARN("Non-identity texture matrices aren't yet fully supported. Applying best guess (!)");
+		out << "{ " << mtx.scaleU << "f, 0.0f, 0.0f, " << mtx.scaleCenterX - 0.5f << "f,\n"
+			<< "0.0f, " << mtx.scaleV << "f, 0.0f, " << mtx.scaleCenterY - 0.5f << "f }";
+	}
+
+	return out.str();
+}
+
 std::string GenerateVS(Mat3* matInfo, int index)
 {
 	Material& mat = matInfo->materials[index];
@@ -70,16 +93,20 @@ std::string GenerateVS(Mat3* matInfo, int index)
 	out << "struct VsOut" << "\n";
 	out << "{" << "\n";
 	out << "float4 Position : SV_Position;" << "\n";
-	out << "float4 Color0	: Color0;" << "\n";
-	out << "float4 Color1	: Color1;" << "\n";
-	out << "float2 TexCoord0: Texcoord0;" << "\n";
-	out << "float2 TexCoord1: Texcoord1;" << "\n";
-	out << "float2 TexCoord2: Texcoord2;" << "\n";
-	out << "float2 TexCoord3: Texcoord3;" << "\n";
-	out << "float2 TexCoord4: Texcoord4;" << "\n";
-	out << "float2 TexCoord5: Texcoord5;" << "\n";
-	out << "float2 TexCoord6: Texcoord6;" << "\n";
-	out << "float2 TexCoord7: Texcoord7;" << "\n";
+	
+	uint nChans = matInfo->numChans[mat.numChansIndex];
+	uint nTexGens = matInfo->texGenCounts[mat.texGenCountIndex];
+
+	for (uint i = 0; i < nChans; i++)
+	{
+		out << "float4 Color" << i << " : Color" << i << ";\n";
+	}
+
+	for (uint i = 0; i < nTexGens; i++)
+	{
+		out << "float2 TexCoord" << i << ": Texcoord" << i << ";\n";
+	}
+
 	out << "};" << "\n";
 	out << "\n";
 
@@ -93,19 +120,9 @@ std::string GenerateVS(Mat3* matInfo, int index)
 	out << "Out.Position = mul(ModelMat[In.MatIndex], float4(In.Position, 1.0));" << "\n";
 	out << "Out.Position = mul(WorldViewProj, Out.Position);" << "\n";
 	out << "\n";
-
-	// TODO: Handle TexGen
-	//Attribute pass-through
-	for (uint i = 0; i < 8; i++)
-	{
-		// TODO: Replace all magic numbers like '8' here with macros defined in some common file
-		// Pass through all of the texcoords that we have
-		out << "Out.TexCoord" << i << " = In.TexCoord" << i << ";\n";
-	}
-	out << "\n";
 	
 	// chanSel is 0, 1, or 2
-	for (uint chanSel = 0; chanSel < matInfo->numChans[mat.numChansIndex]; chanSel++)
+	for (uint chanSel = 0; chanSel < nChans; chanSel++)
 	{
 		ColorChanInfo& chanInfo = matInfo->colorChanInfos[mat.chanControls[chanSel]];
 		std::string chanTarget, vtxColor, ambColor, matColor, ambLight, diffLight;
@@ -123,42 +140,94 @@ std::string GenerateVS(Mat3* matInfo, int index)
 		out << "\n";
 	}
 
+	for (uint i = 0; i < nTexGens; i++)
+	{
+		TexGenInfo& texGen = matInfo->texGenInfos[mat.texGenInfos[i]];
+		std::string texGenSrc, texGenFunc, matrix;
+		
+		switch(texGen.texGenSrc)
+		{
+		case GX_TG_POS:  texGenSrc = "Position";	 break;
+		case GX_TG_TEX0: texGenSrc = "In.TexCoord0"; break;
+		case GX_TG_TEX1: texGenSrc = "In.TexCoord1"; break; 
+		case GX_TG_TEX2: texGenSrc = "In.TexCoord2"; break; 
+		case GX_TG_TEX3: texGenSrc = "In.TexCoord3"; break; 
+		case GX_TG_TEX4: texGenSrc = "In.TexCoord4"; break; 
+		case GX_TG_TEX5: texGenSrc = "In.TexCoord5"; break; 
+		case GX_TG_TEX6: texGenSrc = "In.TexCoord6"; break; 
+		case GX_TG_TEX7: texGenSrc = "In.TexCoord7"; break; 
+
+		// TODO: Verify this is correct
+		case GX_TG_TEXCOORD0: texGenSrc = "Out.TexCoord0"; WARN("NOT SURE IF GX_TG_TEXCOORD0 SRC IS CORRECT"); break;
+		case GX_TG_TEXCOORD1: texGenSrc = "Out.TexCoord1"; WARN("NOT SURE IF GX_TG_TEXCOORD1 SRC IS CORRECT"); break;
+		case GX_TG_TEXCOORD2: texGenSrc = "Out.TexCoord2"; WARN("NOT SURE IF GX_TG_TEXCOORD2 SRC IS CORRECT"); break;
+		case GX_TG_TEXCOORD3: texGenSrc = "Out.TexCoord3"; WARN("NOT SURE IF GX_TG_TEXCOORD3 SRC IS CORRECT"); break;
+		case GX_TG_TEXCOORD4: texGenSrc = "Out.TexCoord4"; WARN("NOT SURE IF GX_TG_TEXCOORD4 SRC IS CORRECT"); break;
+		case GX_TG_TEXCOORD5: texGenSrc = "Out.TexCoord5"; WARN("NOT SURE IF GX_TG_TEXCOORD5 SRC IS CORRECT"); break;
+		case GX_TG_TEXCOORD6: texGenSrc = "Out.TexCoord6"; WARN("NOT SURE IF GX_TG_TEXCOORD6 SRC IS CORRECT"); break;
+
+		case GX_TG_COLOR0: texGenSrc = "Out.Color0"; break;
+		case GX_TG_COLOR1: texGenSrc = "Out.Color1"; break;
+
+		case GX_TG_NRM: 
+		case GX_TG_TANGENT:  
+		case GX_TG_BINRM:  
+		default: 
+			WARN("Unsupported TexGen source %u. Defaulting to GX_TG_TEXCOORD0", texGen.texGenSrc);
+			texGenSrc = "In.TexCoord0";
+		}
+
+		if (texGen.matrix == GX_IDENTITY)
+		{
+			switch (texGen.texGenType)
+			{
+			case GX_TG_MTX2x4:
+				out << "Out.TexCoord" << i << " = " << texGenSrc << ".xy;\n";
+				break;
+			case GX_TG_MTX3x4:
+				out << "float3 uvw = " << texGenSrc << ".xyz;\n";
+				out << "Out.TexCoord" << i << " = (uvw / uvw.z).xy;\n";
+				break;
+			case GX_TG_SRTG:
+				out << "Out.TexCoord" << i << " = " << texGenSrc << ".rg;\n";
+				break;
+			default:
+				WARN("Unsupported TexGen operation %u. Defaulting to MTX2x4", texGen.texGenType);
+				out << "Out.TexCoord" << i << " = " << texGenSrc << ".xy;\n";
+			}
+		}
+		else
+		{
+			uint matIndex = (texGen.matrix - 30) / 3; // See GX_TEXMTX0 - GX_TEXMTX9 in gx.h
+			switch (texGen.texGenType)
+			{
+			case GX_TG_MTX2x4:
+				out << "float2x4 uvMatrix" << i << " = { "
+					<< getMtxString(matInfo->texMtxInfos[mat.texMtxInfos[matIndex]], false) << " };\n";
+				out << "Out.TexCoord" << i << " = mul( uvMatrix" << i << ", " << texGenSrc << ");\n";
+				break;
+			case GX_TG_MTX3x4:
+				out << "float3x4 uvMatrix" << i << " = { " 
+					<< getMtxString(matInfo->texMtxInfos[mat.texMtxInfos[matIndex]], true) << " };\n";
+				out << "float3 uvw = mul( uvMatrix" << i << ", " << texGenSrc << ");\n";
+				out << "Out.TexCoord" << i << " = (uvw / uvw.z).xy;\n";
+				break;
+			case GX_TG_SRTG:
+				WARN("Invalid TexGen operation GX_TG_SRTG. A matrix is set but this op would ignore it!");
+				out << "Out.TexCoord" << i << " = " << texGenSrc << ".rg;\n";
+				break;
+			default:
+				WARN("Unsupported TexGen operation %u. Defaulting to MTX2x4", texGen.texGenType);
+				out << "float2x4 uvMatrix" << i << " = { " 
+					<< getMtxString(matInfo->texMtxInfos[mat.texMtxInfos[matIndex]], false) << " };\n";
+				out << "Out.TexCoord" << i << " = mul( uvMatrix" << i << ", " << texGenSrc << ");\n";
+			}
+		}
+	}
+	out << "\n";
+
 	out << "return Out;" << "\n";
 	out << "}\n";
 
 	return out.str();
 }
-
-	//// In/Out structures
-	//out << "struct VsIn" << "\n";
-	//out << "{" << "\n";
-	//out << "uint   MatIndex : Generic;" << "\n";
-	//out << "float3 Position : Position;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_COLORS0))		out << "uint4  Color0	: Color0;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_COLORS1))		out << "uint4  Color1	: Color1;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS0))		out << "float2 TexCoord0: Texcoord0;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS1))		out << "float2 TexCoord1: Texcoord1;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS2))		out << "float2 TexCoord2: Texcoord2;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS3))		out << "float2 TexCoord3: Texcoord3;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS4))		out << "float2 TexCoord4: Texcoord4;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS5))		out << "float2 TexCoord5: Texcoord5;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS6))		out << "float2 TexCoord6: Texcoord6;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS7))		out << "float2 TexCoord7: Texcoord7;" << "\n";
-	//out << "};" << "\n";
-	//out << "\n";
-	//
-	//out << "struct VsOut" << "\n";
-	//out << "{" << "\n";
-	//out << "float4 Position : SV_Position;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_COLORS0))		out << "uint4  Color0	: Color0;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_COLORS1))		out << "uint4  Color1	: Color1;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS0))		out << "float2 TexCoord0: Texcoord0;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS1))		out << "float2 TexCoord1: Texcoord1;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS2))		out << "float2 TexCoord2: Texcoord2;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS3))		out << "float2 TexCoord3: Texcoord3;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS4))		out << "float2 TexCoord4: Texcoord4;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS5))		out << "float2 TexCoord5: Texcoord5;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS6))		out << "float2 TexCoord6: Texcoord6;" << "\n";
-	//if (hasAttrib(vertAttribs, HAS_TEXCOORDS7))		out << "float2 TexCoord7: Texcoord7;" << "\n";
-	//out << "};" << "\n";
-	//out << "\n";

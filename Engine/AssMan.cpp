@@ -80,7 +80,7 @@ RESULT AssetManager::LoadChunk(Chunk* chnk, const char* nodepath)
 {
 	RESULT r = S_OK;
 	Asset* asset;
-	AssetSlot* slot;
+	AssetSlot* slot = nullptr;
 
 	// Create an empty Asset of the correct type
 	IFC(createAsset(chnk, m_AssetAllocator, nodepath, &asset)); 
