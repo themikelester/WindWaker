@@ -62,7 +62,7 @@ bool App::load()
 	IFC(m_AssMan.Load(m_Pkg, nodeName));
 	IFC(m_AssMan.Get(nodeName, &m_Model)); 
 
-	defaultFont = renderer->addFont("../Fonts/Future.dds", "../Fonts/Future.font", linearClamp);
+	defaultFont = renderer->addFont("../Assets/Fonts/Future.dds", "../Assets/Fonts/Future.font", linearClamp);
 
 	m_Model->Init(renderer);
 

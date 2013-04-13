@@ -31,8 +31,8 @@ RESULT Package::Open( const char* filename, PkgAccessMode mode )
 
 	switch (mode)
 	{
-		case PKG_READ_MEM:	IFC( CopyFileToMem(filename, (void**)&m_Data) );
-		case PKG_READ_DISK:	IFC( fopen_s(&m_File, filename, "rb") );
+		case PKG_READ_MEM:	IFC( CopyFileToMem(filename, (void**)&m_Data) ); break;
+		case PKG_READ_DISK:	if (0 != fopen_s(&m_File, filename, "rb")) { r = E_ACCESSDENIED; goto cleanup;}  break;
 	}
 	
 	// Use the extention to instanciate the correct package object
@@ -49,7 +49,9 @@ RESULT Package::Open( const char* filename, PkgAccessMode mode )
 	return r;
 
 cleanup:
-	fclose(m_File);
+	if (r != E_ACCESSDENIED)
+		fclose(m_File);
+
 	return r;
 }
 

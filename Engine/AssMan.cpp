@@ -98,14 +98,26 @@ RESULT AssetManager::LoadChunk(Chunk* chnk, const char* nodepath)
 
 cleanup:
 	if (FAILED(r))
+	{
 		WARN("Failed to load asset %s", nodepath);
+		MAKE_DELETE(*m_AssetAllocator, AssetSlot, slot);
+	}
 	return r;
 }
 
 RESULT AssetManager::OpenPkg(char* filename, Package** ppPkg)
 {
+	RESULT r;
 	*ppPkg = MAKE_NEW(*m_AssetAllocator, Package, m_AssetAllocator);
-	return (*ppPkg)->Open(filename, PKG_READ_DISK);
+	IFC((*ppPkg)->Open(filename, PKG_READ_DISK));
+
+cleanup:
+	if (FAILED(r))
+	{
+		WARN("Failed to load package %s", filename);
+		MAKE_DELETE(*m_AssetAllocator, Package, *ppPkg);
+	}
+	return r;
 }
 
 
