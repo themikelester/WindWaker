@@ -8,6 +8,48 @@
 const std::string varResultName = "result";
 const std::string varRegisterName[3] = {"r0", "r1", "r2"};
 
+bool IsNewTexCombo(uint texMap, uint texCoordId, bool oldCombos[] )
+{
+	uint8 index = (texMap << 4 | texCoordId);
+	if (oldCombos[index])
+		return false;
+	else
+	{
+		oldCombos[index] = true;
+		return true;
+	}
+}
+
+std::string GetSwapModeSwizzleString(TevSwapModeTable& table)
+{
+	const char* components[4] = { "r", "g", "b", "a" };
+	WARN("Swap mode swizzling not yet tested");
+	return std::string(".") + components[table.r] + components[table.g] + components[table.b] + components[table.a];
+}
+
+std::string getCompareString(int comp, std::string a, u8 ref)
+{
+	std::ostringstream out;
+	float fRef = float(ref / 255.0f);
+
+	switch(comp)
+	{
+	case GX_NEVER:	return "false";	
+	case GX_LESS:	out << a << " < " << fRef;  break;
+	case GX_EQUAL:	out << a << " == " << fRef; break;
+	case GX_LEQUAL:	out << a << " <= " << fRef; break;
+	case GX_GREATER:out << a << " > " << fRef;  break;
+	case GX_NEQUAL:	out << a << " != " << fRef; break;
+	case GX_GEQUAL: out << a << " >= " << fRef; break;
+	case GX_ALWAYS: return "true";
+	default:
+		WARN("Invalid comparison function %u. Defaulting to 'ALWAYS'", comp);
+		return "true";
+	}
+
+	return out.str();
+}
+
 std::string GetRegisterString(uint regIndex)
 {
 	if (regIndex == 0) return varResultName;
@@ -16,24 +58,10 @@ std::string GetRegisterString(uint regIndex)
 
 std::string GetTexTapString(const TevOrderInfo* texMapping, uint formats[8])
 {
-	uint texIndex = texMapping->texMap;
-
-	std::string swizzle;
-	switch (formats[texIndex])
-	{
-	case I8: swizzle = ".rrrr"; break;
-	case I8_A8: swizzle = ".rrrg"; break;
-	case RGBA8: swizzle = ""; break;
-	case DXT1: swizzle = ""; break;
-	default:
-		WARN("GetTexTapString(): Unknown texture format %u. Defaulting to tap with no swizzling", formats[texIndex]);
-		swizzle = "";
-	}
-
-	// "SAMPLE(0, 0)"
+	// "tex00"
 	std::ostringstream out;
-	out << "SAMPLE(" << (int)texIndex << ", " << (int)texMapping->texCoordId << ")";
-	return out.str() + swizzle;
+	out << "tex" << (int)texMapping->texMap << (int)texMapping->texCoordId;
+	return out.str();
 }
 
 std::string GetVertColorString(const TevOrderInfo* texMapping)
@@ -374,6 +402,7 @@ std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 	
 	uint nChans = matInfo->numChans[mat.numChansIndex];
 	uint nTexGens = matInfo->texGenCounts[mat.texGenCountIndex];
+	uint nTevStages = matInfo->tevCounts[mat.tevCountIndex];
 
 	for (uint i = 0; i < nChans; i++)
 	{
@@ -434,11 +463,57 @@ std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 	}
 	out << "\n";
 
-	for(uint i = 0; i < matInfo->tevCounts[mat.tevCountIndex]; ++i)
+	// Make our texture samples
+	bool oldCombos[256] = {};
+	for (uint i = 0, j = 0; i < nTevStages; i++)
+	{
+		const TevOrderInfo& order = matInfo->tevOrderInfos[mat.tevOrderInfo[i]];
+		int tex = (int)order.texMap;
+		int coord = (int)order.texCoordId;
+
+		if (tex == 0xff || coord == 0xff)
+			continue;	// This TEV probably doesn't use the textures
+
+		if (IsNewTexCombo(tex, coord, oldCombos))
+		{
+			std::string swizzle;
+			switch (texFormats[tex])
+			{
+			case I8: swizzle = ".rrrr"; break;
+			case I8_A8: swizzle = ".rrrg"; break;
+			case RGBA8: swizzle = ""; break;
+			case DXT1: swizzle = ""; break;
+			default:
+				WARN("Unknown texture format %u. Defaulting to tap with no swizzling", 
+					texFormats[tex]);
+				swizzle = "";
+			}
+
+			out << "float4 tex" << tex << coord << " = SAMPLE(" 
+				<< tex << ", " << coord << ")" << swizzle << ";\n";
+		}
+	}
+	out << "\n";
+
+	// TODO: Implement indirect texturing
+
+	for(uint i = 0; i < nTevStages; ++i)
 	{
 		const TevOrderInfo& order = matInfo->tevOrderInfos[mat.tevOrderInfo[i]];
 		const TevStageInfo& stage = matInfo->tevStageInfos[mat.tevStageInfo[i]];
+		
+		TevSwapModeInfo& swap = matInfo->tevSwapModeInfos[mat.tevSwapModeInfo[i]];
+		TevSwapModeTable& rasTable = matInfo->tevSwapModeTables[mat.tevSwapModeTable[swap.rasSel]];
+		TevSwapModeTable& texTable = matInfo->tevSwapModeTables[mat.tevSwapModeTable[swap.texSel]];
+		uint8 noSwap[4] = {0,1,2,3};
 
+		if (memcmp(&rasTable, noSwap, 4) != 0)
+			out << GetVertColorString(&order) << " = " 
+				<< GetVertColorString(&order) << GetSwapModeSwizzleString(rasTable) << ";\n";
+		if (memcmp(&texTable, noSwap, 4) != 0)
+			out << GetTexTapString(&order, texFormats) << " = " 
+				<< GetTexTapString(&order, texFormats) << GetSwapModeSwizzleString(texTable) << ";\n";
+	
 		std::string colorInputs[4];
 		colorInputs[0] = GetColorInString(stage.colorIn[0], mat.constColorSel[i], &order, texFormats);
 		colorInputs[1] = GetColorInString(stage.colorIn[1], mat.constColorSel[i], &order, texFormats);
@@ -446,13 +521,7 @@ std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 		colorInputs[3] = GetColorInString(stage.colorIn[3], mat.constColorSel[i], &order, texFormats);
 
 		out << GetColorOpString(uint(stage.colorOp), uint(stage.colorBias), uint(stage.colorScale), uint(stage.colorClamp), uint(stage.colorRegId), colorInputs);
-	}
-	
-	for(uint i = 0; i < matInfo->tevCounts[mat.tevCountIndex]; ++i)
-	{
-		const TevOrderInfo& order = matInfo->tevOrderInfos[mat.tevOrderInfo[i]];
-		const TevStageInfo& stage = matInfo->tevStageInfos[mat.tevStageInfo[i]];
-
+		
 		std::string alphaInputs[4];
 		alphaInputs[0] = GetAlphaInString(stage.alphaIn[0], mat.constAlphaSel[i], &order, texFormats);
 		alphaInputs[1] = GetAlphaInString(stage.alphaIn[1], mat.constAlphaSel[i], &order, texFormats);
@@ -463,6 +532,25 @@ std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 	}
 
 	//TODO: Alpha testing
+	AlphaCompare& cmpInfo = matInfo->alphaCompares[mat.alphaCompIndex];
+	std::string op;
+
+	switch (cmpInfo.alphaOp)
+	{
+		case GX_AOP_AND:	op = " && "; break;
+		case GX_AOP_OR:		op = " || "; break;
+		case GX_AOP_XOR:	
+		case GX_AOP_XNOR:
+		default:
+			WARN("Unsupported alpha operation %u. Defaulting to 'OR'", cmpInfo.alphaOp);
+			op = " || ";
+	}
+	
+	// clip( result.a < 0.5f && result a > 0.2 ? -1 : 1) 
+	out << "clip( (" << getCompareString(cmpInfo.comp0, "result.a", cmpInfo.ref0) 
+		<< op << getCompareString(cmpInfo.comp1, "result.a", cmpInfo.ref1)
+		<< ") ? 1 : -1 );\n";
+
 
 	out << "return " << GetRegisterString(0) <<";\n" << "}";
 
