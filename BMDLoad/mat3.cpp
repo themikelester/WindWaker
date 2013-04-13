@@ -195,7 +195,7 @@ struct ColorChanInfo
 
   //(lit mask is implied by index position in array in MatEntry)
 #endif
-
+#if 0
   //I think I finally got it:
   //(enable = litMask != 0...)
   u8 ambColorSource;
@@ -205,8 +205,16 @@ struct ColorChanInfo
   u8 diffuseAttenuationFunc;
   u8 unk;
   u8 pad[2];
+#endif
+  
+  u8 enable;
+  u8 matColorSource;
+  u8 litMask;
+  u8 diffuseAttenuationFunc;
+  u8 attenuationFracFunc;
+  u8 ambColorSource;
+  u8 pad[2];
 };
-
 struct TexGenInfo
 {
   u8 texGenType;
@@ -796,18 +804,19 @@ void dumpMat3(Chunk* f, Mat3& dst)
   for(i = 0; i < dst.colorChanInfos.size(); ++i)
   {
     bmd::ColorChanInfo info;
-    DRead(&info.ambColorSource, 1, 1, f);
+    DRead(&info.enable, 1, 1, f);
     DRead(&info.matColorSource, 1, 1, f);
     DRead(&info.litMask, 1, 1, f);
-    DRead(&info.attenuationFracFunc, 1, 1, f);
     DRead(&info.diffuseAttenuationFunc, 1, 1, f);
-    DRead(&info.unk, 1, 1, f);
+    DRead(&info.attenuationFracFunc, 1, 1, f);
+    DRead(&info.ambColorSource, 1, 1, f);
     DRead(&info.pad[0], 1, 1, f);
     DRead(&info.pad[1], 1, 1, f);
-
+	
     ColorChanInfo& dstInfo = dst.colorChanInfos[i];
 
     //this is wrong:
+	dstInfo.enable = info.enable;
     dstInfo.ambColorSource = info.ambColorSource;
     dstInfo.matColorSource = info.matColorSource;
     dstInfo.litMask = info.litMask;

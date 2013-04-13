@@ -147,7 +147,10 @@ std::string GenerateVS(Mat3* matInfo, int index)
 
 		//Out.Color0.rgb = ambient * ambLightColor + material * light;
 		out << "Out.Color" + chan << " = 1.0f;\n";
-		out << chanTarget << " = " << ambColor << " * " << ambLight << " + " << matColor << " * " << diffLight << ";\n";
+		if (chanInfo.enable)
+			out << chanTarget << " = " << ambColor << " * " << ambLight << " + " << matColor << " * " << diffLight << ";\n";
+		else
+			out << chanTarget << " = " << matColor << ";\n";
 		out << "\n";
 	}
 

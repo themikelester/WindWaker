@@ -56,7 +56,7 @@ bool App::load()
 	RESULT r;
 
 	char* filename = "..\\Assets\\Link.rarc";
-	char* nodeName = "/bdl/cl.bdl";
+	char* nodeName = "/bdl/sha.bdl";
 
 	IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
 	IFC(m_AssMan.Load(m_Pkg, nodeName));
@@ -140,7 +140,7 @@ void App::drawFrame()
 	
 	renderer->reset();
 		renderer->setGlobalConstant4x4f("WorldViewProj", view_proj);
-		renderer->setGlobalConstant4f("ambLightColor", float4(0.7f, 0.7f, 0.7f, 1.0f));
+		renderer->setGlobalConstant4f("ambLightColor", float4(0.2f, 0.2f, 0.2f, 1.0f));
 	renderer->apply();
 
 	m_Model->Draw(renderer, device);

@@ -21,18 +21,17 @@ struct Color16
 // These are the parameters to GXSetChanCtrl
 struct ColorChanInfo
 {
-  //not sure if this is right
-  u8 ambColorSource; // either GX_SRC_REG (use the ambColor from material) or GX_SRC_VTX (vertex color)
-  u8 matColorSource; // either GX_SRC_REG (use the matColor from material) or GX_SRC_VTX (vertex color)
-  u8 litMask;		 // a bitfield that enables lighting computation for lights 0-7
+  u8 enable;
+  u8 matColorSource;
+  u8 litMask;
 
-  // This is probably the Attenuation Function, one of:
+  //GX_DF_NONE, GX_DF_SIGNED, GX_DF_CLAMP	
+  u8 diffuseAttenuationFunc;
+
   //GX_AF_SPEC, GX_AF_SPOT, GX_AF_NONE	
   u8 attenuationFracFunc;
-  
-  // And this is probably the Diffuse Function
-  //GX_DF_NONE, GX_DF_SIGNED, GX_DF_CLAMP		
-  u8 diffuseAttenuationFunc;
+  u8 ambColorSource;
+  u8 pad[2];
 };
 
 struct TexGenInfo
