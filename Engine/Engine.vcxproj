@@ -85,6 +85,7 @@
     <ClInclude Include="Asset.h" />
     <ClInclude Include="AssetPtr.h" />
     <ClInclude Include="AssMan.h" />
+    <ClInclude Include="Compile.h" />
     <ClInclude Include="GC3D.h" />
     <ClInclude Include="GCModel.h" />
     <ClInclude Include="Package.h" />
@@ -99,6 +100,7 @@
     <ClCompile Include="GeneratePS.cpp" />
     <ClCompile Include="GenerateVS.cpp" />
     <ClCompile Include="Package.cpp" />
+    <ClCompile Include="Compile.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -111,6 +113,9 @@
     <ProjectReference Include="..\Framework3\Framework3.vcxproj">
       <Project>{adf87dbe-89fe-490b-abfd-3a5a48ca517e}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\JsonCpp\JsonCpp.vcxproj">
+      <Project>{123422d4-ba11-482c-8360-6b59d16b77b6}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\RarcRead\RarcRead.vcxproj">
       <Project>{7e96dfbc-fabb-47fc-9617-79c98fb671f9}</Project>
     </ProjectReference>
@@ -122,6 +127,7 @@
     <FxCompile Include="test.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

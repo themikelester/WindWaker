@@ -10,6 +10,15 @@
 #define GCMODEL_NAME_MAX_CHARS 32
 
 class Renderer;
+struct Blob;
+namespace Json {
+	class Value;
+}
+
+namespace GDModel
+{
+	RESULT Compile(Json::Value root, Blob& blob);
+}
 
 class ModelManager
 {

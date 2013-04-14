@@ -25,7 +25,7 @@ extern char _DEBUG_BUFFER[256];
 #if ENABLE_WARNINGS
 	#define WARN(...) DEBUGPRINT("WARN", __VA_ARGS__)
 #else
-	#define WARN(...)
+#define WARN(...) {}
 #endif
 
 #if ENABLE_LOGGING

@@ -21,9 +21,12 @@
 
 #include "Resource.h"
 
+#include "Engine\Compile.h"
+
 #include "../CPU.h"
 #include "../BaseApp.h"
 #include <direct.h>
+#include <shellapi.h>
 
 #include <mmsystem.h>
 #pragma comment (lib, "winmm.lib")
@@ -129,7 +132,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
 
 #include <stdio.h>
 
-int WINAPI WinMain(HINSTANCE hThisInst, HINSTANCE hLastInst, LPSTR lpszCmdLine, int nCmdShow){
+int WINAPI WinMain(HINSTANCE hThisInst, HINSTANCE hLastInst, LPTSTR lpszCmdLine, int nCmdShow){
 #ifdef _DEBUG
 	int flag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG); // Get current flag
 	flag |= _CRTDBG_LEAK_CHECK_DF; // Turn on leak-checking bit
@@ -145,6 +148,20 @@ int WINAPI WinMain(HINSTANCE hThisInst, HINSTANCE hLastInst, LPSTR lpszCmdLine, 
 		char *slash = strrchr(path, '\\');
 		if (slash) *slash = '\0';
         chdir(path);
+	}
+
+	// Parse the command line
+	char* arg = strtok(lpszCmdLine, " ");
+	if (arg != nullptr)
+	{
+		do 
+		{
+			if (strcmp(arg, "-compile") == 0)
+			{
+				int result = _Compile(strtok(nullptr, " "));
+				exit(result);
+			}
+		} while ((arg = strtok(nullptr, " ")) != nullptr);
 	}
 
 	MSG msg;

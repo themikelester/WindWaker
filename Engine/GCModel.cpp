@@ -3,6 +3,7 @@
 #include "GC3D.h"
 #include "Foundation\hash.h"
 #include "Foundation\murmur_hash.h"
+#include "Compile.h"
 
 // ----- Static functions ------------------------------------------------------- //
 mat4 frameMatrix(const Frame& f);
@@ -752,4 +753,11 @@ void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, m
 			adjustMatrix(matrixTable[i], matrixType);
 		}
 	}
+}
+
+
+RESULT GDModel::Compile(Json::Value root, Blob& blob)
+{
+	
+	return S_OK;
 }

@@ -54,6 +54,9 @@
     <ClInclude Include="..\Common\Types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Compile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssMan.cpp">
@@ -81,6 +84,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Common\Debug.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Compile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
