@@ -31,6 +31,9 @@ std::string getCompareString(int comp, std::string a, u8 ref)
 	std::ostringstream out;
 	float fRef = float(ref / 255.0f);
 
+	if (comp != GX_ALWAYS)
+		WARN("Alpha test functionality is untested");
+
 	switch(comp)
 	{
 	case GX_NEVER:	return "false";	
@@ -543,7 +546,7 @@ std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 			WARN("Unsupported alpha operation %u. Defaulting to 'OR'", cmpInfo.alphaOp);
 			op = " || ";
 	}
-	
+
 	// clip( result.a < 0.5f && result a > 0.2 ? -1 : 1) 
 	out << "clip( (" << getCompareString(cmpInfo.comp0, "result.a", cmpInfo.ref0) 
 		<< op << getCompareString(cmpInfo.comp1, "result.a", cmpInfo.ref1)

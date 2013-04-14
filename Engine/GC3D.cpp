@@ -214,7 +214,7 @@ namespace GC3D
 		}
 	}
 
-	BlendStateID CreateBlendState (Renderer* renderer, BlendInfo blendInfo)
+	BlendStateID CreateBlendState (Renderer* renderer, BlendInfo blendInfo, u8 mask)
 	{
 		int srcFactor = ConvertGCBlendFactor(blendInfo.srcFactor);
 		int dstFactor = ConvertGCBlendFactor(blendInfo.dstFactor);
@@ -242,8 +242,8 @@ namespace GC3D
 				WARN("Unsupported blend mode %u. Defaulting to 'BM_ADD'", blendInfo.blendMode);
 				blendOp = BM_ADD;
 		}
-
-		return renderer->addBlendState(srcFactor, dstFactor, blendOp);
+		
+		return renderer->addBlendState(srcFactor, dstFactor, blendOp, mask);
 	}
 
 	ShaderID GetShader (Renderer* renderer, u16 attribFlags)

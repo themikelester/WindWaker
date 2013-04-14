@@ -58,9 +58,11 @@ void GCBatch::applyMaterial(Renderer* renderer, int matIndex)
 	// Shader
 	renderer->setShader(gcMat.shader);
 	renderer->setVertexFormat(model->hackFullVertFormat);
-
+	
+	//TODO: HACK: to make link's eyes work
+	//renderer->setBlendState(gcMat.blendState);
+	renderer->setBlendState(3);
 	renderer->setDepthState(gcMat.depthState);
-	renderer->setBlendState(gcMat.blendState);
 	renderer->setRasterizerState(gcMat.rasterState);
 
 	// Colors
@@ -528,7 +530,7 @@ RESULT GCModel::initMaterials(Renderer* renderer)
 	{
 		// TODO: Create default on fail
 		BlendInfo gcBlendInfo = m_BDL->mat3.blendInfos[i];
-		blendModes.push_back(GC3D::CreateBlendState(renderer, gcBlendInfo));
+		blendModes.push_back(GC3D::CreateBlendState(renderer, gcBlendInfo, ALL));
 	}
 
 	// Material Colors
