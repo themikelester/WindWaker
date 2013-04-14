@@ -225,6 +225,7 @@ struct TexGenInfo
 
 struct TexMtxInfo
 {
+#if 0
   u16 unk;
   u16 pad; //0xffff most of the time
 
@@ -239,8 +240,23 @@ struct TexMtxInfo
 
   f32 f2[2];
   f32 f3[16]; //nearly always an 4x4 identity matrix
-};
+#endif
+  
+  u8 projection;
+  u8 type;
+  u16 padding0; // 0xFFFF
 
+  f32 center_s,center_t;
+  f32 unknown0;
+  f32 scale_s,scale_t;
+
+  u16 rotate; // -32768 = -180 deg, 32768 = 180 deg
+  u16 padding1; // 0xFFFF
+
+  f32 translate_s,translate_t;
+
+  f32 prematrix[4][4];
+};
 
 struct TevOrderInfo
 {
@@ -572,17 +588,24 @@ void writeTexMtxInfo(ostream& debugOut, const bmd::TexMtxInfo& info)
 {
   int j;
   debugOut << hex;
-  debugOut << info.unk << " ";
-  debugOut << info.pad << endl;
-  for(j = 0; j < 5; ++j)
-    debugOut << info.f1[j] << " ";
-  debugOut << endl << info.unk2<< " ";
-  debugOut << info.pad2 << endl;
-  for(j = 0; j < 2; ++j)
-    debugOut << info.f2[j] << " "; debugOut << endl;
+  debugOut << info.projection << " ";
+  debugOut << info.type << " ";
+  debugOut << info.padding0 << endl;
+  debugOut << info.center_s << " ";
+  debugOut << info.center_t << " ";
+  debugOut << endl << info.unknown0<< " ";
+  debugOut << info.scale_s << " ";
+  debugOut << info.scale_t << " ";
+  
+  debugOut << info.rotate << " ";
+  debugOut << info.padding1 << endl;
+  
+  debugOut << info.translate_s << " ";
+  debugOut << info.translate_t << " ";
+
   for(j = 0; j < 16; ++j)
   {
-    debugOut << info.f3[j] << " ";
+    debugOut << info.prematrix[j/4, j%4] << " ";
     if((j+1)%4 == 0) debugOut << endl;
   }
   debugOut << endl;
@@ -669,16 +692,24 @@ void readMatEntry(Chunk* f, bmd::MatEntry& init, bool isMat2)
 void readTexMtxInfo(Chunk* f, bmd::TexMtxInfo& info)
 {
   int j;
-  readWORD(f, info.unk);
-  readWORD(f, info.pad);
-  for(j = 0; j < 5; ++j)
-    readFLOAT(f, info.f1[j]);
-  readWORD(f, info.unk2);
-  readWORD(f, info.pad2);
-  for(j = 0; j < 2; ++j)
-    readFLOAT(f, info.f2[j]);
+  DRead(&info.projection, 1, 1, f);
+  DRead(&info.type, 1, 1, f);
+  readWORD(f, info.padding0);
+
+  readFLOAT(f, info.center_s);
+  readFLOAT(f, info.center_t);
+  readFLOAT(f, info.unknown0);
+  readFLOAT(f, info.scale_s);
+  readFLOAT(f, info.scale_t);
+
+  readWORD(f, info.rotate);
+  readWORD(f, info.padding1);
+  
+  readFLOAT(f, info.translate_s);
+  readFLOAT(f, info.translate_t);
+
   for(j = 0; j < 16; ++j)
-    readFLOAT(f, info.f3[j]);
+    readFLOAT(f, info.prematrix[j/4][j%4]);
 }
 
 void readTevStageInfo(Chunk* f, bmd::TevStageInfo& info)
@@ -935,31 +966,6 @@ void dumpMat3(Chunk* f, Mat3& dst)
     dst.texGenInfos[i].matrix = info.matrix;
   }
 
-  //offset[13] (texmtxinfo debug)
-  if(lengths[13]%(100) != 0)
-  {
-    WARN("ARGH: unexpected texmtxinfo lengths[13]: %d", lengths[13]);
-  }
-  else
-  {
-    DSeek(f, mat3Offset + h.offsets[13], SEEK_SET);
-
-    for(size_t m = 0; m < lengths[13]/(25*4); ++m)
-    {
-      bmd::TexMtxInfo info;
-      readTexMtxInfo(f, info);
-
-      if(info.unk != 0x0100) //sometimes violated
-        WARN("(mat3texmtx) %x instead of 0x0100", info.unk);
-      if(info.pad != 0xffff)
-        WARN("(mat3texmtx) %x instead of 0xffff", info.pad);
-      if(info.unk2 != 0x0000)
-        WARN("(mat3texmtx) %x instead of 0x0000", info.unk2);
-      if(info.pad2 != 0xffff)
-        WARN("(mat3texmtx) %x instead of 2nd 0xffff", info.pad2);
-    }
-  }
-
   //offsets[13] (read texMtxInfo)
   DSeek(f, mat3Offset + h.offsets[13], SEEK_SET);
   dst.texMtxInfos.resize(lengths[13]/100);
@@ -967,10 +973,14 @@ void dumpMat3(Chunk* f, Mat3& dst)
   {
     bmd::TexMtxInfo info;
     readTexMtxInfo(f, info);
-    TexMtxInfo dstInfo = { info.f1[0], info.f1[1], info.f1[3], info.f1[4] };
+    TexMtxInfo dstInfo = { 
+		info.projection, info.type, 
+		info.center_s, info.center_t, info.unknown0, info.scale_s, info.scale_t, 
+		info.rotate, info.translate_s, info.translate_t };
+	memcpy(dstInfo.prematrix, info.prematrix, sizeof(info.prematrix));
     dst.texMtxInfos[i] = dstInfo;
   }
-
+  
   //offsets[15] (read texTable)
   DSeek(f, mat3Offset + h.offsets[15], SEEK_SET);
   size_t texLength = lengths[15];

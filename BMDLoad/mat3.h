@@ -41,10 +41,31 @@ struct TexGenInfo
   u8 matrix;
 };
 
+// This is unique to .bdl/.bmd, not GX
+enum bdmTexMtxType
+{
+	TEXMTX_TEXCOORD = 0x00,
+	TEXMTX_NORM		= 0x06,
+	TEXMTX_TNORM	= 0x07,
+	TEXMTX_POS		= 0x08,
+	TEXMTX_TPOS		= 0x09,
+	TEXMTX_UNK		= 0x80
+};
+
 struct TexMtxInfo
 {
-  float scaleCenterX, scaleCenterY;
-  float scaleU, scaleV;
+  u8 projection; // One of GX_TG_MTX3x4 or GX_TG_MTX2x4.
+  u8 type; // bmdTexMtxType
+
+  f32 center_s,center_t;
+  f32 unknown0;
+  f32 scale_s,scale_t;
+
+  u16 rotate; // -32768 = -180 deg, 32768 = 180 deg
+  f32 translate_s;
+  f32 translate_t;
+
+  f32 prematrix[4][4];
 };
 
 struct TevOrderInfo
