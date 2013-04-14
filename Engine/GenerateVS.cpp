@@ -18,24 +18,72 @@ std::string getLightCalcString(uint litMask, uint attenuationFunc, uint diffuseF
 		return "0.5f";
 }
 
-std::string getMtxString(TexMtxInfo mtx, bool is4x3)
+std::string getMtxString(uint slot, TexMtxInfo mtx, std::string texGenSrc)
 {
 	std::ostringstream out;
 	out.setf(std::ios::fixed, std::ios::floatfield);
 	out.setf(std::ios::showpoint);
-
-	if (is4x3)
+	
+	if (mtx.projection == GX_TG_MTX3x4)
 	{
-		WARN("Non-identity 4x3 texture matrices definitely aren't yet supported. Applying identity (!)");
-		return "{ 1.0f, 0.0f, 0.0f, 0.0f,\n\
-				  0.0f, 1.0f, 0.0f, 0.0f,\n\
-				  0.0f, 0.0f, 1.0f, 0.0f }";
+		switch(mtx.type)
+		{
+		case TEXMTX_TNORM:
+		case TEXMTX_POS:	
+		case TEXMTX_TPOS:
+			WARN("3x4 texture matrix type %u not yet supported. Applying identity", mtx.type);
+			out << "Out.TexCoord" << slot << " = " << texGenSrc << ".xy;\n";
+			break;
+		default:
+			WARN("Unexpected texture generation type %u for 3x4 projection. \
+				 Applying identity", mtx.type);
+			out << "Out.TexCoord" << slot << " = " << texGenSrc << ".xy;\n";
+			break;
+		}
 	}
-	else
+	else if (mtx.projection == GX_TG_MTX2x4)
 	{
-		WARN("Non-identity texture matrices aren't yet fully supported. Applying best guess (!)");
-		out << "{ " << mtx.scaleU << "f, 0.0f, 0.0f, " << mtx.scaleCenterX - 0.5f << "f,\n"
-			<< "0.0f, " << mtx.scaleV << "f, 0.0f, " << mtx.scaleCenterY - 0.5f << "f }";
+		float theta = float(mtx.rotate/32768) * PI;
+		char matrix[128], scale[128], center[128], uv[128];
+
+		snprintf(scale, 128, "float2 scale%u = float2(%f, %f);\n", slot, mtx.scale_s, mtx.scale_t);
+		snprintf(center, 128, "float2 center%u = float2(%f, %f);\n", slot, mtx.center_s, mtx.center_t);
+		snprintf(matrix, 128, "float2x3 uvMatrix%u = { %f, %f, %f, %f, %f, %f };\n",
+			slot,
+			cos(theta), -sin(theta), mtx.translate_s + mtx.center_s,
+			sin(theta),  cos(theta), mtx.translate_t + mtx.center_t);
+		
+		if (mtx.scale_s == 1.0f && mtx.scale_t == 1.0f)
+			snprintf(uv, 128, "float3 uv%u = float3( (%s - center%u), 1.0f );\n",
+				slot, texGenSrc.c_str(), slot);
+		else
+		{
+			out << scale;
+			snprintf(uv, 128, "float3 uv%u = float3( scale%u * (%s - center%u), 1.0f );\n", 
+				slot, slot, texGenSrc.c_str(), slot);
+		}
+
+		out << "\n";
+		out << center;
+		out << matrix;
+		out << uv;
+
+		switch(mtx.type)
+		{
+		case TEXMTX_TEXCOORD:
+			out << "Out.TexCoord" << slot << " = mul( uvMatrix" << slot << ", uv" << slot << " );\n";
+			break;
+		case TEXMTX_NORM:		
+		case TEXMTX_UNK:
+			WARN("2x4 texture matrix type %u not yet supported. Applying identity", mtx.type);
+			out << "Out.TexCoord" << slot << " = " << texGenSrc << ".xy;\n";
+			break;
+		default:
+			WARN("Unexpected texture generation type %u for 2x4 projection. \
+				 Applying identity", mtx.type);
+			out << "Out.TexCoord" << slot << " = " << texGenSrc << ".xy;\n";
+			break;
+		}
 	}
 
 	return out.str();
@@ -215,26 +263,15 @@ std::string GenerateVS(Mat3* matInfo, int index)
 			uint matIndex = (texGen.matrix - 30) / 3; // See GX_TEXMTX0 - GX_TEXMTX9 in gx.h
 			switch (texGen.texGenType)
 			{
+			default: WARN("Unsupported TexGen operation %u. Defaulting to MTX2x4", texGen.texGenType);
 			case GX_TG_MTX2x4:
-				out << "float2x4 uvMatrix" << i << " = { "
-					<< getMtxString(matInfo->texMtxInfos[mat.texMtxInfos[matIndex]], false) << " };\n";
-				out << "Out.TexCoord" << i << " = mul( uvMatrix" << i << ", " << texGenSrc << ");\n";
-				break;
 			case GX_TG_MTX3x4:
-				out << "float3x4 uvMatrix" << i << " = { " 
-					<< getMtxString(matInfo->texMtxInfos[mat.texMtxInfos[matIndex]], true) << " };\n";
-				out << "float3 uvw = mul( uvMatrix" << i << ", " << texGenSrc << ");\n";
-				out << "Out.TexCoord" << i << " = (uvw / uvw.z).xy;\n";
+				out	<< getMtxString(i, matInfo->texMtxInfos[mat.texMtxInfos[matIndex]], texGenSrc);
 				break;
 			case GX_TG_SRTG:
 				WARN("Invalid TexGen operation GX_TG_SRTG. A matrix is set but this op would ignore it!");
 				out << "Out.TexCoord" << i << " = " << texGenSrc << ".rg;\n";
 				break;
-			default:
-				WARN("Unsupported TexGen operation %u. Defaulting to MTX2x4", texGen.texGenType);
-				out << "float2x4 uvMatrix" << i << " = { " 
-					<< getMtxString(matInfo->texMtxInfos[mat.texMtxInfos[matIndex]], false) << " };\n";
-				out << "Out.TexCoord" << i << " = mul( uvMatrix" << i << ", " << texGenSrc << ");\n";
 			}
 		}
 	}

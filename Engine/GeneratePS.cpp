@@ -23,7 +23,6 @@ bool IsNewTexCombo(uint texMap, uint texCoordId, bool oldCombos[] )
 std::string GetSwapModeSwizzleString(TevSwapModeTable& table)
 {
 	const char* components[4] = { "r", "g", "b", "a" };
-	WARN("Swap mode swizzling not yet tested");
 	return std::string(".") + components[table.r] + components[table.g] + components[table.b] + components[table.a];
 }
 
@@ -531,7 +530,6 @@ std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 		out << GetAlphaOpString(uint(stage.alphaOp), uint(stage.alphaBias), uint(stage.alphaScale), uint(stage.alphaClamp), uint(stage.alphaRegId), alphaInputs);
 	}
 
-	//TODO: Alpha testing
 	AlphaCompare& cmpInfo = matInfo->alphaCompares[mat.alphaCompIndex];
 	std::string op;
 
