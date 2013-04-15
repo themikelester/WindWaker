@@ -5,16 +5,17 @@
 #include <fstream>
 
 #include "Compile.h"
-#include "GCModel.h"
+#include "GDModel.h"
 
 using namespace std;
 
-RESULT _WriteBlob(string filename, Blob& blob)
+RESULT _WriteBlob(string filename, Header& hdr, char* data)
 {
 	ofstream file (filename, ios::out | ios::binary);
 	if (file.is_open())
 	{
-		file.write(blob.data, blob.size);
+		file.write((char*)&hdr, sizeof(hdr));
+		file.write(data, hdr.sizeBytes);
 		file.close();
 	}
 	else
@@ -30,13 +31,17 @@ int _Compile(string filename)
 {
 	Json::Value root;
 	Json::Reader reader;
-	Blob blob = {};
+	Header hdr = {};
+	char* data;
 	RESULT r = S_OK;
-
+	
 	ifstream file (filename);
 	if (file.is_open())
 	{
+		_CrtSetDbgFlag(0);
 		bool parsingSuccessful = reader.parse(file, root, true);
+		_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF);
+
 		if ( !parsingSuccessful )
 		{
 			std::cout << "Failed to parse JSON from " << filename << endl;
@@ -47,7 +52,10 @@ int _Compile(string filename)
 		string type = root["Info"].get("type", "unknown").asString();
 		if (type == "bmd")
 		{
-			IFC( GDModel::Compile(root, blob) );
+			IFC( GDModel::Compile(root, hdr, &data) );
+			//TESTING
+			GDModel::GDModel model;
+			IFC( GDModel::Load(&model, (ubyte*)data) );
 		}
 		else 
 		{
@@ -59,7 +67,7 @@ int _Compile(string filename)
 		string rawname = filename.substr(0, lastindex); 
 		string blobname = rawname + ".blob";
 
-		IFC( _WriteBlob(blobname, blob) );
+		IFC( _WriteBlob(blobname, hdr, data) );
 	}
 	else
 	{
@@ -69,7 +77,7 @@ int _Compile(string filename)
 
 cleanup:
 	if (file.is_open()) file.close();
-	if (blob.data != nullptr) free(blob.data);
+	if (data != nullptr) free(data);
 
 	return r;
 }

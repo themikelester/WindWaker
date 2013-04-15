@@ -120,8 +120,6 @@ struct TextureHeader
 void loadAndConvertImage(FILE* f, const bmd::TextureHeader& h, long baseOffset,
                          Image& curr);
 
-#include "simple_gl.h"
-
 void r5g6b5ToRgba8(u16 srcPixel, u8* dest);
 
 void decompressDxt1(u8* dest, const u8* src, int w, int h)

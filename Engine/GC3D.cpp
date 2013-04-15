@@ -43,40 +43,8 @@ namespace GC3D
 		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 6
 		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 7
 	};
-
-	uint __AttribComponentSize[MAX_VERTEX_ATTRIBS] =
-	{
-		sizeof(uint) , // Matrix Index
-		sizeof(float), // Position
-		sizeof(float), // Normal
-		sizeof(ubyte), // Color 0
-		sizeof(ubyte), // Color 1
-		sizeof(float), // Texture Coordinate 0
-		sizeof(float), // Texture Coordinate 1
-		sizeof(float), // Texture Coordinate 2
-		sizeof(float), // Texture Coordinate 3
-		sizeof(float), // Texture Coordinate 4
-		sizeof(float), // Texture Coordinate 5
-		sizeof(float), // Texture Coordinate 6
-		sizeof(float), // Texture Coordinate 7
-	};
-
-	const char* __ShaderSwitches[MAX_VERTEX_ATTRIBS] =
-	{
-		"#define HAS_MATRICES\n",
-		"#define HAS_POSITIONS\n",
-		"#define HAS_NORMALS\n",
-		"#define HAS_COLORS0\n",
-		"#define HAS_COLORS1\n",
-		"#define HAS_TEXCOORDS0\n",
-		"#define HAS_TEXCOORDS1\n",
-		"#define HAS_TEXCOORDS2\n",
-		"#define HAS_TEXCOORDS3\n",
-		"#define HAS_TEXCOORDS4\n",
-		"#define HAS_TEXCOORDS5\n",
-		"#define HAS_TEXCOORDS6\n",
-		"#define HAS_TEXCOORDS7\n",
-	};
+		
+	static const int formatSize[] = { sizeof(float), sizeof(half), sizeof(ubyte), sizeof(uint) };
 
 	void Init()
 	{
@@ -90,44 +58,25 @@ namespace GC3D
 		MAKE_DELETE(ALLOC_DEFAULT, Hash<VertexFormatID>, __vertexFormatMap);
 	}
 
-	int GetAttributeSize (Renderer* renderer, u16 attrib)
+	int GetAttributeSize (u16 attrib)
 	{
 		uint attribIndex = uint(log10(attrib) / log10(2));
-		return __GCformat[attribIndex].size * renderer->getFormatSize(__GCformat[attribIndex].format);
+		return __GCformat[attribIndex].size * formatSize[__GCformat[attribIndex].format];
 	}
 
-	int GetVertexSize (Renderer* renderer, u16 attribFlags)
+	int GetVertexSize (u16 attribFlags)
 	{
+
 		int vertSize = 0;
 		for (int i = 0; i < MAX_VERTEX_ATTRIBS; ++i) 
 		{
 			if ( attribFlags & (1 << i) )
 			{
-				vertSize += __GCformat[i].size * renderer->getFormatSize(__GCformat[i].format);
+				vertSize += __GCformat[i].size * formatSize[__GCformat[i].format];
 			}
 		}
 
 		return vertSize;
-	}
-
-	ShaderID CreateShader (Renderer* renderer, u16 attribFlags)
-	{
-		using namespace string_stream;
-		
-		Buffer shaderDefines(ALLOC_SCRATCH);
-		
-		// TODO: Could probably clean this up by moving the #define's inside of here 
-		// and listing them explicitly
-		int formatBufIndex = 0;
-		for (int i = 0; i < MAX_VERTEX_ATTRIBS; ++i) 
-		{
-			if ( attribFlags & (1 << i) )
-			{
-				shaderDefines << __ShaderSwitches[i];
-			}
-		}
-
-		return renderer->addShader("../Vertices.shd", string_stream::c_str(shaderDefines));
 	}
 	
 	ShaderID CreateShader (Renderer* renderer, Tex1* texInfo, Mat3* matInfo, int matIndex)
@@ -244,25 +193,6 @@ namespace GC3D
 		}
 		
 		return renderer->addBlendState(srcFactor, dstFactor, blendOp, mask);
-	}
-
-	ShaderID GetShader (Renderer* renderer, u16 attribFlags)
-	{
-		ShaderID shdID;
-		u64 hashKey;
-		
-		//TODO: Move all hashing functionality like this up one level
-		//		GC3D should only be handling the creation. This is app logic.
-		hashKey = murmur_hash_64(&attribFlags, sizeof(attribFlags), hashSeed);
-		shdID = hash::get(*__shaderMap, hashKey, SHADER_NONE);
-
-		if (shdID == SHADER_NONE)
-		{
-			shdID = CreateShader(renderer, attribFlags);
-			hash::set(*__shaderMap, hashKey, shdID);
-		}
-		
-		return shdID;
 	}
 
 	VertexFormatID GetVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader)

@@ -57,6 +57,9 @@
     <ClInclude Include="Compile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GDModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssMan.cpp">
@@ -89,10 +92,8 @@
     <ClCompile Include="Compile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="test.hlsl">
+    <ClCompile Include="GDModel.cpp">
       <Filter>Source Files</Filter>
-    </FxCompile>
+    </ClCompile>
   </ItemGroup>
 </Project>

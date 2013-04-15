@@ -10,15 +10,6 @@
 #define GCMODEL_NAME_MAX_CHARS 32
 
 class Renderer;
-struct Blob;
-namespace Json {
-	class Value;
-}
-
-namespace GDModel
-{
-	RESULT Compile(Json::Value root, Blob& blob);
-}
 
 class ModelManager
 {
@@ -34,24 +25,46 @@ protected:
 
 class GCModel;
 
+struct GCIndexBuffer
+{
+	IndexBufferID	id;		// ID of buffer in rendering engine
+	u16*			data;	// pointer to actual data stored in buffer... 
+							//		Debug only, a copy is made so this is not needed.
+	uint			count;	// number of elements in buffer
+};
+
+struct GCVertexBuffer
+{
+	VertexBufferID	id;		// ID of buffer in rendering engine
+	ubyte*			data;	// pointer to actual data stored in buffer... 
+							//		Debug only, a copy is made so this is not needed.
+	uint			count;	// number of vertices in buffer
+};
+
+struct GCBatchBlob
+{
+	u16 vertFormat;
+	int vertSize;
+	int vertCount;
+	u8* vertices;
+	
+	int idxCount;
+	u16* indices;
+
+	u8 matrixType;
+};
+
+struct GCBatchLoad
+{
+	GCModel*		model;
+	u8				matrixType;  // standard, billboard, y-billboard...
+	GCIndexBuffer	indexBuffer;
+	GCVertexBuffer	vertexBuffer;
+	VertexFormatID	vertexFormat;
+};
+
 struct GCBatch 
 {
-	struct GCIndexBuffer
-	{
-		IndexBufferID	id;		// ID of buffer in rendering engine
-		u16*			data;	// pointer to actual data stored in buffer... 
-								//		Debug only, a copy is made so this is not needed.
-		uint			count;	// number of elements in buffer
-	};
-
-	struct GCVertexBuffer
-	{
-		VertexBufferID	id;		// ID of buffer in rendering engine
-		ubyte*			data;	// pointer to actual data stored in buffer... 
-								//		Debug only, a copy is made so this is not needed.
-		uint			count;	// number of vertices in buffer
-	};
-	
 	foundation::Hash<u16>* indexMap;
 	
 	// TODO: Remove BModel as a dependency. Convert frames to matrices at load time and never look back
@@ -121,6 +134,8 @@ private:
 	std::vector<GCBatch> m_Batches;
 	std::vector<GCTexture> m_Textures;
 
+	std::vector<GCBatchLoad> m_BatchesLoad;
+
 protected:
 	RESULT GCModel::Load(Chunk* data);
 	RESULT GCModel::Reload();
@@ -143,7 +158,7 @@ public:
 	DEBUG_ONLY(static int _debugDrawBatch);
 
 private:
-	void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& s, const mat4& p = identity4(), bool onDown = true, int matIndex = 0);
+	void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& s, const mat4& p = identity4(), bool onDown = true, int matIndex = 0, int jointIndex = 0);
 	RESULT GCModel::initTextures(Renderer *renderer);
 	RESULT GCModel::initMaterials(Renderer* renderer);
 };

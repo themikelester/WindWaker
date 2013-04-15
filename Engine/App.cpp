@@ -22,6 +22,10 @@
 #include "App.h"
 #include <Foundation\memory.h>
 #include "GC3D.h"
+#include "GDModel.h"
+
+//TODO: Remove HACK
+#include <fstream>
 
 BaseApp *app = new App();
 
@@ -57,6 +61,28 @@ bool App::load()
 
 	char* filename = "..\\Assets\\Link.rarc";
 	char* nodeName = "/bdl/cl.bdl";
+
+	std::ifstream file ("../assets/cl.bdl.blob", std::ios::in|std::ios::binary);
+	if(file.is_open())
+    {
+		char fourcc[4];
+		uint version;
+		uint size;
+        file.read(fourcc, 4);
+        file.read((char*)&version, 4);
+        file.read((char*)&size, 4);
+
+		ubyte* blob = (ubyte*) malloc(size);
+		file.read((char*)blob, size);
+
+		GDModel::GDModel model;
+		GDModel::Load(&model, blob);
+		GDModel::Draw(renderer, device, &model); 
+	}
+    file.close();
+
+	//early out
+	return false;
 
 	IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
 	IFC(m_AssMan.Load(m_Pkg, nodeName));

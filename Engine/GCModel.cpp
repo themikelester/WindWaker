@@ -127,7 +127,7 @@ RESULT GCBatch::Draw(Renderer *renderer, ID3D10Device *device, const mat4 &paren
 }
 
 void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const SceneGraph& scenegraph, 
-							 const mat4& parentMatrix, bool onDown, int matIndex)
+							 const mat4& parentMatrix, bool onDown, int matIndex, int jointIndex)
 {
 	mat4 tempMat = parentMatrix;
 
@@ -142,6 +142,8 @@ void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const Sce
 		// This should probably be here. See definition comment of isMatrixValid
 		//m_BDL->jnt1.isMatrixValid[scenegraph.index] = true;
 		
+		WARN("Applying joint %u", scenegraph.index); 
+		jointIndex = scenegraph.index;
 		break;
 	}
 
@@ -150,6 +152,8 @@ void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const Sce
 		//applyMaterial(s.index, m_BDL, *g_oglBlock);
 		matIndex = scenegraph.index;
 		onDown = ( m_BDL->mat3.materials[m_BDL->mat3.indexToMatIndex[matIndex]].flag == 1 );
+
+		WARN("Applying material %u", matIndex); 
 		break;
 	}
 
@@ -160,15 +164,17 @@ void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const Sce
 			//TODO: it's not sure that all matrices required by this call
 			//are already calculated...
 			m_Batches[scenegraph.index].Draw(renderer, device, tempMat, matIndex);
+			WARN("Drawing batch %u with Joint=%u and Material%u on down", scenegraph.index, jointIndex, matIndex);
 		} 
 	}
 	}
 
 	for(size_t i = 0; i < scenegraph.children.size(); ++i)
-		drawScenegraph(renderer, device, scenegraph.children[i], tempMat, onDown, matIndex);
+		drawScenegraph(renderer, device, scenegraph.children[i], tempMat, onDown, matIndex, jointIndex);
 
 	if (scenegraph.type == SG_PRIM && !onDown) 
 	{
+		WARN("Drawing batch %u with Joint=%u and Material%u on up", scenegraph.index, jointIndex, matIndex);
 		m_Batches[scenegraph.index].Draw(renderer, device, tempMat, matIndex);
 	}
 }
@@ -178,7 +184,7 @@ void GCModel::drawScenegraph(Renderer *renderer, ID3D10Device *device, const Sce
 RESULT buildInflatedVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs, Vtx1* vtx)
 {
 	uint attribSize;
-	uint vtxSize = GC3D::GetVertexSize(renderer, FULL_VERTEX_ATTRIBS);
+	uint vtxSize = GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
 
 	// Clear the vertex so that all of our missing data is zero'd
 	memset(dst, 0, vtxSize);
@@ -189,7 +195,7 @@ RESULT buildInflatedVertex(Renderer *renderer, ubyte* dst, Index &point, u16 att
 	// TODO: Fix the uint cast. Perhaps we can keep it as a u16 somehow? Depends on HLSL
 	// Always set this attribute. The default is 0.
 	// TODO: We can save a uint in the vertex structure if we remove this force
-	attribSize = GC3D::GetAttributeSize(renderer, HAS_MATRIX_INDICES);
+	attribSize = GC3D::GetAttributeSize(HAS_MATRIX_INDICES);
 	if (attribs & HAS_MATRIX_INDICES) {
 		ASSERT(point.matrixIndex/3 < 10); 
 		uint matrixIndex = point.matrixIndex/3;
@@ -201,13 +207,13 @@ RESULT buildInflatedVertex(Renderer *renderer, ubyte* dst, Index &point, u16 att
 	}
 	dst += attribSize;
 	
-	attribSize = GC3D::GetAttributeSize(renderer, HAS_POSITIONS);
+	attribSize = GC3D::GetAttributeSize(HAS_POSITIONS);
 	if (attribs & HAS_POSITIONS) {
 		memcpy(dst, vtx->positions[point.posIndex], attribSize);
 	}
 	dst += attribSize;
 	
-	attribSize = GC3D::GetAttributeSize(renderer, HAS_NORMALS);
+	attribSize = GC3D::GetAttributeSize(HAS_NORMALS);
 	if (attribs & HAS_NORMALS) {
 		memcpy(dst, vtx->normals[point.normalIndex], attribSize);
 	}
@@ -216,7 +222,7 @@ RESULT buildInflatedVertex(Renderer *renderer, ubyte* dst, Index &point, u16 att
 	for (uint i = 0; i < 2; i++)
 	{
 		u16 colorAttrib = HAS_COLORS0 << i;
-		attribSize = GC3D::GetAttributeSize(renderer, colorAttrib);
+		attribSize = GC3D::GetAttributeSize(colorAttrib);
 		
 		if (attribs & colorAttrib) {
 			Color c = vtx->colors[i][point.colorIndex[i]];
@@ -236,7 +242,7 @@ RESULT buildInflatedVertex(Renderer *renderer, ubyte* dst, Index &point, u16 att
 	{
 		u16 texAttrib = HAS_TEXCOORDS0 << i;
 		float* dstFloat = (float*)dst;
-		attribSize = GC3D::GetAttributeSize(renderer, texAttrib);
+		attribSize = GC3D::GetAttributeSize(texAttrib);
 
 		if (attribs & texAttrib) {
 			TexCoord t = vtx->texCoords[i][point.texCoordIndex[i]];
@@ -261,7 +267,7 @@ RESULT buildVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs, Vt
 	// TODO: Fix the uint cast. Perhaps we can keep it as a u16 somehow? Depends on HLSL
 	// Always set this attribute. The default is 0.
 	// TODO: We can save a uint in the vertex structure if we remove this force
-	attribSize = GC3D::GetAttributeSize(renderer, HAS_MATRIX_INDICES);
+	attribSize = GC3D::GetAttributeSize(HAS_MATRIX_INDICES);
 	if (attribs & HAS_MATRIX_INDICES) {
 		ASSERT(point.matrixIndex/3 < 10); 
 		uint matrixIndex = point.matrixIndex/3;
@@ -274,13 +280,13 @@ RESULT buildVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs, Vt
 	dst += attribSize;
 
 	if (attribs & HAS_POSITIONS) {
-		attribSize = GC3D::GetAttributeSize(renderer, HAS_POSITIONS);
+		attribSize = GC3D::GetAttributeSize(HAS_POSITIONS);
 		memcpy(dst, vtx->positions[point.posIndex], attribSize);
 		dst += attribSize;
 	}
 
 	if (attribs & HAS_NORMALS) {
-		attribSize = GC3D::GetAttributeSize(renderer, HAS_NORMALS);
+		attribSize = GC3D::GetAttributeSize(HAS_NORMALS);
 		memcpy(dst, vtx->normals[point.normalIndex], attribSize);
 		dst += attribSize;
 	}
@@ -298,7 +304,7 @@ RESULT buildVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs, Vt
 			dst[2] = c.b;
 			dst[3] = c.a;
 			
-			attribSize = GC3D::GetAttributeSize(renderer, colorAttrib);
+			attribSize = GC3D::GetAttributeSize(colorAttrib);
 			ASSERT(attribSize == sizeof(c.r) + sizeof(c.g) + sizeof(c.b) + sizeof(c.a));
 			dst += attribSize;
 		}
@@ -314,7 +320,7 @@ RESULT buildVertex(Renderer *renderer, ubyte* dst, Index &point, u16 attribs, Vt
 			dstFloat[0] = t.s;
 			dstFloat[1] = t.t;
 			
-			attribSize = GC3D::GetAttributeSize(renderer, texAttrib);
+			attribSize = GC3D::GetAttributeSize(texAttrib);
 			ASSERT(attribSize == sizeof(t.s) + sizeof(t.t));
 			dst += attribSize;
 		}
@@ -367,7 +373,7 @@ RESULT GCBatch::Init(uint index, BModel *bdl, Renderer *renderer, GCModel* model
 	}
 
 	// Create vertex buffer for this batch based on available attributes
-	int vertexSize = GC3D::GetVertexSize(renderer, FULL_VERTEX_ATTRIBS);
+	int vertexSize = GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
 	int bufferSize = pointCount * vertexSize; // we may not need all this space, see pointCount above
 		
 	ubyte*	vertices = (ubyte*)malloc( bufferSize );
@@ -475,7 +481,6 @@ RESULT GCModel::initTextures(Renderer *renderer)
 		strncpy(m_Textures[i].name, hdr->name.c_str(), GCMODEL_NAME_MAX_CHARS);
 		m_Textures[i].tex = texIDs[hdr->imageIndex];
 		m_Textures[i].sampler = ssIDs[i];
-		m_Textures[i].gcFormat = m_BDL->tex1.images[hdr->imageIndex].format;
 	}
 
 cleanup:
@@ -597,12 +602,13 @@ RESULT GCModel::Init(Renderer *renderer)
 	// Init all batches
 	int numBatches = m_BDL->shp1.batches.size();
 	m_Batches.resize(numBatches);
+	m_BatchesLoad.resize(numBatches);
 	STL_FOR_EACH(node, m_BDL->inf1.scenegraph)
 	{
 		if (node->type != SG_PRIM) continue;
-
 		int batchIndex = node->index;
 		IFC( m_Batches[batchIndex].Init(batchIndex, m_BDL, renderer, this) );
+
 	}
 
 cleanup:
@@ -753,11 +759,4 @@ void updateMatrixTable(const BModel* bmd, const Packet& packet, u8 matrixType, m
 			adjustMatrix(matrixTable[i], matrixType);
 		}
 	}
-}
-
-
-RESULT GDModel::Compile(Json::Value root, Blob& blob)
-{
-	
-	return S_OK;
 }

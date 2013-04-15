@@ -1,10 +1,12 @@
 #pragma once
 #include "json\json.h"
 
-struct Blob
+struct Header
 {
-	char* data;
-	size_t size;
+	char fourCC[4];
+	int version;
+	int sizeBytes;
 };
+
 
 int _Compile(std::string filename);

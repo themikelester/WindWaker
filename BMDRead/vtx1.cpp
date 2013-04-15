@@ -285,40 +285,40 @@ Json::Value serializeVtx1(Vtx1& vtx1)
 	for (uint i = 0; i < vtx1.positions.size(); i++)
 	{
 		Vector3f p = vtx1.positions[i];
-		vtxNode["positions"][i][0] = p.getX();
-		vtxNode["positions"][i][1] = p.getY();
-		vtxNode["positions"][i][2] = p.getZ();
+		vtxNode["positions"][i][uint(0)] = p.getX();
+		vtxNode["positions"][i][uint(1)] = p.getY();
+		vtxNode["positions"][i][uint(2)] = p.getZ();
 	}
 	for (uint i = 0; i < vtx1.normals.size(); i++)
 	{
 		Vector3f n = vtx1.normals[i];
-		vtxNode["normals"][i][0] = n.getX();
-		vtxNode["normals"][i][1] = n.getY();
-		vtxNode["normals"][i][2] = n.getZ();
+		vtxNode["normals"][i][uint(0)] = n.getX();
+		vtxNode["normals"][i][uint(1)] = n.getY();
+		vtxNode["normals"][i][uint(2)] = n.getZ();
 	}
-	for (uint i = 0; i < vtx1.colors[0].size(); i++)
+	for (uint i = 0; i < vtx1.colors[uint(0)].size(); i++)
 	{
-		Color c = vtx1.colors[0][i];
-		vtxNode["colors0"][i][0] = c.r;
-		vtxNode["colors0"][i][1] = c.g;
-		vtxNode["colors0"][i][2] = c.b;
-		vtxNode["colors0"][i][3] = c.a;
+		Color c = vtx1.colors[uint(0)][i];
+		vtxNode["colors0"][i][uint(0)] = c.r;
+		vtxNode["colors0"][i][uint(1)] = c.g;
+		vtxNode["colors0"][i][uint(2)] = c.b;
+		vtxNode["colors0"][i][uint(3)] = c.a;
 	}
-	for (uint i = 0; i < vtx1.colors[1].size(); i++)
+	for (uint i = 0; i < vtx1.colors[uint(1)].size(); i++)
 	{
-		Color c = vtx1.colors[1][i];
-		vtxNode["colors1"][i][0] = c.r;
-		vtxNode["colors1"][i][1] = c.g;
-		vtxNode["colors1"][i][2] = c.b;
-		vtxNode["colors1"][i][3] = c.a;
+		Color c = vtx1.colors[uint(1)][i];
+		vtxNode["colors1"][i][uint(0)] = c.r;
+		vtxNode["colors1"][i][uint(1)] = c.g;
+		vtxNode["colors1"][i][uint(2)] = c.b;
+		vtxNode["colors1"][i][uint(3)] = c.a;
 	}
 	for (uint i = 0; i < 8; i++)
 	{
 		for (uint j = 0; j < vtx1.texCoords[i].size(); j++)
 		{
 			TexCoord t = vtx1.texCoords[i][j];
-			vtxNode["texcoord"][i][j]["s"] = t.s;
-			vtxNode["texcoord"][i][j]["t"] = t.t;
+			vtxNode["texcoords"][i][j]["s"] = t.s;
+			vtxNode["texcoords"][i][j]["t"] = t.t;
 		}
 	}
 
