@@ -172,4 +172,7 @@ VerticesPreprocessed.txt
 
 WindWaker.sln
 ErrorLog.txt
-Assets/Link.rarc
+Assets/
+JsonCpp/doc/
+Tools/
+*.sleepy
