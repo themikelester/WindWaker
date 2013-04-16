@@ -53,9 +53,6 @@ int _Compile(string filename)
 		if (type == "bmd")
 		{
 			IFC( GDModel::Compile(root, hdr, &data) );
-			//TESTING
-			GDModel::GDModel model;
-			IFC( GDModel::Load(&model, (ubyte*)data) );
 		}
 		else 
 		{

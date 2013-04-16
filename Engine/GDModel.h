@@ -48,8 +48,15 @@ namespace GDModel
 	{
 		ModelAsset* _asset;
 
-		uint nScenegraphNodes;
 		Scenegraph* scenegraph;
+		u16* batchOffsetTable; // Batch* batch3 = _asset + batchOffsetTable[3];
+		
+		uint nVertexIndexBuffers;
+		ubyte* vertexIndexBuffers;
+		
+		// This is set on load/reload, and tells the next draw call 
+		//		to load/reload all the GPU assets that we own
+		bool loadGPU; 
 	};
 	
 	RESULT Draw(Renderer* renderer, ID3D10Device* device, GDModel* model);

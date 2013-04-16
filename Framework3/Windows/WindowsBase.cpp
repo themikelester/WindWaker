@@ -158,8 +158,10 @@ int WINAPI WinMain(HINSTANCE hThisInst, HINSTANCE hLastInst, LPTSTR lpszCmdLine,
 		{
 			if (strcmp(arg, "-compile") == 0)
 			{
-				int result = _Compile(strtok(nullptr, " "));
-				exit(result);
+				//int result = _Compile(strtok(nullptr, " "));
+				
+				// Commented out for testing
+				//exit(result);
 			}
 		} while ((arg = strtok(nullptr, " ")) != nullptr);
 	}

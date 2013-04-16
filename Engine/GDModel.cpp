@@ -13,8 +13,8 @@
 #include <Framework3\Direct3D10\Direct3D10Renderer.h>
 
 #define COMPILER_VERSION 1;
-#define WRITE(val) { s.write( (char*)&val, sizeof(val) ); _size += sizeof(val); }
-#define WRITE_ARRAY(arr, size) { s.write((char*)arr, size); _size += size; }
+#define WRITE(val) { s.write( (char*)&val, sizeof(val) ); totalSize += sizeof(val); }
+#define WRITE_ARRAY(arr, size) { s.write((char*)arr, size); totalSize += size; }
 #define READ(type) *(type*)head; head += sizeof(type);
 #define READ_ARRAY(type, count) (type*)head; head += sizeof(type) * count;
 
@@ -44,6 +44,12 @@ u16 compileAttribs(Json::Value attribsNode)
 
 	return attribFlags;
 }
+
+struct SectionHeader
+{
+	char fourcc[4];
+	int size; // Including this header
+};
 
 struct VertexBuffer 
 {
@@ -249,21 +255,37 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 	ib->indexBuf = indices;
 }
 
+#define BEGIN_SECTION(FOURCC) {	\
+	memcpy(sectionHeaders[currentSection].fourcc, FOURCC, 4); \
+	sectionHeaderOffsets[currentSection] = totalSize; \
+	WRITE(sectionHeaders[0]); }
+
+#define END_SECTION() { \
+	sectionHeaders[currentSection].size = totalSize - sectionHeaderOffsets[currentSection]; \
+	currentSection++; }
+
+
 RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 {
 	std::stringstream s;
-	uint _size = 0;
-	
+	uint totalSize = 0;
+	uint currentSection = 0;
+
 	//TODO: HACK: Remove this
 	foundation::memory_globals::init(4 * 1024 * 1024);
 
-	// We don't write these until the end, so save them
+	// Post-processing data
+	u16 sectionHeaderOffsets[8];
+	SectionHeader sectionHeaders[8];
+	
+	u16 batchOffsetsOffset;
+	
 	VertexBuffer* vertexBuffers;
 	IndexBuffer* indexBuffers;
 	u16 nVertexIndexBuffers = 0;
 
 	// Scenegraph
-	{
+	BEGIN_SECTION("scn1");
 		Scenegraph sg;
 		Json::Value sgNode = root["Inf1"]["scenegraph"];
 		uint nNodes = sgNode.size();
@@ -274,20 +296,32 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 			sg.type = u16(sgNode[i].get("type", 0).asUInt());
 			WRITE(sg);
 		}
-	}
+	END_SECTION();
 
 	// Batches
-	{
+	BEGIN_SECTION("bch1");
 		Json::Value batchNodes = root["Shp1"]["batches"];
 		u16 nBatches = batchNodes.size();
 		WRITE(nBatches);
 		
+		// Save some space for our batch offsets
+		batchOffsetsOffset = totalSize;
+		u16* batchOffsets = (u16*) malloc(sizeof(u16) * nBatches);
+		WRITE_ARRAY(batchOffsets, sizeof(u16) * nBatches);
+
 		nVertexIndexBuffers = nBatches;
 		vertexBuffers = (VertexBuffer*) malloc(sizeof(VertexBuffer) * nBatches);
 		indexBuffers = (IndexBuffer*) malloc(sizeof(IndexBuffer) * nBatches);
 
 		for (uint i = 0; i < nBatches; i++)
 		{
+			batchOffsets[i] = totalSize;
+		
+			// Save space for our vertexBufferID and indexBufferID
+			int vertexIndexBufferInvalidID = -1;
+			WRITE(vertexIndexBufferInvalidID);
+			WRITE(vertexIndexBufferInvalidID);
+
 			Json::Value packetNodes = batchNodes[i]["packets"];
 			u16 nPackets = packetNodes.size();
 			WRITE(nPackets);
@@ -313,10 +347,10 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 
 			free(packetIndexCounts);
 		}
-	}
+	END_SECTION();
 
-	// Vertex Buffers
-	{
+	// Vertex, Index Buffers
+	BEGIN_SECTION("vib1");
 		WRITE(nVertexIndexBuffers);
 		for (uint i = 0; i < nVertexIndexBuffers; i++)
 		{
@@ -328,14 +362,24 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 			WRITE(indexBuffers[i].indexCount);
 			WRITE_ARRAY(indexBuffers[i].indexBuf, indexBuffers[i].indexCount * sizeof(u16));
 		}
-	}
+	END_SECTION();
 
 	memcpy(hdr.fourCC, "bmd1", 4);
 	hdr.version = COMPILER_VERSION;
-	hdr.sizeBytes = _size;
+	hdr.sizeBytes = totalSize;
 	
-	*data = (char*) malloc(_size);
-	s.read(*data, _size);
+	*data = (char*) malloc(totalSize);
+	s.read(*data, totalSize);
+
+	//Post-processing
+	for (uint i = 0; i < currentSection; i++)
+	{
+		SectionHeader* pHdr = (SectionHeader*)(*data + sectionHeaderOffsets[i]);
+		memcpy(pHdr, &sectionHeaders[i], sizeof(SectionHeader));
+	}
+
+	u16* pBatchOffsetsTable = (u16*)(*data + batchOffsetsOffset);
+	memcpy(pBatchOffsetsTable, batchOffsets, nBatches * sizeof(u16));
 
 cleanup:
 	for (uint i = 0; i < nVertexIndexBuffers; i++)
@@ -346,26 +390,90 @@ cleanup:
 
 	free(vertexBuffers);
 	free(indexBuffers);
+	free(batchOffsets);
 
 	return S_OK;
+}
+
+#define BEGIN_READ_SECTION(FOURCC) { \
+	sectionHead = head; \
+	section = READ(SectionHeader); \
+	assert(memcmp(section.fourcc, FOURCC, 4) == 0); \
+}
+
+#define END_READ_SECTION() { \
+	head = sectionHead + section.size; \
 }
 
 RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 {
 	model->_asset = asset;
 	ubyte* head = asset;
+	ubyte* sectionHead = head;
+	SectionHeader section;
 
 	// Scenegraph first	
-	model->nScenegraphNodes = READ(uint);
-	model->scenegraph = READ_ARRAY(Scenegraph, model->nScenegraphNodes);
-	
+	BEGIN_READ_SECTION("scn1");
+		uint nNodes = READ(uint);
+		model->scenegraph = READ_ARRAY(Scenegraph, nNodes);
+	END_READ_SECTION();
+
+	// Batches
+	BEGIN_READ_SECTION("bch1");
+		uint nBatches = READ(u16);
+		model->batchOffsetTable = READ_ARRAY(u16, nBatches);
+	END_READ_SECTION();
+
+	// Vertex, Index Buffer registration is handled on the next draw
+	BEGIN_READ_SECTION("vib1");
+		model->nVertexIndexBuffers = READ(u16);
+		model->vertexIndexBuffers = head;
+	END_READ_SECTION();
+
+	model->loadGPU = true;
+
 	return S_OK;
 }
 
+void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model, 
+			   u16 batchIndex, u16 jointIndex, u16 matIndex)
+{
+	ubyte* head = model->_asset + model->batchOffsetTable[batchIndex];
+	
+	VertexBufferID vbID = READ(int);
+	IndexBufferID ibID = READ(int);
+	u16 numPackets = READ(u16);
+	
+	// These are partially updated by each packet
+	mat4 matrixTable[10];
+	bool isMatrixWeighted[10];
+
+	int numIndicesSoFar = 0;
+	for (uint i = 0; i < numPackets; i++)
+	{
+		u16 nMatrixIndices = READ(u16);
+		u16* matrixIndices = READ_ARRAY(u16, nMatrixIndices);
+
+		// Setup Matrix table
+		// updateMatrixTable(bmd, *packet, matrixType, matrixTable, isMatrixWeighted);	
+
+		//renderer->reset();
+		//	//applyMaterial(renderer, matIndex);
+		//	renderer->setVertexBuffer(0, vbID);
+		//	renderer->setIndexBuffer(ibID);
+		//	//renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, sizeof(matrixTable));
+		//renderer->apply();
+
+		u16 indexCount = READ(u16);
+		//device->DrawIndexed(indexCount, numIndicesSoFar, 0);	
+		numIndicesSoFar += indexCount;
+	}
+}
 
 //TODO: Remove the need for the D3D reference
-const GDModel::Scenegraph* DrawScenegraph(Renderer *renderer, ID3D10Device *device, const GDModel::Scenegraph* node, 
-									uint jointIdx = 0, uint materialIdx = 0, bool drawOnDown = true)
+const GDModel::Scenegraph* DrawScenegraph(Renderer *renderer, ID3D10Device *device, GDModel::GDModel* model, 
+									const GDModel::Scenegraph* node, uint jointIndex = 0, uint matIndex = 0, 
+									bool drawOnDown = true)
 {
 	//TODO: implement drawOnDown. The joint and material states match up with the onDown implementation.
 	//		 the only thing that changes is the draw order. Does this make a difference?
@@ -376,21 +484,24 @@ const GDModel::Scenegraph* DrawScenegraph(Renderer *renderer, ID3D10Device *devi
 		{
 		case GDModel::SG_JOINT: 
 			WARN("Applying joint %u", node->index); 
-			jointIdx = node->index;
+			jointIndex = node->index;
 			break;
 	
 		case GDModel::SG_MATERIAL: 
 			WARN("Applying material %u", node->index); 
-			materialIdx = node->index;
+			matIndex = node->index;
 			break;
 
 		case GDModel::SG_PRIM:
 			if (drawOnDown)
-				WARN("Drawing batch %u with Joint=%u and Material%u", node->index, jointIdx, materialIdx);
+			{
+				WARN("Drawing batch %u with Joint=%u and Material%u", node->index, jointIndex, matIndex);
+				DrawBatch(renderer, device, model, node->index, jointIndex, matIndex);
+			}	
 			break;	
 
 		case GDModel::SG_DOWN: 
-			node = DrawScenegraph(renderer, device, node+1, jointIdx, materialIdx, drawOnDown);
+			node = DrawScenegraph(renderer, device, model, node+1, jointIndex, matIndex, drawOnDown);
 			break;
 
 		case GDModel::SG_UP:
@@ -405,6 +516,32 @@ const GDModel::Scenegraph* DrawScenegraph(Renderer *renderer, ID3D10Device *devi
 
 RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
 {
-	DrawScenegraph(renderer, device, model->scenegraph);
+	if (model->loadGPU)
+	{
+		// Register vertex and index buffers
+		ubyte* head = model->vertexIndexBuffers;
+		for (uint i = 0; i < model->nVertexIndexBuffers; i++)
+		{
+			ubyte* batch = model->_asset + model->batchOffsetTable[i];
+			VertexBufferID* batchVBID = (VertexBufferID*)batch;
+			IndexBufferID*  batchIBID = (IndexBufferID*)(batch + sizeof(batchVBID));
+			assert(*batchVBID == -1 && *batchIBID == -1);
+
+			u16 attributes = READ(u16);
+			int numVertices = READ(u16);
+			int vbSize = numVertices * GC3D::GetVertexSize(attributes);
+			void* vertices = READ_ARRAY(ubyte, vbSize);
+
+			int numIndices = READ(u16);
+			int ibSize = numIndices * sizeof(u16);
+			void* indices = READ_ARRAY(ubyte, ibSize);
+
+			*batchVBID = renderer->addVertexBuffer(vbSize, STATIC, vertices);
+			*batchIBID = renderer->addIndexBuffer(ibSize, 2, STATIC, indices);
+		}
+		model->loadGPU = false;
+	}
+
+	DrawScenegraph(renderer, device, model, model->scenegraph);
 	return S_OK;
 }
