@@ -100,17 +100,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Assets\cl.bdl">
-      <Filter>Assets</Filter>
-    </CustomBuild>
     <CustomBuild Include="..\Assets\binfairy.bdl.json">
       <Filter>Assets</Filter>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Assets\binfairy.bdl">
-      <Filter>Assets</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Media Include="Test.shd">

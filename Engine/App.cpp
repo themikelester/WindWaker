@@ -83,13 +83,13 @@ bool App::load()
 	//early out
 	//return false;
 
-	/*IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
+	IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
 	IFC(m_AssMan.Load(m_Pkg, nodeName));
-	IFC(m_AssMan.Get(nodeName, &m_Model)); */
+	IFC(m_AssMan.Get(nodeName, &m_Model));
 
 	defaultFont = renderer->addFont("../Assets/Fonts/Future.dds", "../Assets/Fonts/Future.font", linearClamp);
 
-	//m_Model->Init(renderer);
+	m_Model->Init(renderer);
 
 cleanup:
 	return SUCCEEDED(r);
@@ -101,10 +101,10 @@ void App::unload()
 	// We have to do this goofily here because the model destructor won't be called until
 	//   after the asset manager is shut down. 
 	// The memset is to clear the m_AssetPtr attribute to negate the second destructor call
-	/*m_Model.~AssetPtr();
+	m_Model.~AssetPtr();
 	memset(&m_Model, 0, sizeof(m_Model));
 
-	m_AssMan.ClosePkg(m_Pkg);*/
+	m_AssMan.ClosePkg(m_Pkg);
 }
 
 bool App::onKey(const uint key, const bool pressed)

@@ -205,8 +205,8 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 
 				Point p = {};
 				p.mtxIdx = (*point).get("mtx", 0).asUInt();
-				p.nrmIdx = (*point).get("pos", 0).asUInt();
-				p.posIdx = (*point).get("nrm", 0).asUInt();
+				p.posIdx = (*point).get("pos", 0).asUInt();
+				p.nrmIdx = (*point).get("nrm", 0).asUInt();
 				p.clrIdx[0] = (*point)["clr"].get(uint(0), 0).asUInt();
 				p.clrIdx[1] = (*point)["clr"].get(uint(1), 0).asUInt();
 				p.texIdx[0] = (*point)["tex"].get(uint(0), 0).asUInt();
@@ -349,6 +349,10 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		}
 	END_SECTION();
 
+	// Skeleton joints
+	//BEGIN_SECTION("skl1");
+		
+
 	// Vertex, Index Buffers
 	BEGIN_SECTION("vib1");
 		WRITE(nVertexIndexBuffers);
@@ -356,7 +360,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		{
 			WRITE(vertexBuffers[i].vertexAttributes);
 			WRITE(vertexBuffers[i].vertexCount);
-			uint vertBufSize = vertexBuffers[i].vertexCount * GC3D::GetVertexSize(vertexBuffers[i].vertexAttributes);
+			uint vertBufSize = vertexBuffers[i].vertexCount * GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
 			WRITE_ARRAY(vertexBuffers[i].vertexBuf, vertBufSize);
 
 			WRITE(indexBuffers[i].indexCount);
@@ -457,7 +461,7 @@ void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model
 		// Setup Matrix table
 		// updateMatrixTable(bmd, *packet, matrixType, matrixTable, isMatrixWeighted);	
 		
-		device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_POINTLIST);
+		device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 		renderer->reset();
 			//applyMaterial(renderer, matIndex);
@@ -533,7 +537,7 @@ RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
 
 			u16 attributes = READ(u16);
 			int numVertices = READ(u16);
-			int vbSize = numVertices * GC3D::GetVertexSize(attributes);
+			int vbSize = numVertices * GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
 			void* vertices = READ_ARRAY(ubyte, vbSize);
 
 			int numIndices = READ(u16);
