@@ -21,6 +21,7 @@
 
 #include <Framework3/Direct3D10/D3D10App.h>
 #include "GCModel.h"
+#include "GDModel.h"
 #include "AssMan.h"
 
 class App : public D3D10App
@@ -49,4 +50,6 @@ protected:
 	Package *m_Pkg;
 	AssetPtr<GCModel> m_Model;
 	ShaderID m_VerticesShader;
+
+	GDModel::GDModel m_GDModel;
 };

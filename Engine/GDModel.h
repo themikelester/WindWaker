@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Common\common.h"
 #include "Framework3\Renderer.h"
 #include <d3d10.h>
@@ -54,6 +56,10 @@ namespace GDModel
 		uint nVertexIndexBuffers;
 		ubyte* vertexIndexBuffers;
 		
+		// TODO: Temprorary for testing
+		ShaderID shaderID;
+		VertexFormatID vertFormat;
+
 		// This is set on load/reload, and tells the next draw call 
 		//		to load/reload all the GPU assets that we own
 		bool loadGPU; 

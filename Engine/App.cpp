@@ -57,12 +57,12 @@ void App::exitAPI()
 
 bool App::load()
 {
-	RESULT r;
+	RESULT r = S_OK;
 
 	char* filename = "..\\Assets\\Link.rarc";
 	char* nodeName = "/bdl/cl.bdl";
 
-	std::ifstream file ("../assets/cl.bdl.blob", std::ios::in|std::ios::binary);
+	std::ifstream file ("../assets/binfairy.bdl.blob", std::ios::in|std::ios::binary);
 	if(file.is_open())
     {
 		char fourcc[4];
@@ -75,22 +75,21 @@ bool App::load()
 		ubyte* blob = (ubyte*) malloc(size);
 		file.read((char*)blob, size);
 
-		GDModel::GDModel model;
-		GDModel::Load(&model, blob);
-		GDModel::Draw(renderer, device, &model); 
+		GDModel::Load(&m_GDModel, blob);
+		GDModel::Draw(renderer, device, &m_GDModel); 
 	}
     file.close();
 
 	//early out
-	return false;
+	//return false;
 
-	IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
+	/*IFC(m_AssMan.OpenPkg(filename, &m_Pkg) );
 	IFC(m_AssMan.Load(m_Pkg, nodeName));
-	IFC(m_AssMan.Get(nodeName, &m_Model)); 
+	IFC(m_AssMan.Get(nodeName, &m_Model)); */
 
 	defaultFont = renderer->addFont("../Assets/Fonts/Future.dds", "../Assets/Fonts/Future.font", linearClamp);
 
-	m_Model->Init(renderer);
+	//m_Model->Init(renderer);
 
 cleanup:
 	return SUCCEEDED(r);
@@ -102,10 +101,10 @@ void App::unload()
 	// We have to do this goofily here because the model destructor won't be called until
 	//   after the asset manager is shut down. 
 	// The memset is to clear the m_AssetPtr attribute to negate the second destructor call
-	m_Model.~AssetPtr();
+	/*m_Model.~AssetPtr();
 	memset(&m_Model, 0, sizeof(m_Model));
 
-	m_AssMan.ClosePkg(m_Pkg);
+	m_AssMan.ClosePkg(m_Pkg);*/
 }
 
 bool App::onKey(const uint key, const bool pressed)
@@ -166,10 +165,12 @@ void App::drawFrame()
 	
 	renderer->reset();
 		renderer->setGlobalConstant4x4f("WorldViewProj", view_proj);
-		renderer->setGlobalConstant4f("ambLightColor", float4(0.2f, 0.2f, 0.2f, 1.0f));
+		//renderer->setGlobalConstant4f("ambLightColor", float4(0.2f, 0.2f, 0.2f, 1.0f));
 	renderer->apply();
 
-	m_Model->Draw(renderer, device);
+	GDModel::Draw(renderer, device, &m_GDModel);
+
+	//m_Model->Draw(renderer, device);
 	
-	renderer->drawText(m_Model->nodepath, 8, 8, 30, 38, defaultFont, linearClamp, blendSrcAlpha, noDepthTest);
+	//renderer->drawText(m_Model->nodepath, 8, 8, 30, 38, defaultFont, linearClamp, blendSrcAlpha, noDepthTest);
 }

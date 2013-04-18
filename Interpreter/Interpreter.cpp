@@ -37,7 +37,7 @@ int _tmain(int argc, TCHAR* argv[])
 
 	char* filename = argv[1];
 	OpenedFile* f = openFile(filename);
-	if(f == 0)
+	if(f == nullptr)
 		return -2;
   
 	BModel* bmd = loadBmd(f->f);
@@ -75,9 +75,17 @@ int _tmain(int argc, TCHAR* argv[])
 	_snprintf_s(jsonFilename, 128, "%s.json", filename);
 	FILE* outFile;
 	fopen_s(&outFile, jsonFilename, "w");
-	fwrite(outBmd.c_str(), outBmd.size(), 1, outFile);
-	fclose(outFile);
-
-	return 0;
+	if(f != nullptr)
+	{
+		cout << "Writing JSON file to " << jsonFilename << endl;
+		fwrite(outBmd.c_str(), outBmd.size(), 1, outFile);
+		fclose(outFile);
+		return 0;
+	}
+	else
+	{
+		cout << "Failed to open " << jsonFilename << " for writing" << endl;
+		return -3;
+	}
 }
 

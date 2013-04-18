@@ -101,9 +101,9 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 	attribSize = GC3D::GetAttributeSize(GDModel::HAS_POSITIONS);
 	if (attribs & GDModel::HAS_POSITIONS) {
 		float3 pos;
-		pos.x = float(vtx["positions"][point.posIdx].get("x", 0).asDouble());
-		pos.y = float(vtx["positions"][point.posIdx].get("y", 0).asDouble());
-		pos.z = float(vtx["positions"][point.posIdx].get("z", 0).asDouble());
+		pos.x = float(vtx["positions"][point.posIdx].get(uint(0), 0).asDouble());
+		pos.y = float(vtx["positions"][point.posIdx].get(uint(1), 0).asDouble());
+		pos.z = float(vtx["positions"][point.posIdx].get(uint(2), 0).asDouble());
 		memcpy(dst, &pos, attribSize);
 	}
 	dst += attribSize;
@@ -111,9 +111,9 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 	attribSize = GC3D::GetAttributeSize(GDModel::HAS_NORMALS);
 	if (attribs & GDModel::HAS_NORMALS) {
 		float3 nrm;
-		nrm.x = float(vtx["normals"][point.nrmIdx].get("x", 0).asDouble());
-		nrm.y = float(vtx["normals"][point.nrmIdx].get("y", 0).asDouble());
-		nrm.z = float(vtx["normals"][point.nrmIdx].get("z", 0).asDouble());
+		nrm.x = float(vtx["normals"][point.nrmIdx].get(uint(0), 0).asDouble());
+		nrm.y = float(vtx["normals"][point.nrmIdx].get(uint(1), 0).asDouble());
+		nrm.z = float(vtx["normals"][point.nrmIdx].get(uint(2), 0).asDouble());
 		memcpy(dst, &nrm, attribSize);
 	}
 	dst += attribSize;
@@ -142,8 +142,8 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 
 		if (attribs & texAttrib) {
 			float2 st;
-			st.x = float(vtx["texcoords"][point.texIdx[i]].get("s", 0).asDouble());
-			st.y = float(vtx["texcoords"][point.texIdx[i]].get("t", 0).asDouble());
+			st.x = float(vtx["texcoords"][i][point.texIdx[i]].get("s", 0).asDouble());
+			st.y = float(vtx["texcoords"][i][point.texIdx[i]].get("t", 0).asDouble());
 			memcpy(dst, st, attribSize);
 			ASSERT(attribSize == sizeof(st));
 		}
@@ -174,7 +174,7 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 			primCount += 1;
 			pointCount += primNodes[j]["points"].size();
 
-			// TODO: We're still writing the crazy ass type version to the intermediate file
+			// TODO: We're still writing the crazy type version to the intermediate file
 			//			Change this to something nice like 0 = TRISTRIP, 1 = TRIFAN, >1 = UNKNOWN 
 			if (primNodes[j]["type"].asInt() != 152)
 				WARN("Unsupported primitive type detected! This will probably not draw correctly");
@@ -456,16 +456,20 @@ void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model
 
 		// Setup Matrix table
 		// updateMatrixTable(bmd, *packet, matrixType, matrixTable, isMatrixWeighted);	
+		
+		device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_POINTLIST);
 
-		//renderer->reset();
-		//	//applyMaterial(renderer, matIndex);
-		//	renderer->setVertexBuffer(0, vbID);
-		//	renderer->setIndexBuffer(ibID);
-		//	//renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, sizeof(matrixTable));
-		//renderer->apply();
+		renderer->reset();
+			//applyMaterial(renderer, matIndex);
+			renderer->setVertexFormat(model->vertFormat);
+			renderer->setShader(model->shaderID);
+			renderer->setVertexBuffer(0, vbID);
+			renderer->setIndexBuffer(ibID);
+			//renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, sizeof(matrixTable));
+		renderer->apply();
 
 		u16 indexCount = READ(u16);
-		//device->DrawIndexed(indexCount, numIndicesSoFar, 0);	
+		device->DrawIndexed(indexCount, numIndicesSoFar, 0);	
 		numIndicesSoFar += indexCount;
 	}
 }
@@ -539,6 +543,13 @@ RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
 			*batchVBID = renderer->addVertexBuffer(vbSize, STATIC, vertices);
 			*batchIBID = renderer->addIndexBuffer(ibSize, 2, STATIC, indices);
 		}
+
+		// Register our shaders
+		model->shaderID = renderer->addShader("Test.shd");
+
+		// TODO: This is currently hacked to be the full vertex every time
+		model->vertFormat = GC3D::CreateVertexFormat(renderer, FULL_VERTEX_ATTRIBS, model->shaderID);
+
 		model->loadGPU = false;
 	}
 

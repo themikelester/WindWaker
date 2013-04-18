@@ -107,7 +107,9 @@ Ret decodeYaz0(u8* src, int srcSize, u8* dst, int uncompressedSize)
 
 OpenedFile* openFile(const string& name)
 {
-  FILE* f = fopen(name.c_str(), "rb");
+  FILE* f;
+
+  fopen_s(&f, name.c_str(), "rb");
   if(f == NULL)
   {
     fprintf(stderr, "Failed to open \"%s\"\n", name.c_str());
@@ -147,7 +149,7 @@ OpenedFile* openFile(const string& name)
   //return handle to this file
   string tempFileName = getTempFileName();
   
-  f = fopen(tempFileName.c_str(), "wb+");
+  fopen_s(&f, tempFileName.c_str(), "wb+");
   if(f == NULL)
   {
     delete ret;
