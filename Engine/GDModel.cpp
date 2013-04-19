@@ -21,29 +21,6 @@
 //TODO: HACK: Remove this!
 #define FULL_VERTEX_ATTRIBS 0x1fff
 
-//read and interpret Batch1 vertex attribs
-u16 compileAttribs(Json::Value attribsNode)
-{
-	u16 attribFlags = 0;
-
-	if (attribsNode.get("mtx", false).asBool()) attribFlags |= GDModel::HAS_MATRIX_INDICES;
-	if (attribsNode.get("pos", false).asBool()) attribFlags |= GDModel::HAS_POSITIONS;
-	if (attribsNode.get("nrm", false).asBool()) attribFlags |= GDModel::HAS_NORMALS;
-
-	if (attribsNode["clr"].get(uint(0), false).asBool()) attribFlags |= GDModel::HAS_COLORS0;
-	if (attribsNode["clr"].get(uint(1), false).asBool()) attribFlags |= GDModel::HAS_COLORS1;
-	
-	if (attribsNode["tex"].get(uint(0), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS0;
-	if (attribsNode["tex"].get(uint(1), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS1;
-	if (attribsNode["tex"].get(uint(2), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS2;
-	if (attribsNode["tex"].get(uint(3), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS3;
-	if (attribsNode["tex"].get(uint(4), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS4;
-	if (attribsNode["tex"].get(uint(5), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS5;
-	if (attribsNode["tex"].get(uint(6), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS6;
-	if (attribsNode["tex"].get(uint(7), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS7;
-
-	return attribFlags;
-}
 
 struct SectionHeader
 {
@@ -72,6 +49,59 @@ struct Point
 	u16 clrIdx[2];
 	u16 texIdx[8];
 };
+
+// Compile a coordinate frame into an affine matrix
+void compileFrame(Json::Value& frameNode, mat4* matrix)
+{
+	mat4 t, rx, ry, rz, s;
+
+	Json::Value& transNode = frameNode["translation"];
+	t = translate(float(transNode.get("x", 0).asDouble()), 
+				  float(transNode.get("y", 0).asDouble()), 
+				  float(transNode.get("z", 0).asDouble()));
+
+	Json::Value& rotNode = frameNode["rotation"];
+	rx = rotateX(float(rotNode.get("x", 0).asDouble()/360.0 * 2*PI));
+	ry = rotateY(float(rotNode.get("y", 0).asDouble()/360.0 * 2*PI));
+	rz = rotateZ(float(rotNode.get("z", 0).asDouble()/360.0 * 2*PI));
+	
+	Json::Value& scaleNode = frameNode["scale"];
+	s = scale(float(scaleNode.get("x", 0).asDouble()), 
+			  float(scaleNode.get("y", 0).asDouble()), 
+			  float(scaleNode.get("z", 0).asDouble()));
+
+	// TODO: Implement == and != for mat4s 
+	if (s != identity4())
+		WARN("This model is using joint scaling. This is not yet tested!");
+
+  //this is probably right this way:
+  //return t*rz*ry*rx*s; //scales seem to be local only
+  *matrix = t*rz*ry*rx;
+}
+
+// Read and interpret Batch1 vertex attribs
+u16 compileAttribs(Json::Value& attribsNode)
+{
+	u16 attribFlags = 0;
+
+	if (attribsNode.get("mtx", false).asBool()) attribFlags |= GDModel::HAS_MATRIX_INDICES;
+	if (attribsNode.get("pos", false).asBool()) attribFlags |= GDModel::HAS_POSITIONS;
+	if (attribsNode.get("nrm", false).asBool()) attribFlags |= GDModel::HAS_NORMALS;
+
+	if (attribsNode["clr"].get(uint(0), false).asBool()) attribFlags |= GDModel::HAS_COLORS0;
+	if (attribsNode["clr"].get(uint(1), false).asBool()) attribFlags |= GDModel::HAS_COLORS1;
+	
+	if (attribsNode["tex"].get(uint(0), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS0;
+	if (attribsNode["tex"].get(uint(1), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS1;
+	if (attribsNode["tex"].get(uint(2), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS2;
+	if (attribsNode["tex"].get(uint(3), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS3;
+	if (attribsNode["tex"].get(uint(4), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS4;
+	if (attribsNode["tex"].get(uint(5), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS5;
+	if (attribsNode["tex"].get(uint(6), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS6;
+	if (attribsNode["tex"].get(uint(7), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS7;
+
+	return attribFlags;
+}
 
 RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Value& vtx)
 {
@@ -350,8 +380,96 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	END_SECTION();
 
 	// Skeleton joints
-	//BEGIN_SECTION("skl1");
+	BEGIN_SECTION("drw1");
+	{
+		Json::Value weightedNode = root["Drw1"]["isWeighted"];
+		Json::Value indexNode = root["Drw1"]["data"];
+		uint nNodes = indexNode.size();
+		WRITE(nNodes);
+		for (uint i = 0; i < nNodes; i++)
+		{
+			DrwElement drw;
+			drw.index = indexNode.get(i, 0).asUInt();
+			drw.isWeighted = weightedNode.get(i, false).asBool();
+			WRITE(drw);
+		}
+	}
+	END_SECTION();	
+	BEGIN_SECTION("jnt1");
+	{
+		Json::Value frameNode = root["Jnt1"]["frames"];
+		uint nNodes = frameNode.size();
+		WRITE(nNodes);
+		for (uint i = 0; i < nNodes; i++)
+		{
+			JointElement joint;
+			compileFrame(frameNode[i], &joint.matrix);
+			strncpy_s(joint.name, frameNode[i].get("name", "UnknownName").asCString(), 16);
+			WRITE(joint);
+		}
+	}
+	END_SECTION();	
+	BEGIN_SECTION("evp1");
+	{
+		Json::Value matNode = root["Evp1"]["matrices"];
+		Json::Value weightIndexNode = root["Evp1"]["weightedIndices"];
+		uint nMatrices = matNode.size();
+		uint nWeights = weightIndexNode.size();
+		uint weightsSize = 0;
+
+		WRITE(nMatrices);
+		WRITE(nWeights);
+
+		// These two elements will be filled as a postprocess
+		long offsetsPos = s.tellp();
+		u16* weightedIndexOffsets = (u16*)malloc(sizeof(u16) * nWeights);
+		WRITE(weightsSize)
+		WRITE_ARRAY(weightedIndexOffsets, nWeights * sizeof(u16));
+
+		for (uint i = 0; i < nMatrices; i++)
+		{
+			mat4 matrix;
+			for (uint j = 0; j < 16;)
+			{
+				matrix.rows[j/4].x = float(matNode[i].get(uint(j++), 0).asDouble());
+				matrix.rows[j/4].y = float(matNode[i].get(uint(j++), 0).asDouble());
+				matrix.rows[j/4].z = float(matNode[i].get(uint(j++), 0).asDouble());
+				matrix.rows[j/4].w = float(matNode[i].get(uint(j++), 0).asDouble());
+			}
+			WRITE(matrix);
+		}
 		
+		uint offsetStart = totalSize;
+		for (uint i = 0; i < nWeights; i++)
+		{
+			weightedIndexOffsets[i] = offsetStart - totalSize;
+			Json::Value weightsNode = weightIndexNode[i]["weights"];
+			uint nWeightsNodes = weightsNode.size();
+			for (uint j = 0; j < nWeightsNodes; j++)
+			{
+				u16 weight = weightsNode.get(uint(j), 0).asUInt();
+				WRITE(weight);
+			}
+		}
+		weightsSize = totalSize - offsetStart;
+				
+		for (uint i = 0; i < nWeights; i++)
+		{
+			Json::Value indicesNode = weightIndexNode[i]["indices"];
+			uint nIndicesNodes = indicesNode.size();
+			for (uint j = 0; j < nIndicesNodes; j++)
+			{
+				u16 index = indicesNode.get(uint(j), 0).asUInt();
+				WRITE(index);
+			}
+		}
+
+		s.seekp(offsetsPos);
+		s.write((char*)&weightsSize, sizeof(weightsSize));
+		s.write((char*)weightedIndexOffsets, nWeights * sizeof(u16));
+		s.seekp(0, std::ios_base::end);
+	}
+	END_SECTION();	
 
 	// Vertex, Index Buffers
 	BEGIN_SECTION("vib1");
@@ -426,6 +544,26 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 	BEGIN_READ_SECTION("bch1");
 		uint nBatches = READ(u16);
 		model->batchOffsetTable = READ_ARRAY(u16, nBatches);
+	END_READ_SECTION();
+	
+	BEGIN_READ_SECTION("drw1");
+		uint nDrw = READ(uint);
+		model->drwTable = READ_ARRAY(DrwElement, nDrw);
+	END_READ_SECTION();
+
+	BEGIN_READ_SECTION("jnt1");
+		uint nJnt = READ(uint);
+		model->jointTable = READ_ARRAY(JointElement, nJnt);
+	END_READ_SECTION();
+	
+	BEGIN_READ_SECTION("evp1");
+		uint nMatrices = READ(uint);
+		uint nWeights = READ(uint);
+		uint weightsSize = READ(uint);
+		model->evpWeightedIndexOffsetTable = READ_ARRAY(u16, nWeights);
+		model->evpMatrixTable = READ_ARRAY(mat4, nMatrices);
+		model->evpWeights = READ_ARRAY(ubyte, weightsSize);
+		model->evpIndices = READ_ARRAY(ubyte, 0);
 	END_READ_SECTION();
 
 	// Vertex, Index Buffer registration is handled on the next draw

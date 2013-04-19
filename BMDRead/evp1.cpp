@@ -139,7 +139,7 @@ Json::Value serializeEvp1(Evp1& evp1)
 		Json::Value mtx;
 		for (uint j = 0; j < 16; j++)
 		{
-			mtx[j] = *evp1.matrices[i][j];
+			mtx[j] = evp1.matrices[i][j/4][j%4];
 		}
 
 		evpNode["matrices"][i] = mtx;

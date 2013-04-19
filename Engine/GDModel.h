@@ -11,6 +11,18 @@ namespace Json {
 
 namespace GDModel
 {
+
+	struct DrwElement
+	{
+		u16 index;
+		bool isWeighted;
+	};
+
+	struct JointElement
+	{
+		char name[16];
+		mat4 matrix;
+	};
 	
 	enum SgNodeType {
 		SG_END		= 0x00,
@@ -53,9 +65,17 @@ namespace GDModel
 		Scenegraph* scenegraph;
 		u16* batchOffsetTable; // Batch* batch3 = _asset + batchOffsetTable[3];
 		
+		DrwElement* drwTable;
+		JointElement* jointTable;
+		mat4*  evpMatrixTable;
+		u16*   evpWeightedIndexOffsetTable;
+		ubyte* evpWeights;
+		ubyte* evpIndices;
+
+		// These are only needed at load time, we should find a way to remove them
 		uint nVertexIndexBuffers;
 		ubyte* vertexIndexBuffers;
-		
+
 		// TODO: Temprorary for testing
 		ShaderID shaderID;
 		VertexFormatID vertFormat;
