@@ -420,11 +420,13 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		WRITE(nMatrices);
 		WRITE(nWeights);
 
-		// These two elements will be filled as a postprocess
+		// These elements will be filled as a postprocess
 		long offsetsPos = s.tellp();
-		u16* weightedIndexOffsets = (u16*)malloc(sizeof(u16) * nWeights);
+		u16* weightOffsets = (u16*)malloc(sizeof(u16) * nWeights);
+		u16* indexOffsets = (u16*)malloc(sizeof(u16) * nWeights);
 		WRITE(weightsSize)
-		WRITE_ARRAY(weightedIndexOffsets, nWeights * sizeof(u16));
+		WRITE_ARRAY(weightOffsets, nWeights * sizeof(u16));
+		WRITE_ARRAY(indexOffsets, nWeights * sizeof(u16));
 
 		for (uint i = 0; i < nMatrices; i++)
 		{
@@ -442,12 +444,12 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		uint offsetStart = totalSize;
 		for (uint i = 0; i < nWeights; i++)
 		{
-			weightedIndexOffsets[i] = offsetStart - totalSize;
+			weightOffsets[i] = offsetStart - totalSize;
 			Json::Value weightsNode = weightIndexNode[i]["weights"];
 			uint nWeightsNodes = weightsNode.size();
 			for (uint j = 0; j < nWeightsNodes; j++)
 			{
-				u16 weight = weightsNode.get(uint(j), 0).asUInt();
+				float weight = float(weightsNode.get(uint(j), 0).asDouble());
 				WRITE(weight);
 			}
 		}
@@ -455,6 +457,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 				
 		for (uint i = 0; i < nWeights; i++)
 		{
+			indexOffsets[i] = offsetStart - totalSize;
 			Json::Value indicesNode = weightIndexNode[i]["indices"];
 			uint nIndicesNodes = indicesNode.size();
 			for (uint j = 0; j < nIndicesNodes; j++)
@@ -466,7 +469,8 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 
 		s.seekp(offsetsPos);
 		s.write((char*)&weightsSize, sizeof(weightsSize));
-		s.write((char*)weightedIndexOffsets, nWeights * sizeof(u16));
+		s.write((char*)weightOffsets, nWeights * sizeof(u16));
+		s.write((char*)indexOffsets, nWeights * sizeof(u16));
 		s.seekp(0, std::ios_base::end);
 	}
 	END_SECTION();	
@@ -560,7 +564,8 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 		uint nMatrices = READ(uint);
 		uint nWeights = READ(uint);
 		uint weightsSize = READ(uint);
-		model->evpWeightedIndexOffsetTable = READ_ARRAY(u16, nWeights);
+		model->evpWeightsOffsetTable = READ_ARRAY(u16, nWeights);
+		model->evpIndexOffsetTable = READ_ARRAY(u16, nWeights);
 		model->evpMatrixTable = READ_ARRAY(mat4, nMatrices);
 		model->evpWeights = READ_ARRAY(ubyte, weightsSize);
 		model->evpIndices = READ_ARRAY(ubyte, 0);

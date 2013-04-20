@@ -68,7 +68,8 @@ namespace GDModel
 		DrwElement* drwTable;
 		JointElement* jointTable;
 		mat4*  evpMatrixTable;
-		u16*   evpWeightedIndexOffsetTable;
+		u16*   evpWeightsOffsetTable;
+		u16*   evpIndexOffsetTable;
 		ubyte* evpWeights;
 		ubyte* evpIndices;
 
