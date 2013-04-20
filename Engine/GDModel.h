@@ -20,8 +20,9 @@ namespace GDModel
 
 	struct JointElement
 	{
-		char name[16];
 		mat4 matrix;
+		char name[16];
+		u16 parent;
 	};
 	
 	struct WeightedIndex
@@ -71,13 +72,19 @@ namespace GDModel
 		Scenegraph* scenegraph;
 		u16* batchOffsetTable; // Batch* batch3 = _asset + batchOffsetTable[3];
 		
-		DrwElement* drwTable;
+		u16 numJoints;
 		JointElement* jointTable;
+
+		DrwElement* drwTable;
 		mat4*  evpMatrixTable;
 		u8*	   evpWeightedIndexSizesTable;
 		u16*   evpWeightedIndexOffsetTable;
 		WeightedIndex* evpWeightedIndexTable;
 
+		// TODO: This is only temporary until we start loading animations
+		// Store a copy of our original joints 
+		JointElement* emptyAnim;
+		
 		// These are only needed at load time, we should find a way to remove them
 		uint nVertexIndexBuffers;
 		ubyte* vertexIndexBuffers;
@@ -91,6 +98,9 @@ namespace GDModel
 		bool loadGPU; 
 	};
 	
+	
+	RESULT Update(GDModel* model);
+
 	RESULT Draw(Renderer* renderer, ID3D10Device* device, GDModel* model);
 	
 	//Given a JSON object, compile a binary blob that can be loaded with Load() and Reload()

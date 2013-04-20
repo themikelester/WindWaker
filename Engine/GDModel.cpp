@@ -317,16 +317,41 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	IndexBuffer* indexBuffers;
 	u16 nVertexIndexBuffers = 0;
 
+	std::vector<u16> jointParents;
+
 	// Scenegraph
 	BEGIN_SECTION("scn1");
 		Scenegraph sg;
 		Json::Value sgNode = root["Inf1"]["scenegraph"];
 		uint nNodes = sgNode.size();
 		WRITE(nNodes);
+
+		std::stack<u16> parentJoints;
+		parentJoints.push(-1);
+		u16 tempParentJoint = parentJoints.top();
 		for (uint i = 0; i < nNodes; i++)
 		{
 			sg.index = u16(sgNode[i].get("index", 0).asUInt());
 			sg.type = u16(sgNode[i].get("type", 0).asUInt());
+
+			switch(sg.type)
+			{
+			case SG_JOINT:
+				jointParents.push_back(tempParentJoint);
+				tempParentJoint = sg.index;
+				break;
+
+			case SG_DOWN:
+				parentJoints.push(tempParentJoint);
+				tempParentJoint = tempParentJoint;
+				break;
+
+			case SG_UP:
+				parentJoints.pop();
+				tempParentJoint = parentJoints.top();
+				break;
+			}
+
 			WRITE(sg);
 		}
 	END_SECTION();
@@ -408,6 +433,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 			JointElement joint;
 			compileFrame(frameNode[i], &joint.matrix);
 			strncpy_s(joint.name, frameNode[i].get("name", "UnknownName").asCString(), 16);
+			joint.parent = jointParents[i];
 			WRITE(joint);
 		}
 	}
@@ -551,7 +577,15 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 
 	BEGIN_READ_SECTION("jnt1");
 		uint nJnt = READ(uint);
+		model->numJoints = nJnt;
 		model->jointTable = READ_ARRAY(JointElement, nJnt);
+
+		// TODO: This is temporary until we start loading animations
+		// TODO: This is a memory leak, but we're going to leave it since it's temporary
+		// Store a copy of the joints as our "default" animation
+		uint jointTableSize = sizeof(JointElement) * nJnt;
+		model->emptyAnim = (JointElement*) malloc(jointTableSize);
+		memcpy(model->emptyAnim, model->jointTable, jointTableSize);
 	END_READ_SECTION();
 	
 	BEGIN_READ_SECTION("evp1");
@@ -607,11 +641,13 @@ void FillMatrixTable(GDModel::GDModel* model, mat4* matrixTable, u16* matrixIndi
 		{
 			matrix = model->jointTable[drw.index].matrix;
 		}
+
+		// TODO: Implement MatrixType (Billboard, Y-Billboard)
 	}
 }
 
 void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model, 
-			   u16 batchIndex, u16 jointIndex, u16 matIndex)
+			   u16 batchIndex, u16 matIndex)
 {
 	ubyte* head = model->_asset + model->batchOffsetTable[batchIndex];
 	
@@ -648,23 +684,36 @@ void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model
 	}
 }
 
+RESULT GDModel::Update(GDModel* model)
+{
+	// Grab the root joint straight from the animation. It's parent is the identity
+	model->jointTable[0].matrix = model->emptyAnim[0].matrix;
+
+	for (uint i = 1; i < model->numJoints; i++)
+	{
+		JointElement& joint = model->jointTable[i];
+
+		// Calculate joint from animation at current time
+		mat4& animMatrix = model->emptyAnim[i].matrix;
+
+		// Put in parent's frame
+		joint.matrix = model->jointTable[joint.parent].matrix * animMatrix;
+	}
+
+	return S_OK;
+}
+
 //TODO: Remove the need for the D3D reference
 const GDModel::Scenegraph* DrawScenegraph(Renderer *renderer, ID3D10Device *device, GDModel::GDModel* model, 
-									const GDModel::Scenegraph* node, uint jointIndex = 0, uint matIndex = 0, 
-									bool drawOnDown = true)
+										  const GDModel::Scenegraph* node, uint matIndex = 0, 
+										  bool drawOnDown = true)
 {
 	//TODO: implement drawOnDown. The joint and material states match up with the onDown implementation.
 	//		 the only thing that changes is the draw order. Does this make a difference?
-
 	while (node->type != GDModel::SG_END)
 	{
 		switch(node->type)
-		{
-		case GDModel::SG_JOINT: 
-			WARN("Applying joint %u", node->index); 
-			jointIndex = node->index;
-			break;
-	
+		{	
 		case GDModel::SG_MATERIAL: 
 			WARN("Applying material %u", node->index); 
 			matIndex = node->index;
@@ -673,13 +722,13 @@ const GDModel::Scenegraph* DrawScenegraph(Renderer *renderer, ID3D10Device *devi
 		case GDModel::SG_PRIM:
 			if (drawOnDown)
 			{
-				WARN("Drawing batch %u with Joint=%u and Material%u", node->index, jointIndex, matIndex);
-				DrawBatch(renderer, device, model, node->index, jointIndex, matIndex);
+				WARN("Drawing batch %u with Material%u", node->index, matIndex);
+				DrawBatch(renderer, device, model, node->index, matIndex);
 			}	
 			break;	
 
 		case GDModel::SG_DOWN: 
-			node = DrawScenegraph(renderer, device, model, node+1, jointIndex, matIndex, drawOnDown);
+			node = DrawScenegraph(renderer, device, model, node+1, matIndex, drawOnDown);
 			break;
 
 		case GDModel::SG_UP:

@@ -62,7 +62,7 @@ bool App::load()
 	char* filename = "..\\Assets\\Link.rarc";
 	char* nodeName = "/bdl/cl.bdl";
 
-	std::ifstream file ("../assets/binfairy.bdl.blob", std::ios::in|std::ios::binary);
+	std::ifstream file ("../assets/cl.bdl.blob", std::ios::in|std::ios::binary);
 	if(file.is_open())
     {
 		char fourcc[4];
@@ -165,12 +165,13 @@ void App::drawFrame()
 	
 	renderer->reset();
 		renderer->setGlobalConstant4x4f("WorldViewProj", view_proj);
-		//renderer->setGlobalConstant4f("ambLightColor", float4(0.2f, 0.2f, 0.2f, 1.0f));
+		renderer->setGlobalConstant4f("ambLightColor", float4(0.2f, 0.2f, 0.2f, 1.0f));
 	renderer->apply();
 
+	GDModel::Update(&m_GDModel);
 	GDModel::Draw(renderer, device, &m_GDModel);
 
 	//m_Model->Draw(renderer, device);
 	
-	//renderer->drawText(m_Model->nodepath, 8, 8, 30, 38, defaultFont, linearClamp, blendSrcAlpha, noDepthTest);
+	renderer->drawText(m_Model->nodepath, 8, 8, 30, 38, defaultFont, linearClamp, blendSrcAlpha, noDepthTest);
 }
