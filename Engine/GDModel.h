@@ -24,6 +24,12 @@ namespace GDModel
 		mat4 matrix;
 	};
 	
+	struct WeightedIndex
+	{
+		float weight;
+		uint  index;
+	};
+
 	enum SgNodeType {
 		SG_END		= 0x00,
 		SG_DOWN		= 0x01,
@@ -68,10 +74,9 @@ namespace GDModel
 		DrwElement* drwTable;
 		JointElement* jointTable;
 		mat4*  evpMatrixTable;
-		u16*   evpWeightsOffsetTable;
-		u16*   evpIndexOffsetTable;
-		ubyte* evpWeights;
-		ubyte* evpIndices;
+		u8*	   evpWeightedIndexSizesTable;
+		u16*   evpWeightedIndexOffsetTable;
+		WeightedIndex* evpWeightedIndexTable;
 
 		// These are only needed at load time, we should find a way to remove them
 		uint nVertexIndexBuffers;

@@ -301,6 +301,9 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	uint totalSize = 0;
 	uint currentSection = 0;
 
+	// Disable the debug heap. JsonCpp uses a ton of malloc/free's.
+	DEBUG_ONLY(_CrtSetDbgFlag(0));
+
 	//TODO: HACK: Remove this
 	foundation::memory_globals::init(4 * 1024 * 1024);
 
@@ -415,18 +418,16 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		Json::Value weightIndexNode = root["Evp1"]["weightedIndices"];
 		uint nMatrices = matNode.size();
 		uint nWeights = weightIndexNode.size();
-		uint weightsSize = 0;
 
 		WRITE(nMatrices);
 		WRITE(nWeights);
 
 		// These elements will be filled as a postprocess
 		long offsetsPos = s.tellp();
-		u16* weightOffsets = (u16*)malloc(sizeof(u16) * nWeights);
-		u16* indexOffsets = (u16*)malloc(sizeof(u16) * nWeights);
-		WRITE(weightsSize)
-		WRITE_ARRAY(weightOffsets, nWeights * sizeof(u16));
-		WRITE_ARRAY(indexOffsets, nWeights * sizeof(u16));
+		u8*  weightedIndexSizes = (u8*)malloc(sizeof(u8) * nWeights);
+		u16* weightedIndexOffsets = (u16*)malloc(sizeof(uint) * nWeights);
+		WRITE_ARRAY(weightedIndexSizes, nWeights * sizeof(u8));
+		WRITE_ARRAY(weightedIndexOffsets, nWeights * sizeof(u16));
 
 		for (uint i = 0; i < nMatrices; i++)
 		{
@@ -441,36 +442,27 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 			WRITE(matrix);
 		}
 		
-		uint offsetStart = totalSize;
 		for (uint i = 0; i < nWeights; i++)
 		{
-			weightOffsets[i] = offsetStart - totalSize;
 			Json::Value weightsNode = weightIndexNode[i]["weights"];
-			uint nWeightsNodes = weightsNode.size();
-			for (uint j = 0; j < nWeightsNodes; j++)
-			{
-				float weight = float(weightsNode.get(uint(j), 0).asDouble());
-				WRITE(weight);
-			}
-		}
-		weightsSize = totalSize - offsetStart;
-				
-		for (uint i = 0; i < nWeights; i++)
-		{
-			indexOffsets[i] = offsetStart - totalSize;
 			Json::Value indicesNode = weightIndexNode[i]["indices"];
-			uint nIndicesNodes = indicesNode.size();
-			for (uint j = 0; j < nIndicesNodes; j++)
+			uint nWeightedIndices = weightsNode.size();
+
+			weightedIndexSizes[i] = nWeightedIndices;
+			weightedIndexOffsets[i] = (i == 0) ? 0 : weightedIndexOffsets[i-1] + nWeightedIndices;
+
+			for (uint j = 0; j < nWeightedIndices; j++)
 			{
-				u16 index = indicesNode.get(uint(j), 0).asUInt();
-				WRITE(index);
+				WeightedIndex wi;
+				wi.weight = float(weightsNode.get(uint(j), 0).asDouble());
+				wi.index = indicesNode.get(uint(j), 0).asUInt();
+				WRITE(wi);
 			}
 		}
 
 		s.seekp(offsetsPos);
-		s.write((char*)&weightsSize, sizeof(weightsSize));
-		s.write((char*)weightOffsets, nWeights * sizeof(u16));
-		s.write((char*)indexOffsets, nWeights * sizeof(u16));
+		s.write((char*)weightedIndexSizes, nWeights * sizeof(u8));
+		s.write((char*)weightedIndexOffsets, nWeights * sizeof(weightedIndexOffsets[0]));
 		s.seekp(0, std::ios_base::end);
 	}
 	END_SECTION();	
@@ -517,6 +509,8 @@ cleanup:
 	free(vertexBuffers);
 	free(indexBuffers);
 	free(batchOffsets);
+	
+	DEBUG_ONLY(_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF));
 
 	return S_OK;
 }
@@ -563,12 +557,10 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 	BEGIN_READ_SECTION("evp1");
 		uint nMatrices = READ(uint);
 		uint nWeights = READ(uint);
-		uint weightsSize = READ(uint);
-		model->evpWeightsOffsetTable = READ_ARRAY(u16, nWeights);
-		model->evpIndexOffsetTable = READ_ARRAY(u16, nWeights);
+		model->evpWeightedIndexSizesTable = READ_ARRAY(u8, nWeights);
+		model->evpWeightedIndexOffsetTable = READ_ARRAY(u16, nWeights);
 		model->evpMatrixTable = READ_ARRAY(mat4, nMatrices);
-		model->evpWeights = READ_ARRAY(ubyte, weightsSize);
-		model->evpIndices = READ_ARRAY(ubyte, 0);
+		model->evpWeightedIndexTable = READ_ARRAY(WeightedIndex, 0);
 	END_READ_SECTION();
 
 	// Vertex, Index Buffer registration is handled on the next draw
@@ -582,6 +574,85 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 	return S_OK;
 }
 
+void FillMatrixTable(GDModel::GDModel* model, mat4* matrixTable, u16* matrixIndices, u16 nMatrixIndices)
+{
+	for (uint i = 0; i < nMatrixIndices; i++)
+	{
+		mat4& matrix = matrixTable[i];
+		u16 drwIndex = matrixIndices[i];
+
+		if (drwIndex == 0xffff)
+			continue; // keep matrix set by previous packet
+		
+		GDModel::DrwElement& drw = model->drwTable[drwIndex];
+		if (drw.isWeighted)
+		{
+			// TODO: Optimize this
+			memset(&matrix, 0, sizeof(mat4));
+			u8 nMatrices = model->evpWeightedIndexSizesTable[drw.index];
+			GDModel::WeightedIndex* weightedIndices = 
+				model->evpWeightedIndexTable + model->evpWeightedIndexOffsetTable[drw.index];
+			
+			for (uint j = 0; j < nMatrices; j++)
+			{
+				uint evpAndJntIndex = weightedIndices[j].index;
+				float evpAndJntWeight = weightedIndices[j].weight;
+				const mat4& evpMatrix = model->evpMatrixTable[evpAndJntIndex];
+				const mat4& jntMatrix = model->jointTable[evpAndJntIndex].matrix;
+				matrix = (jntMatrix*evpMatrix) * evpAndJntWeight + matrix;
+			}
+		}
+		else
+		{
+			matrix = model->jointTable[drw.index].matrix;
+		}
+	}
+
+	//for(size_t i = 0; i < packet.matrixTable.size(); ++i)
+	//{
+	//	if(packet.matrixTable[i] != 0xffff) //this means keep old entry
+	//	{
+	//		u16 index = packet.matrixTable[i];
+	//		if(bmd->drw1.isWeighted[index])
+	//		{
+	//			//TODO: the EVP1 data should probably be used here,
+	//			//figure out how this works (most files look ok
+	//			//without this, but models/ji.bdl is for example
+	//			//broken this way)
+	//			//matrixTable[i] = def;
+	//		
+	//			//the following _does_ the right thing...it looks
+	//			//ok for all files, but i don't understand why :-P
+	//			//(and this code is slow as hell, so TODO: fix this)
+	//		
+	//			//NO idea if this is right this way...
+	//			mat4 m(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	//			const MultiMatrix& mm = bmd->evp1.weightedIndices[bmd->drw1.data[index]];
+	//			for(size_t r = 0; r < mm.weights.size(); ++r)
+	//			{
+	//				const mat4 evpMat = bmd->evp1.matrices[mm.indices[r]];
+	//				const mat4 localMat = localMatrix(mm.indices[r], bmd);
+	//				mad(m, localMat*evpMat, mm.weights[r]);
+	//			}
+	//			m.rows[3] = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	//			matrixTable[i] = m;
+	//			if(isMatrixWeighted != NULL)
+	//				isMatrixWeighted[i] = true;
+	//		}
+	//		else
+	//		{
+	//			//ASSERT(bmd->jnt1.isMatrixValid[bmd->drw1.data[index]]);
+	//			matrixTable[i] = bmd->jnt1.matrices[bmd->drw1.data[index]];
+	//							
+	//			if(isMatrixWeighted != NULL)
+	//				isMatrixWeighted[i] = false;
+	//		}
+	//		adjustMatrix(matrixTable[i], matrixType);
+	//	}
+	//}
+}
+
 void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model, 
 			   u16 batchIndex, u16 jointIndex, u16 matIndex)
 {
@@ -593,7 +664,6 @@ void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model
 	
 	// These are partially updated by each packet
 	mat4 matrixTable[10];
-	bool isMatrixWeighted[10];
 
 	int numIndicesSoFar = 0;
 	for (uint i = 0; i < numPackets; i++)
@@ -602,7 +672,7 @@ void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model
 		u16* matrixIndices = READ_ARRAY(u16, nMatrixIndices);
 
 		// Setup Matrix table
-		// updateMatrixTable(bmd, *packet, matrixType, matrixTable, isMatrixWeighted);	
+		FillMatrixTable(model, matrixTable, matrixIndices, nMatrixIndices);	
 		
 		device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
