@@ -432,12 +432,12 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		for (uint i = 0; i < nMatrices; i++)
 		{
 			mat4 matrix;
-			for (uint j = 0; j < 16;)
+			for (uint j = 0; j < 16; j += 4)
 			{
-				matrix.rows[j/4].x = float(matNode[i].get(uint(j++), 0).asDouble());
-				matrix.rows[j/4].y = float(matNode[i].get(uint(j++), 0).asDouble());
-				matrix.rows[j/4].z = float(matNode[i].get(uint(j++), 0).asDouble());
-				matrix.rows[j/4].w = float(matNode[i].get(uint(j++), 0).asDouble());
+				matrix.rows[j/4].x = float(matNode[i].get(uint(j+0), 0).asDouble());
+				matrix.rows[j/4].y = float(matNode[i].get(uint(j+1), 0).asDouble());
+				matrix.rows[j/4].z = float(matNode[i].get(uint(j+2), 0).asDouble());
+				matrix.rows[j/4].w = float(matNode[i].get(uint(j+3), 0).asDouble());
 			}
 			WRITE(matrix);
 		}
@@ -449,7 +449,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 			uint nWeightedIndices = weightsNode.size();
 
 			weightedIndexSizes[i] = nWeightedIndices;
-			weightedIndexOffsets[i] = (i == 0) ? 0 : weightedIndexOffsets[i-1] + nWeightedIndices;
+			weightedIndexOffsets[i] = (i == 0) ? 0 : weightedIndexOffsets[i-1] + weightedIndexSizes[i-1];
 
 			for (uint j = 0; j < nWeightedIndices; j++)
 			{
@@ -601,56 +601,13 @@ void FillMatrixTable(GDModel::GDModel* model, mat4* matrixTable, u16* matrixIndi
 				const mat4& jntMatrix = model->jointTable[evpAndJntIndex].matrix;
 				matrix = (jntMatrix*evpMatrix) * evpAndJntWeight + matrix;
 			}
+			matrix.rows[3] = vec4(0, 0, 0, 1.0f);
 		}
 		else
 		{
 			matrix = model->jointTable[drw.index].matrix;
 		}
 	}
-
-	//for(size_t i = 0; i < packet.matrixTable.size(); ++i)
-	//{
-	//	if(packet.matrixTable[i] != 0xffff) //this means keep old entry
-	//	{
-	//		u16 index = packet.matrixTable[i];
-	//		if(bmd->drw1.isWeighted[index])
-	//		{
-	//			//TODO: the EVP1 data should probably be used here,
-	//			//figure out how this works (most files look ok
-	//			//without this, but models/ji.bdl is for example
-	//			//broken this way)
-	//			//matrixTable[i] = def;
-	//		
-	//			//the following _does_ the right thing...it looks
-	//			//ok for all files, but i don't understand why :-P
-	//			//(and this code is slow as hell, so TODO: fix this)
-	//		
-	//			//NO idea if this is right this way...
-	//			mat4 m(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-	//			const MultiMatrix& mm = bmd->evp1.weightedIndices[bmd->drw1.data[index]];
-	//			for(size_t r = 0; r < mm.weights.size(); ++r)
-	//			{
-	//				const mat4 evpMat = bmd->evp1.matrices[mm.indices[r]];
-	//				const mat4 localMat = localMatrix(mm.indices[r], bmd);
-	//				mad(m, localMat*evpMat, mm.weights[r]);
-	//			}
-	//			m.rows[3] = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-
-	//			matrixTable[i] = m;
-	//			if(isMatrixWeighted != NULL)
-	//				isMatrixWeighted[i] = true;
-	//		}
-	//		else
-	//		{
-	//			//ASSERT(bmd->jnt1.isMatrixValid[bmd->drw1.data[index]]);
-	//			matrixTable[i] = bmd->jnt1.matrices[bmd->drw1.data[index]];
-	//							
-	//			if(isMatrixWeighted != NULL)
-	//				isMatrixWeighted[i] = false;
-	//		}
-	//		adjustMatrix(matrixTable[i], matrixType);
-	//	}
-	//}
 }
 
 void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model, 
@@ -674,7 +631,7 @@ void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model
 		// Setup Matrix table
 		FillMatrixTable(model, matrixTable, matrixIndices, nMatrixIndices);	
 		
-		device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);  
 
 		renderer->reset();
 			//applyMaterial(renderer, matIndex);
@@ -682,7 +639,7 @@ void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model
 			renderer->setShader(model->shaderID);
 			renderer->setVertexBuffer(0, vbID);
 			renderer->setIndexBuffer(ibID);
-			//renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, sizeof(matrixTable));
+			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, nMatrixIndices);
 		renderer->apply();
 
 		u16 indexCount = READ(u16);
@@ -771,5 +728,5 @@ RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
 	}
 
 	DrawScenegraph(renderer, device, model, model->scenegraph);
-	return S_OK;
+	return S_OK; 
 }
