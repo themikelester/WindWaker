@@ -344,6 +344,8 @@ protected:
 	int arraySize;
 	FORMAT format;
 
+	bool ownsMemory;
+
 	int nExtraData;
 	unsigned char *extraData;
 };

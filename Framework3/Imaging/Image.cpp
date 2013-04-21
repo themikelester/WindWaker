@@ -276,7 +276,7 @@ Image::Image(){
 	format = FORMAT_NONE;
 
 	nExtraData = 0;
-	extraData = NULL;
+	extraData = nullptr;
 }
 
 Image::Image(const Image &img){
@@ -286,6 +286,7 @@ Image::Image(const Image &img){
 	nMipMaps = img.nMipMaps;
 	arraySize = img.arraySize;
 	format = img.format;
+	ownsMemory = true;
 
 	int size = getMipMappedSize(0, nMipMaps) * arraySize;
 	pixels = new unsigned char[size];
@@ -297,7 +298,7 @@ Image::Image(const Image &img){
 }
 
 Image::~Image(){
-	delete [] pixels;
+	if (ownsMemory) delete [] pixels;
 	delete [] extraData;
 }
 
@@ -313,8 +314,11 @@ unsigned char *Image::create(const FORMAT fmt, const int w, const int h, const i
 }
 
 void Image::free(){
-	delete [] pixels;
-	pixels = NULL;
+	if (ownsMemory) 
+	{
+		delete [] pixels;
+		pixels = NULL;
+	}
 
 	delete [] extraData;
 	extraData = NULL;
@@ -2008,7 +2012,7 @@ bool Image::saveImage(const char *fileName){
 	return false;
 }
 
-void Image::loadFromMemory(void *mem, const FORMAT frmt, const int w, const int h, const int d, const int mipMapCount, bool ownsMemory){
+void Image::loadFromMemory(void *mem, const FORMAT frmt, const int w, const int h, const int d, const int mipMapCount, bool callerOwnsMemory){
 	free();
 
 	width  = w;
@@ -2018,7 +2022,9 @@ void Image::loadFromMemory(void *mem, const FORMAT frmt, const int w, const int 
 	nMipMaps = mipMapCount;
 	arraySize = 1;
 
-	if (ownsMemory){
+	ownsMemory = !callerOwnsMemory;
+
+	if (callerOwnsMemory){
 		pixels = (unsigned char *) mem;
 	} else {
 		int size = getMipMappedSize(0, nMipMaps);

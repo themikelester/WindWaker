@@ -2,8 +2,12 @@
 
 #include "Common\common.h"
 #include "Framework3\Renderer.h"
+#include "GC3D.h"
+
+// TODO: Remove this
 #include <d3d10.h>
 
+struct TextureDesc;
 struct Header;
 namespace Json {
 	class Value;
@@ -11,6 +15,12 @@ namespace Json {
 
 namespace GDModel
 {
+	struct TextureResource
+	{
+		char name[32];
+		SamplerStateID samplerStateIndex;
+		TextureID textureIndex;
+	};
 
 	struct DrwElement
 	{
@@ -63,6 +73,21 @@ namespace GDModel
 		u16 type; //One of SgNodeType
 	};
 	
+	// These are only needed at load time, we should find a way to remove them
+	struct TemporaryGFXData
+	{
+		uint nVertexIndexBuffers;
+		ubyte* vertexIndexBuffers;
+
+		uint nSamplerStates;
+		GC3D::SamplerState* samplerStates;
+
+		uint nTextures;
+		TextureDesc* textures;
+
+		ubyte* textureData;
+	};
+
 	typedef ubyte ModelAsset;
 
 	struct GDModel
@@ -70,7 +95,7 @@ namespace GDModel
 		ModelAsset* _asset;
 
 		Scenegraph* scenegraph;
-		u16* batchOffsetTable; // Batch* batch3 = _asset + batchOffsetTable[3];
+		uint* batchOffsetTable; // Batch* batch3 = _asset + batchOffsetTable[3];
 		
 		u16 numJoints;
 		JointElement* jointTable;
@@ -85,10 +110,6 @@ namespace GDModel
 		// Store a copy of our original joints 
 		JointElement* emptyAnim;
 		
-		// These are only needed at load time, we should find a way to remove them
-		uint nVertexIndexBuffers;
-		ubyte* vertexIndexBuffers;
-
 		// TODO: Temprorary for testing
 		ShaderID shaderID;
 		VertexFormatID vertFormat;
@@ -96,6 +117,7 @@ namespace GDModel
 		// This is set on load/reload, and tells the next draw call 
 		//		to load/reload all the GPU assets that we own
 		bool loadGPU; 
+		TemporaryGFXData gfxData;
 	};
 	
 	

@@ -2,7 +2,7 @@
 //
 #include "stdafx.h"
 #include <stdarg.h>
-#include <iostream>
+#include <fstream>
 
 #include "json\json.h"
 #include "BMDRead\bmdread.h"
@@ -12,12 +12,14 @@ using namespace std;
 
 typedef unsigned int uint;
 
-std::string serializeImage(int ID, u8* buf, int size)
-{
-	char filenameBuf[64];
-	_snprintf_s(filenameBuf, 64, "%u.img", ID);
+std::ofstream texFile;
+std::ofstream jsonFile;
 
-	return filenameBuf;
+uint serializeImage(int ID, u8* buf, int size)
+{
+	std::streamoff offset = texFile.tellp();
+	texFile.write((char*) buf, size);
+	return uint(offset);
 }
 
 void warn(const char* msg, ...)
@@ -49,13 +51,24 @@ int _tmain(int argc, TCHAR* argv[])
 
 	closeFile(f);
 
+	// Open our texture output file
+	char texFilename[128];
+	_snprintf_s(texFilename, 128, "%s.tex", filename);
+	texFile.open(texFilename, ios::out | ios::binary);
+	if(texFile.is_open())
+	{
+		cout << "Writing texture file to " << texFilename << endl;
+	}
+	else
+	{
+		cout << "Failed to open " << texFilename << " for writing" << endl;
+		return -4;
+	}
+
 	Json::Value root;
 	root["Info"]["type"] = "bmd";
 	root["Info"]["version"] = 1.0;
 	root["Info"]["name"] = filename;
-
-	// Double check this
-	
 
 	root["Inf1"] = serializeInf1(bmd->inf1);
 	root["Vtx1"] = serializeVtx1(bmd->vtx1);
@@ -71,15 +84,16 @@ int _tmain(int argc, TCHAR* argv[])
 	Json::StyledWriter writer;
 	std::string outBmd = writer.write( root );
 
+	texFile.close();
+
 	char jsonFilename[128];
 	_snprintf_s(jsonFilename, 128, "%s.json", filename);
-	FILE* outFile;
-	fopen_s(&outFile, jsonFilename, "w");
+	jsonFile.open(jsonFilename, ios::out);
 	if(f != nullptr)
 	{
 		cout << "Writing JSON file to " << jsonFilename << endl;
-		fwrite(outBmd.c_str(), outBmd.size(), 1, outFile);
-		fclose(outFile);
+		jsonFile.write(outBmd.c_str(), outBmd.size());
+		jsonFile.close();
 		return 0;
 	}
 	else

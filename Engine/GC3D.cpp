@@ -214,7 +214,7 @@ namespace GC3D
 		return vfID;
 	}
 
-	FORMAT ConvertGCFormat(int format)
+	FORMAT GC3D::GetTextureFormat(u8 format)
 	{
 		switch (format)
 		{
@@ -268,6 +268,15 @@ namespace GC3D
 			return NEAREST; 
 		}
 	}
+	
+	SamplerState GetSamplerState(u8 magFilter, u8 minFilter, u8 wrapS, u8 wrapT)
+	{
+		SamplerState ss;
+		ss.filter = ConvertGCTextureFilters(magFilter, minFilter);
+		ss.s = ConvertGCAddressMode(wrapS);
+		ss.t = ConvertGCAddressMode(wrapT);
+		return ss;
+	}
 
 	SamplerStateID CreateSamplerState(Renderer* renderer, ImageHeader* imgHdr)
 	{
@@ -282,7 +291,7 @@ namespace GC3D
 	{
 		Image imgResource;
 
-		FORMAT format = ConvertGCFormat(img->format);
+		FORMAT format = GetTextureFormat(img->format);
 		if (format == FORMAT_NONE)
 		{
 			// Fail if we can't determine the format

@@ -6,7 +6,7 @@
 #include <string>
 #include <iosfwd>
 
-std::string serializeImage(int ID, u8* buf, int size);
+uint serializeImage(int ID, u8* buf, int size);
 
 struct Image;
 struct ImageHeader
@@ -84,7 +84,7 @@ struct Image
 		  val["mipmapSizes"][i] = sizes[i];
 
 	  // Don't serialize the actual image with JSON, instead use a binary format
-	  val["imageData"] = serializeImage(ID, &imageData[0], imageData.size());
+	  val["imageDataOffset"] = serializeImage(ID, &imageData[0], imageData.size());
 
 	  return val;
   }

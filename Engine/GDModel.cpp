@@ -5,6 +5,7 @@
 #include "util.h"
 
 #include <sstream>
+#include <fstream>
 
 #include "Foundation\hash.h"
 #include "Foundation\murmur_hash.h"
@@ -48,6 +49,17 @@ struct Point
 	u16 nrmIdx;
 	u16 clrIdx[2];
 	u16 texIdx[8];
+};
+
+struct TextureDesc
+{
+	FORMAT format;
+	uint width;
+	uint height;
+	uint numMips;
+
+	uint sizeBytes;
+	uint texDataOffset;
 };
 
 // Compile a coordinate frame into an affine matrix
@@ -308,16 +320,18 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	foundation::memory_globals::init(4 * 1024 * 1024);
 
 	// Post-processing data
-	u16 sectionHeaderOffsets[8];
+	uint sectionHeaderOffsets[8];
 	SectionHeader sectionHeaders[8];
 	
-	u16 batchOffsetsOffset;
+	uint batchOffsetsOffset;
 	
 	VertexBuffer* vertexBuffers;
 	IndexBuffer* indexBuffers;
 	u16 nVertexIndexBuffers = 0;
 
 	std::vector<u16> jointParents;
+
+	uint totalTexSize = 0;
 
 	// Scenegraph
 	BEGIN_SECTION("scn1");
@@ -363,9 +377,10 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		WRITE(nBatches);
 		
 		// Save some space for our batch offsets
+		// TODO: These should be offsets from the start of the batch list. Not _asset.
 		batchOffsetsOffset = totalSize;
-		u16* batchOffsets = (u16*) malloc(sizeof(u16) * nBatches);
-		WRITE_ARRAY(batchOffsets, sizeof(u16) * nBatches);
+		uint* batchOffsets = (uint*) malloc(sizeof(uint) * nBatches);
+		WRITE_ARRAY(batchOffsets, sizeof(uint) * nBatches);
 
 		nVertexIndexBuffers = nBatches;
 		vertexBuffers = (VertexBuffer*) malloc(sizeof(VertexBuffer) * nBatches);
@@ -406,6 +421,13 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 			free(packetIndexCounts);
 		}
 	END_SECTION();
+
+	// Materials
+	/*BEGIN_SECTION("mat1");
+	{
+
+	}
+	END_SECTION();*/
 
 	// Skeleton joints
 	BEGIN_SECTION("drw1");
@@ -449,7 +471,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		WRITE(nWeights);
 
 		// These elements will be filled as a postprocess
-		long offsetsPos = s.tellp();
+		std::streamoff offsetsPos = s.tellp();
 		u8*  weightedIndexSizes = (u8*)malloc(sizeof(u8) * nWeights);
 		u16* weightedIndexOffsets = (u16*)malloc(sizeof(uint) * nWeights);
 		WRITE_ARRAY(weightedIndexSizes, nWeights * sizeof(u8));
@@ -508,12 +530,70 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		}
 	END_SECTION();
 
-	memcpy(hdr.fourCC, "bmd1", 4);
-	hdr.version = COMPILER_VERSION;
-	hdr.sizeBytes = totalSize;
-	
-	*data = (char*) malloc(totalSize);
+	// Textures and samplers
+	BEGIN_SECTION("tex1");
+	{
+		Json::Value hdrsNode = root["Tex1"]["imageHdrs"];
+		u16 nHdrs = hdrsNode.size();
+		WRITE(nHdrs);
+		for (uint i = 0; i < nHdrs; i++)
+		{
+			u8 magFilter = hdrsNode[i].get("magFilter", 0).asUInt();
+			u8 minFilter = hdrsNode[i].get("minFilter", 0).asUInt();
+			u8 wrapS = hdrsNode[i].get("wrapS", 0).asUInt();
+			u8 wrapT = hdrsNode[i].get("wrapT", 0).asUInt();
+			GC3D::SamplerState ss = GC3D::GetSamplerState(magFilter, minFilter, wrapS, wrapT);
+			WRITE(ss);
+		}
+
+		Json::Value imgsNode = root["Tex1"]["images"];
+		u16 nImgs = imgsNode.size();
+		WRITE(nImgs);
+		for (uint i = 0; i < nImgs; i++)
+		{
+			TextureDesc tex;
+			uint gcFormat = imgsNode[i].get("format", 0).asUInt();
+			tex.format = GC3D::GetTextureFormat(gcFormat);
+			tex.width = imgsNode[i].get("width", 0).asUInt();
+			tex.height = imgsNode[i].get("height", 0).asUInt();
+
+			Json::Value mipSizes = imgsNode[i]["mipmapSizes"];
+			tex.numMips = mipSizes.size();
+			
+			uint texSize = 0;
+			for (uint j = 0; j < tex.numMips; j++) { texSize += mipSizes[j].asUInt(); }
+			tex.sizeBytes = texSize;
+			totalTexSize += texSize;
+
+			tex.texDataOffset = imgsNode[i].get("imageDataOffset", 0).asUInt();
+
+			WRITE(tex);
+		}
+	}
+	END_SECTION();
+
+	uint blobSize = totalSize + totalTexSize;
+
+	*data = (char*) malloc(blobSize);
 	s.read(*data, totalSize);
+
+	//Append our binary texture data
+	std::string filename = root["Info"]["name"].asString();
+	std::ifstream texFile(filename + ".tex", std::ios::in | std::ios::binary);
+	if (!texFile.is_open())
+	{
+		//TODO: Test this
+		WARN("Failed to open texture file %s, no textures will be loaded!", filename + ".tex");
+		memset(*data + totalSize, 0, totalTexSize);
+	}
+	else
+	{
+		texFile.seekg (0, std::ios::end);
+		std::streamoff length = texFile.tellg();
+		texFile.seekg (0, std::ios::beg);
+		ASSERT(length == totalTexSize);
+		texFile.read(*data + totalSize, totalTexSize);
+	}
 
 	//Post-processing
 	for (uint i = 0; i < currentSection; i++)
@@ -522,8 +602,12 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		memcpy(pHdr, &sectionHeaders[i], sizeof(SectionHeader));
 	}
 
-	u16* pBatchOffsetsTable = (u16*)(*data + batchOffsetsOffset);
-	memcpy(pBatchOffsetsTable, batchOffsets, nBatches * sizeof(u16));
+	uint* pBatchOffsetsTable = (uint*)(*data + batchOffsetsOffset);
+	memcpy(pBatchOffsetsTable, batchOffsets, nBatches * sizeof(uint));
+
+	memcpy(hdr.fourCC, "bmd1", 4);
+	hdr.version = COMPILER_VERSION;
+	hdr.sizeBytes = blobSize;
 
 cleanup:
 	for (uint i = 0; i < nVertexIndexBuffers; i++)
@@ -536,6 +620,8 @@ cleanup:
 	free(indexBuffers);
 	free(batchOffsets);
 	
+	texFile.close();
+
 	DEBUG_ONLY(_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF));
 
 	return S_OK;
@@ -567,7 +653,7 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 	// Batches
 	BEGIN_READ_SECTION("bch1");
 		uint nBatches = READ(u16);
-		model->batchOffsetTable = READ_ARRAY(u16, nBatches);
+		model->batchOffsetTable = READ_ARRAY(uint, nBatches);
 	END_READ_SECTION();
 	
 	BEGIN_READ_SECTION("drw1");
@@ -599,9 +685,22 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 
 	// Vertex, Index Buffer registration is handled on the next draw
 	BEGIN_READ_SECTION("vib1");
-		model->nVertexIndexBuffers = READ(u16);
-		model->vertexIndexBuffers = head;
+		model->gfxData.nVertexIndexBuffers = READ(u16);
+		model->gfxData.vertexIndexBuffers = head;
 	END_READ_SECTION();
+
+	BEGIN_READ_SECTION("tex1");
+		u16 nSamplerStates = READ(u16);
+		model->gfxData.nSamplerStates = nSamplerStates;
+		model->gfxData.samplerStates = READ_ARRAY(GC3D::SamplerState, nSamplerStates);
+
+		u16 nTextures = READ(u16);
+		model->gfxData.nTextures = nTextures;
+		model->gfxData.textures = READ_ARRAY(TextureDesc, nTextures);
+	END_READ_SECTION();
+
+	//TODO: Confirm this is correct
+	model->gfxData.textureData = head;
 
 	model->loadGPU = true;
 
@@ -710,6 +809,9 @@ const GDModel::Scenegraph* DrawScenegraph(Renderer *renderer, ID3D10Device *devi
 {
 	//TODO: implement drawOnDown. The joint and material states match up with the onDown implementation.
 	//		 the only thing that changes is the draw order. Does this make a difference?
+	
+	//TODO: Remove drawing with scenegraph. We should assign materials to batches and then draw batches linearly
+	//		We don't even need batches, just draw packets in sequence, occasionally switching materials
 	while (node->type != GDModel::SG_END)
 	{
 		switch(node->type)
@@ -746,8 +848,8 @@ RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
 	if (model->loadGPU)
 	{
 		// Register vertex and index buffers
-		ubyte* head = model->vertexIndexBuffers;
-		for (uint i = 0; i < model->nVertexIndexBuffers; i++)
+		ubyte* head = model->gfxData.vertexIndexBuffers;
+		for (uint i = 0; i < model->gfxData.nVertexIndexBuffers; i++)
 		{
 			ubyte* batch = model->_asset + model->batchOffsetTable[i];
 			VertexBufferID* batchVBID = (VertexBufferID*)batch;
@@ -765,6 +867,24 @@ RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
 
 			*batchVBID = renderer->addVertexBuffer(vbSize, STATIC, vertices);
 			*batchIBID = renderer->addIndexBuffer(ibSize, 2, STATIC, indices);
+		}
+
+		// Register our samplers and textures
+		for (uint i = 0; i < model->gfxData.nSamplerStates; i++)
+		{
+			GC3D::SamplerState ss = model->gfxData.samplerStates[i];
+			SamplerStateID throwaway = renderer->addSamplerState(ss.filter, ss.s, ss.t, CLAMP);
+		}
+		
+		Image imgResource;
+		for (uint i = 0; i < model->gfxData.nTextures; i++)
+		{
+			TextureDesc& tex = model->gfxData.textures[i];
+			
+			imgResource.loadFromMemory(model->gfxData.textureData + tex.texDataOffset, tex.format, 
+				tex.width, tex.height, 1, tex.numMips, true);
+
+			TextureID throwaway = renderer->addTexture(imgResource);
 		}
 
 		// Register our shaders
