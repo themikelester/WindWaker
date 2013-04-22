@@ -103,6 +103,24 @@ namespace GC3D
 		return renderer->addVertexFormat(formatBuf, numAttribs, shader); 
 	}
 	
+	int GC3D::ConvertGCDepthFunction (u8 gcDepthFunc)
+	{
+		switch(gcDepthFunc)
+		{
+		case GX_NEVER:	 return NEVER;	  
+		case GX_LESS:	 return LESS;	  
+		case GX_EQUAL:	 return EQUAL;	  
+		case GX_LEQUAL:	 return LEQUAL;   
+		case GX_GREATER: return GREATER;  
+		case GX_NEQUAL:	 return NOTEQUAL; 
+		case GX_GEQUAL:	 return GEQUAL;   
+		case GX_ALWAYS:	 return ALWAYS;   
+		default:
+			WARN("Unknown compare mode %d. Defaulting to 'ALWAYS'", gcDepthFunc);
+			return ALWAYS;
+		}
+	}
+
 	DepthStateID CreateDepthState (Renderer* renderer, ZMode mode)
 	{
 		bool depthTestEnable = mode.enable;
@@ -127,6 +145,20 @@ namespace GC3D
 		return renderer->addDepthState(depthTestEnable, depthWriteEnable, depthFunc);
 	}
 	
+	int GC3D::ConvertGCCullMode(u8 gcCullMode)
+	{
+		switch(gcCullMode)
+		{
+		case GX_CULL_NONE:  return CULL_NONE; 
+		case GX_CULL_BACK:  return CULL_FRONT;
+		case GX_CULL_FRONT: return CULL_BACK; 
+		case GX_CULL_ALL:   
+		default:
+			WARN("Unsupported cull mode %u. Defaulting to 'CULL_NONE'", gcCullMode);
+			return CULL_NONE;
+		}
+	}
+
 	RasterizerStateID CreateRasterizerState (Renderer* renderer, uint gcCullMode)
 	{
 		uint cullMode;
@@ -145,9 +177,9 @@ namespace GC3D
 		return renderer->addRasterizerState(cullMode);
 	}
 
-	int ConvertGCBlendFactor(int blendFactor)
+	int GC3D::ConvertGCBlendFactor(u8 gcBlendFactor)
 	{
-		switch (blendFactor)
+		switch (gcBlendFactor)
 		{
 			case GX_BL_ZERO			: return ZERO;
 			case GX_BL_ONE			: return ONE;
@@ -158,8 +190,23 @@ namespace GC3D
 			case GX_BL_DSTALPHA		: return DST_ALPHA;
 			case GX_BL_INVDSTALPHA	: return ONE_MINUS_DST_ALPHA;
 			default:
-				WARN("Unknown blend factor %u. Defaulting to 'ONE'", blendFactor);
+				WARN("Unknown blend factor %u. Defaulting to 'ONE'", gcBlendFactor);
 				return ONE;
+		}
+	}
+
+	int GC3D::ConvertGCBlendOp (u8 gcBlendOp)
+	{
+		switch (gcBlendOp)
+		{
+			case GX_BM_NONE: return BM_ADD;
+			case GX_BM_BLEND: return BM_ADD; 
+			case GX_BM_SUBSTRACT: return BM_SUBTRACT; 
+			case GX_BM_LOGIC:
+			case GX_MAX_BLENDMODE:
+			default:
+				WARN("Unsupported blend mode %u. Defaulting to 'BM_ADD'", gcBlendOp);
+				return BM_ADD;
 		}
 	}
 
@@ -214,11 +261,10 @@ namespace GC3D
 		return vfID;
 	}
 
-	FORMAT GC3D::GetTextureFormat(u8 format)
+	FORMAT GC3D::ConvertGCTextureFormat(u8 format)
 	{
 		switch (format)
 		{
-		//TODO: Are these supposed to be signed formats or not?
 		case I8:	return FORMAT_R8;
 		case I8_A8:	return FORMAT_RG8;
 		case RGBA8: return FORMAT_RGBA8;
@@ -229,7 +275,7 @@ namespace GC3D
 	}
 	
 	// TODO: DX has support for Mirror address mode. Add support for this in the renderer
-	AddressMode ConvertGCAddressMode(int addressMode)
+	AddressMode GC3D::ConvertGCTexWrap(u8 addressMode)
 	{
 	    //from gx.h:
 	    //0: clamp to edge
@@ -245,7 +291,7 @@ namespace GC3D
 	}
 	
 	// TODO: DX supports min and mag filters. Add support to the renderer so that we can use both.
-	Filter ConvertGCTextureFilters(int minFilter, int magFilter)
+	Filter GC3D::ConvertGCTexFilter(u8 minFilter, u8 magFilter)
 	{
 		if (magFilter != minFilter)
 			WARN("Renderer does not support different texture filter types for Minification and Magnification. Rendering may be incorrect");
@@ -268,22 +314,13 @@ namespace GC3D
 			return NEAREST; 
 		}
 	}
-	
-	SamplerState GetSamplerState(u8 magFilter, u8 minFilter, u8 wrapS, u8 wrapT)
-	{
-		SamplerState ss;
-		ss.filter = ConvertGCTextureFilters(magFilter, minFilter);
-		ss.s = ConvertGCAddressMode(wrapS);
-		ss.t = ConvertGCAddressMode(wrapT);
-		return ss;
-	}
 
 	SamplerStateID CreateSamplerState(Renderer* renderer, ImageHeader* imgHdr)
 	{
 		return renderer->addSamplerState(
-					ConvertGCTextureFilters(imgHdr->magFilter, imgHdr->minFilter), 
-					ConvertGCAddressMode(imgHdr->wrapS), 
-					ConvertGCAddressMode(imgHdr->wrapT),
+					ConvertGCTexFilter(imgHdr->magFilter, imgHdr->minFilter), 
+					ConvertGCTexWrap(imgHdr->wrapS), 
+					ConvertGCTexWrap(imgHdr->wrapT),
 					CLAMP);
 	}
 

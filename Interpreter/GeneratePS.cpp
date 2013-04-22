@@ -1,9 +1,4 @@
-#include "common.h"
-#include "gx.h"
-#include "BMDLoad\mat3.h"
-#include "BMDLoad\tex1.h"
-#include <sstream>
-
+#include "stdafx.h"
 
 const std::string varResultName = "result";
 const std::string varRegisterName[3] = {"r0", "r1", "r2"};

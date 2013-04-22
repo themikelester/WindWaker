@@ -32,7 +32,7 @@ int _Compile(string filename)
 	Json::Value root;
 	Json::Reader reader;
 	Header hdr = {};
-	char* data;
+	char* data = nullptr;
 	RESULT r = S_OK;
 	
 	ifstream file (filename);

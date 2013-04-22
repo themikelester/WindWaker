@@ -299,10 +299,9 @@ void dumpTex1(FILE* f, Tex1& dst)
     else
     {
       Image* curr = &dst.images[j];
-      ++j;
-
       dst.imageHeaders[i].imageIndex = j;
       loadedImages[effectiveOffset] = j;
+      ++j;
       
       loadAndConvertImage(f, texHeaders[i],
                           tex1Offset + h.textureHeaderOffset + 0x20*i, *curr);

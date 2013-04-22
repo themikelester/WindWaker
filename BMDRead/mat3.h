@@ -59,24 +59,34 @@ struct Color16
   }
 };
 
+// MikeLest: See this site for details http://www.gamasutra.com/view/feature/2945/shader_integration_merging_.php?print=1
+// MikeLest: This has examples of GXSetChanCtrl: https://wire3d.googlecode.com/svn-history/r416/trunk/Wire/Renderer/GXRenderer/WireGXLight.cpp
+// MikeLest: Full gx.h documentation! http://libogc.devkitpro.org/gx_8h.html
+// These are the parameters to GXSetChanCtrl
 struct ColorChanInfo
 {
-  //not sure if this is right
-  u8 ambColorSource;
+  u8 enable;
   u8 matColorSource;
   u8 litMask;
-  u8 attenuationFracFunc;
+
+  //GX_DF_NONE, GX_DF_SIGNED, GX_DF_CLAMP	
   u8 diffuseAttenuationFunc;
-  
+
+  //GX_AF_SPEC, GX_AF_SPOT, GX_AF_NONE	
+  u8 attenuationFracFunc;
+  u8 ambColorSource;
+  u8 pad[2];
+
   Json::Value serialize()
   {
-	  Json::Value val;
-	  val["ambColorSource"] = ambColorSource;
-	  val["matColorSource"] = matColorSource;
-	  val["litMask"] = litMask;
-	  val["attenuationFracFunc"] = attenuationFracFunc;
-	  val["diffuseAttenuationFunc"] = diffuseAttenuationFunc;
-	  return val;
+	Json::Value val;
+	val["enable"] = enable;
+	val["matColorSource"] = matColorSource; 
+	val["litMask"] = litMask;
+	val["diffuseAttenuationFunc"] = diffuseAttenuationFunc;
+	val["attenuationFracFunc"] = attenuationFracFunc;
+	val["ambColorSource"] = ambColorSource;
+	return val;
   }
 };
 
@@ -96,19 +106,50 @@ struct TexGenInfo
   }
 };
 
+// This is unique to .bdl/.bmd, not GX
+enum bdmTexMtxType
+{
+	TEXMTX_TEXCOORD = 0x00,
+	TEXMTX_NORM		= 0x06,
+	TEXMTX_TNORM	= 0x07,
+	TEXMTX_POS		= 0x08,
+	TEXMTX_TPOS		= 0x09,
+	TEXMTX_UNK		= 0x80
+};
+
 struct TexMtxInfo
 {
-  float scaleCenterX, scaleCenterY;
-  float scaleU, scaleV;
+  u8 projection; // One of GX_TG_MTX3x4 or GX_TG_MTX2x4.
+  u8 type; // bmdTexMtxType
+
+  f32 center_s,center_t;
+  f32 unknown0;
+  f32 scale_s,scale_t;
+
+  u16 rotate; // -32768 = -180 deg, 32768 = 180 deg
+  f32 translate_s;
+  f32 translate_t;
+
+  f32 prematrix[4][4];
   
   Json::Value serialize()
   {
-	  Json::Value val;
-	  val["scaleCenterX"] = scaleCenterX;
-	  val["scaleCenterY"] = scaleCenterY;
-	  val["scaleU"] = scaleU;
-	  val["scaleV"] = scaleV;
-	  return val;
+	Json::Value val;
+	val["projection"] = projection;
+	val["type"] = type;
+	val["center_s"] = center_s;
+	val["center_t"] = center_t;
+	val["scale_s"] = scale_s;
+	val["scale_t"] = scale_t;
+	val["rotate"] = rotate;
+	val["translate_s"] = translate_s;
+	val["translate_t"] = translate_t;
+
+	for (uint i = 0; i < 16; i++)
+	{
+		val["prematrix"][i/4][i%4] = prematrix[i/4][i%4];
+	}
+	return val;
   }
 };
 
@@ -264,37 +305,42 @@ struct TevStageInfo
 struct Material
 {
   u8 flag;
-  u8 cullIndex;
-  u8 numChansIndex;
-  u8 texGenCountIndex;
-  u8 tevCountIndex;
 
-  u8 zModeIndex;
+  // Lighting Pipeline 
+  u16 chanControls[4]; // index into colorChanInfos. 
+  //These indices are for GX_COLOR0, GX_ALPHA0, GX_COLOR1, GX_ALPHA1. 
+  //According to http://kuribo64.net/?page=thread&id=532&from=20
 
-  u16 color1[2];
-  u16 chanControls[4];
-  u16 color2[2];
-
-  u16 texGenInfos[8];
-
-  u16 texMtxInfos[8];
-
-  u16 texStages[8];
-  //constColor (GX_TEV_KCSEL_K0-3)
-  u16 color3[4];
-  u8 constColorSel[16]; //0x0c most of the time (const color sel, GX_TEV_KCSEL_*)
-  u8 constAlphaSel[16]; //0x1c most of the time (const alpha sel, GX_TEV_KASEL_*)
-  u16 tevOrderInfo[16];
-  //this is to be loaded into
-  //GX_CC_CPREV - GX_CC_A2??
-  u16 colorS10[4];
-  u16 tevStageInfo[16];
-  u16 tevSwapModeInfo[16];
-  u16 tevSwapModeTable[4];
-
+  u8 numChansIndex;	   // index into numChans
+  u16 ambColor[2];		
+  u16 matColor[2];
+  
+  // State settings
   u16 alphaCompIndex;
   u16 blendIndex;
+  u8 zModeIndex;
+  u8 cullIndex;
 
+  // Texture Units (8)
+  u8 texGenCountIndex;
+  u16 texGenInfos[8];
+  u16 texMtxInfos[8];
+  u16 texStages[8];
+
+  // TEV Units (16)
+  u8 tevCountIndex;
+  u16 tevStageInfo[16];
+  u16 tevOrderInfo[16];
+  u16 tevSwapModeInfo[16]; // TODO: Add WARN messages that this is unsupported
+  u16 tevSwapModeTable[4]; // TODO: Add WARN messages that this is unsupported
+  //this is to be loaded into
+  //GX_CC_CPREV - GX_CC_A2??
+  u16 registerColor[4];
+
+  u16 konstColor[4]; // The Konst Color Registers. This is an index into the actual colors stored in Mat3::konstColor
+  u8 constColorSel[16]; //Inputs to GX_SetTevKColorSel. For each TEV Stage, binds a constant or a Konst Color Register value to the KONST register.
+  u8 constAlphaSel[16]; //Inputs to GX_SetTevKColorSel. For each TEV Stage, binds a constant or a Konst Color Register value to the KONST register.
+ 
   Json::Value serialize()
   {
 	  Json::Value mat;
@@ -307,9 +353,9 @@ struct Material
 
 	  SERIALIZE(mat, zModeIndex);
 
-	  SERIALIZE_PARRAY(mat, color1, 2);
+	  SERIALIZE_PARRAY(mat, ambColor, 2);
 	  SERIALIZE_PARRAY(mat, chanControls, 4);
-	  SERIALIZE_PARRAY(mat, color2, 2);
+	  SERIALIZE_PARRAY(mat, matColor, 2);
 
 	  SERIALIZE_PARRAY(mat, texGenInfos, 8);
 
@@ -317,13 +363,13 @@ struct Material
 
 	  SERIALIZE_PARRAY(mat, texStages, 8);
 		//constColor (GX_TEV_KCSEL_K0-3)
-	  SERIALIZE_PARRAY(mat, color3, 4);
+	  SERIALIZE_PARRAY(mat, konstColor, 4);
 	  SERIALIZE_PARRAY(mat, constColorSel, 16); //0x0c most of the time (const color sel, GX_TEV_KCSEL_*)
 	  SERIALIZE_PARRAY(mat, constAlphaSel, 16); //0x1c most of the time (const alpha sel, GX_TEV_KASEL_*)
 	  SERIALIZE_PARRAY(mat, tevOrderInfo, 16);
 		//this is to be loaded into
 		//GX_CC_CPREV - GX_CC_A2??
-	  SERIALIZE_PARRAY(mat, colorS10, 4);
+	  SERIALIZE_PARRAY(mat, registerColor, 4);
 	  SERIALIZE_PARRAY(mat, tevStageInfo, 16);
 	  SERIALIZE_PARRAY(mat, tevSwapModeInfo, 16);
 	  SERIALIZE_PARRAY(mat, tevSwapModeTable, 4);
@@ -337,10 +383,11 @@ struct Material
 
 struct Mat3
 {
-  std::vector<MColor> color1;
-  std::vector<u8> numChans;
+  // Controls the Lighting/Color calculations that feed in to the 2 TEV RAS color channels 
   std::vector<ColorChanInfo> colorChanInfos;
-  std::vector<MColor> color2;
+  std::vector<u8> numChans;		// Number of these channels to enable (0, 1, or 2)
+  std::vector<MColor> matColor; // Each color channel has a mat color 
+  std::vector<MColor> ambColor;
 
   std::vector<Material> materials;
   std::vector<int> indexToMatIndex;
@@ -354,8 +401,8 @@ struct Mat3
 
   std::vector<int> texStageIndexToTextureIndex;
   std::vector<TevOrderInfo> tevOrderInfos;
-  std::vector<Color16> colorS10;
-  std::vector<MColor> color3;
+  std::vector<Color16> registerColor;
+  std::vector<MColor> konstColor;
   std::vector<u8> tevCounts;
   std::vector<TevStageInfo> tevStageInfos;
   std::vector<TevSwapModeInfo> tevSwapModeInfos;
@@ -366,10 +413,10 @@ struct Mat3
 
   Json::Value& serialize(Json::Value& mat)
   {
-	  SERIALIZE_VECTOR(mat, color1);
+	  SERIALIZE_VECTOR(mat, ambColor);
 	  SERIALIZE_PVECTOR(mat, numChans);
 	  SERIALIZE_VECTOR(mat, colorChanInfos);
-	  SERIALIZE_VECTOR(mat, color2);
+	  SERIALIZE_VECTOR(mat, matColor);
 
 	  SERIALIZE_VECTOR(mat, materials);
 	  SERIALIZE_PVECTOR(mat, indexToMatIndex);
@@ -383,8 +430,8 @@ struct Mat3
 	  
 	  SERIALIZE_PVECTOR(mat, texStageIndexToTextureIndex);
 	  SERIALIZE_VECTOR(mat, tevOrderInfos);
-	  SERIALIZE_VECTOR(mat, colorS10);
-	  SERIALIZE_VECTOR(mat, color3);
+	  SERIALIZE_VECTOR(mat, registerColor);
+	  SERIALIZE_VECTOR(mat, konstColor);
 	  SERIALIZE_PVECTOR(mat, tevCounts);
 	  SERIALIZE_VECTOR(mat, tevStageInfos);
 	  SERIALIZE_VECTOR(mat, tevSwapModeInfos);

@@ -7,7 +7,12 @@
 // TODO: Remove this
 #include <d3d10.h>
 
+struct TextureResource;
 struct TextureDesc;
+struct BlendMode;
+struct DepthMode;
+struct MaterialInfo;
+
 struct Header;
 namespace Json {
 	class Value;
@@ -15,13 +20,6 @@ namespace Json {
 
 namespace GDModel
 {
-	struct TextureResource
-	{
-		char name[32];
-		SamplerStateID samplerStateIndex;
-		TextureID textureIndex;
-	};
-
 	struct DrwElement
 	{
 		u16 index;
@@ -79,13 +77,29 @@ namespace GDModel
 		uint nVertexIndexBuffers;
 		ubyte* vertexIndexBuffers;
 
-		uint nSamplerStates;
-		GC3D::SamplerState* samplerStates;
+		uint nTextureResources;
+		// TODO: This should be GDModel::SamplerState
+		TextureResource* textureResources;
 
 		uint nTextures;
 		TextureDesc* textures;
 
 		ubyte* textureData;
+
+		uint nBlendModes;
+		BlendMode* blendModes;
+
+		uint nDepthModes;
+		DepthMode* depthModes;
+		
+		uint nCullModes;
+		u8* cullModes;
+
+		uint nShaders;
+		uint* vsOffsets;
+		uint* psOffsets;
+		char* vsShaders;
+		char* psShaders;
 	};
 
 	typedef ubyte ModelAsset;
@@ -96,6 +110,9 @@ namespace GDModel
 
 		Scenegraph* scenegraph;
 		uint* batchOffsetTable; // Batch* batch3 = _asset + batchOffsetTable[3];
+		
+		u16 nMaterials;
+		MaterialInfo* materials;
 		
 		u16 numJoints;
 		JointElement* jointTable;
@@ -111,7 +128,6 @@ namespace GDModel
 		JointElement* emptyAnim;
 		
 		// TODO: Temprorary for testing
-		ShaderID shaderID;
 		VertexFormatID vertFormat;
 
 		// This is set on load/reload, and tells the next draw call 

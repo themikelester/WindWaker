@@ -3,14 +3,14 @@
 #include "stdafx.h"
 #include <stdarg.h>
 #include <fstream>
-
 #include "json\json.h"
-#include "BMDRead\bmdread.h"
-#include "BMDRead\openfile.h"
 
 using namespace std;
 
 typedef unsigned int uint;
+
+extern std::string GenerateVS(Mat3* matInfo, int index);
+extern std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index);
 
 std::ofstream texFile;
 std::ofstream jsonFile;
@@ -22,6 +22,7 @@ uint serializeImage(int ID, u8* buf, int size)
 	return uint(offset);
 }
 
+char _DEBUG_BUFFER[256];
 void warn(const char* msg, ...)
 {
   va_list argList;
@@ -30,6 +31,19 @@ void warn(const char* msg, ...)
   vsnprintf_s(buff, 161, msg, argList);
   va_end(argList);
   cout << buff << endl;
+}
+
+Json::Value compileMaterials(Mat3& mat, Tex1& tex)
+{
+	Json::Value node;
+	for (uint i = 0; i < mat.materials.size(); i++)
+	{
+		std::string vs = GenerateVS(&mat, i);
+		std::string ps = GeneratePS(&tex, &mat, i);
+		node[i]["VS"] = vs;
+		node[i]["PS"] = ps;
+	}
+	return node;
 }
 
 int _tmain(int argc, TCHAR* argv[])
@@ -80,6 +94,8 @@ int _tmain(int argc, TCHAR* argv[])
 	Json::Value mat;
 	root["Mat3"] = bmd->mat3.serialize(mat);
 	root["Tex1"] = bmd->tex1.serialize();
+	
+	root["Shd1"] = compileMaterials(bmd->mat3, bmd->tex1);
 
 	Json::StyledWriter writer;
 	std::string outBmd = writer.write( root );

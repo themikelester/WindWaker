@@ -51,6 +51,17 @@ struct Point
 	u16 texIdx[8];
 };
 
+struct TextureResource
+{
+	//TODO: Replace all instances like this with a constant NAME_LENGTH
+	char name[16];
+	u16 texIndex;
+
+	Filter filter;
+	AddressMode wrapS;
+	AddressMode wrapT;
+};
+
 struct TextureDesc
 {
 	FORMAT format;
@@ -60,6 +71,31 @@ struct TextureDesc
 
 	uint sizeBytes;
 	uint texDataOffset;
+};
+
+struct MaterialInfo
+{
+	ShaderID shader;
+	DepthStateID depthMode;
+	BlendStateID blendMode;
+	RasterizerStateID rasterMode;
+		
+	TextureID textures[8];
+	SamplerStateID samplers[8];
+};
+
+struct DepthMode
+{
+	bool testEnable;
+	bool writeEnable;
+	u8 func;
+};
+
+struct BlendMode
+{
+	u8 blendOp;
+	u8 srcFactor;
+	u8 dstFactor;
 };
 
 // Compile a coordinate frame into an affine matrix
@@ -320,8 +356,9 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	foundation::memory_globals::init(4 * 1024 * 1024);
 
 	// Post-processing data
-	uint sectionHeaderOffsets[8];
-	SectionHeader sectionHeaders[8];
+	const uint numSections = 9;
+	uint sectionHeaderOffsets[numSections];
+	SectionHeader sectionHeaders[numSections];
 	
 	uint batchOffsetsOffset;
 	
@@ -336,9 +373,13 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	// Scenegraph
 	BEGIN_SECTION("scn1");
 		Scenegraph sg;
+		// TODO: Switch all of the Json::Value references to use &! This should speed it up
 		Json::Value sgNode = root["Inf1"]["scenegraph"];
 		uint nNodes = sgNode.size();
 		WRITE(nNodes);
+
+		// Table to convert scene node indexes into material indexes
+		Json::Value indexToMatIndex = root["Mat3"]["indexToMatIndex"];
 
 		std::stack<u16> parentJoints;
 		parentJoints.push(-1);
@@ -350,6 +391,10 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 
 			switch(sg.type)
 			{
+			case SG_MATERIAL:
+				sg.index = indexToMatIndex.get(sg.index, 0).asUInt();		
+				break;
+
 			case SG_JOINT:
 				jointParents.push_back(tempParentJoint);
 				tempParentJoint = sg.index;
@@ -423,11 +468,78 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	END_SECTION();
 
 	// Materials
-	/*BEGIN_SECTION("mat1");
-	{
+	BEGIN_SECTION("mat1");
+	{		
+		// Depth Modes
+		Json::Value depthNodes = root["Mat3"]["zModes"];
+		u16 nDepthStates = depthNodes.size();
+		WRITE(nDepthStates);
+		for (uint i = 0; i < nDepthStates; i++)
+		{
+			DepthMode dm;
+			dm.testEnable = depthNodes[i].get("enable", true).asBool();
+			dm.writeEnable = depthNodes[i].get("enableUpdate", true).asBool();
+			dm.func = GC3D::ConvertGCDepthFunction(depthNodes[i].get("zFunc", 3).asUInt());
+			WRITE(dm);
+		}
+		
+		// Blend Modes
+		Json::Value blendNodes = root["Mat3"]["blendInfos"];
+		u16 nBlendStates = blendNodes.size();
+		WRITE(nBlendStates);
+		for (uint i = 0; i < nBlendStates; i++)
+		{
+			BlendMode bm;
+			bm.blendOp = GC3D::ConvertGCBlendOp(blendNodes[i].get("blendMode", 0).asUInt());
+			bm.srcFactor = GC3D::ConvertGCBlendFactor(blendNodes[i].get("srcFactor", 0).asUInt());
+			bm.dstFactor = GC3D::ConvertGCBlendFactor(blendNodes[i].get("dstFactor", 0).asUInt());
+			WRITE(bm);
+		}
 
+		// Cull Modes
+		Json::Value cullNodes = root["Mat3"]["cullModes"];
+		u16 nCullStates = cullNodes.size();
+		WRITE(nCullStates);
+		for (uint i = 0; i < nCullStates; i++)
+		{
+			u8 cullMode = GC3D::ConvertGCCullMode(cullNodes[i].asUInt());
+			WRITE(cullMode);
+		}
+
+		// MaterialInfo info
+		Json::Value matNodes = root["Mat3"]["materials"];
+		Json::Value texLookupNodes = root["Mat3"]["texStageIndexToTextureIndex"];
+		u16 nMaterials = matNodes.size();
+		WRITE(nMaterials);
+		for (uint i = 0; i < nMaterials; i++)
+		{
+			MaterialInfo mat;
+			mat.shader = i;
+			mat.depthMode = matNodes[i].get("zModeIndex", 0).asUInt();
+			mat.blendMode = matNodes[i].get("blendIndex", 0).asUInt();
+			mat.rasterMode = matNodes[i].get("cullIndex", 0).asUInt();
+
+			for (uint j = 0; j < 8; j++)
+			{
+				int stageIndex = matNodes[i]["texStages"].get(uint(j), 0xffff).asUInt();
+				mat.samplers[j] = texLookupNodes.get(stageIndex, 0xffff).asUInt();
+				mat.textures[j] = 0;
+			}
+
+			WRITE(mat);
+		}
+
+		// MaterialInfo names
+		Json::Value nameNodes = root["Mat3"]["stringtable"];
+		u16 nMaterialNames = nameNodes.size();
+		WRITE(nMaterialNames);
+		for (uint i = 0; i < nMaterialNames; i++)
+		{
+			std::string name = nameNodes.get(uint(0), "UNKNOWN").asString();
+			WRITE_ARRAY(name.c_str(), name.size());
+		}
 	}
-	END_SECTION();*/
+	END_SECTION();
 
 	// Skeleton joints
 	BEGIN_SECTION("drw1");
@@ -515,6 +627,48 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	}
 	END_SECTION();	
 
+	// Shader HLSL
+	BEGIN_SECTION("shd1");
+	{
+		Json::Value hlslNodes = root["Shd1"];
+		u16 nNodes = hlslNodes.size();
+		WRITE(nNodes);
+		
+		std::streamoff offsetsPos = s.tellp();
+		uint* vsOffsets = (uint*) malloc(nNodes * sizeof(uint));
+		uint* psOffsets = (uint*) malloc(nNodes * sizeof(uint));
+		uint vsTotalSize = 0;
+		uint psTotalSize = 0;
+		WRITE_ARRAY(vsOffsets, nNodes * sizeof(uint));
+		WRITE_ARRAY(psOffsets, nNodes * sizeof(uint));
+		WRITE(vsTotalSize);
+		WRITE(psTotalSize);
+
+		for (uint i = 0; i < nNodes; i++)
+		{
+			vsOffsets[i] = vsTotalSize;
+			std::string vs = hlslNodes[i].get("VS", "").asString();
+			WRITE_ARRAY(vs.c_str(), vs.size()+1);
+			vsTotalSize += vs.size()+1;
+		}
+		
+		for (uint i = 0; i < nNodes; i++)
+		{
+			psOffsets[i] = psTotalSize;
+			std::string ps = hlslNodes[i].get("PS", "").asString();
+			WRITE_ARRAY(ps.c_str(), ps.size()+1);
+			psTotalSize += ps.size()+1;
+		}
+		
+		s.seekp(offsetsPos);
+		s.write((char*)vsOffsets, nNodes * sizeof(uint));
+		s.write((char*)psOffsets, nNodes * sizeof(uint));
+		s.write((char*)&vsTotalSize, sizeof(uint));
+		s.write((char*)&psTotalSize, sizeof(uint));
+		s.seekp(0, std::ios_base::end);
+	}
+	END_SECTION();
+
 	// Vertex, Index Buffers
 	BEGIN_SECTION("vib1");
 		WRITE(nVertexIndexBuffers);
@@ -533,17 +687,25 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	// Textures and samplers
 	BEGIN_SECTION("tex1");
 	{
+		// TODO: Turn the samplers into a set (using hashing) and simplify this
 		Json::Value hdrsNode = root["Tex1"]["imageHdrs"];
 		u16 nHdrs = hdrsNode.size();
 		WRITE(nHdrs);
 		for (uint i = 0; i < nHdrs; i++)
 		{
+			TextureResource res;
+
+			const char* name = hdrsNode[i].get("name", "UNKNOWN").asCString();
+			memcpy(res.name, name, 16);
+
 			u8 magFilter = hdrsNode[i].get("magFilter", 0).asUInt();
 			u8 minFilter = hdrsNode[i].get("minFilter", 0).asUInt();
-			u8 wrapS = hdrsNode[i].get("wrapS", 0).asUInt();
-			u8 wrapT = hdrsNode[i].get("wrapT", 0).asUInt();
-			GC3D::SamplerState ss = GC3D::GetSamplerState(magFilter, minFilter, wrapS, wrapT);
-			WRITE(ss);
+			res.filter = GC3D::ConvertGCTexFilter(magFilter, minFilter);
+			res.wrapS = GC3D::ConvertGCTexWrap(hdrsNode[i].get("wrapS", 0).asUInt());
+			res.wrapT = GC3D::ConvertGCTexWrap(hdrsNode[i].get("wrapT", 0).asUInt());
+			res.texIndex = hdrsNode[i].get("imageIdx", 0).asUInt();
+			
+			WRITE(res);
 		}
 
 		Json::Value imgsNode = root["Tex1"]["images"];
@@ -553,7 +715,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		{
 			TextureDesc tex;
 			uint gcFormat = imgsNode[i].get("format", 0).asUInt();
-			tex.format = GC3D::GetTextureFormat(gcFormat);
+			tex.format = GC3D::ConvertGCTextureFormat(gcFormat);
 			tex.width = imgsNode[i].get("width", 0).asUInt();
 			tex.height = imgsNode[i].get("height", 0).asUInt();
 
@@ -596,7 +758,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	}
 
 	//Post-processing
-	for (uint i = 0; i < currentSection; i++)
+	for (uint i = 0; i < numSections; i++)
 	{
 		SectionHeader* pHdr = (SectionHeader*)(*data + sectionHeaderOffsets[i]);
 		memcpy(pHdr, &sectionHeaders[i], sizeof(SectionHeader));
@@ -656,6 +818,24 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 		model->batchOffsetTable = READ_ARRAY(uint, nBatches);
 	END_READ_SECTION();
 	
+	BEGIN_READ_SECTION("mat1");
+		u16 nDepthModes = READ(u16);
+		model->gfxData.nDepthModes = nDepthModes;
+		model->gfxData.depthModes = READ_ARRAY(DepthMode, nDepthModes);
+		
+		u16 nBlendModes = READ(u16);
+		model->gfxData.nBlendModes = nBlendModes;
+		model->gfxData.blendModes = READ_ARRAY(BlendMode, nBlendModes);
+
+		u16 nCullModes = READ(u16);
+		model->gfxData.nCullModes = nCullModes;
+		model->gfxData.cullModes = READ_ARRAY(u8, nCullModes);
+
+		u16 nMaterials = READ(u16);
+		model->nMaterials = nMaterials;
+		model->materials = READ_ARRAY(MaterialInfo, nMaterials);
+	END_READ_SECTION();
+
 	BEGIN_READ_SECTION("drw1");
 		uint nDrw = READ(uint);
 		model->drwTable = READ_ARRAY(DrwElement, nDrw);
@@ -683,6 +863,18 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 		model->evpWeightedIndexTable = READ_ARRAY(WeightedIndex, 0);
 	END_READ_SECTION();
 
+	BEGIN_READ_SECTION("shd1");
+		u16 nShaders = READ(u16);
+		model->gfxData.nShaders = nShaders;
+
+		model->gfxData.vsOffsets = READ_ARRAY(uint, nShaders);
+		model->gfxData.psOffsets = READ_ARRAY(uint, nShaders);
+		uint vsTotalSize = READ(uint);
+		uint psTotalSize = READ(uint);
+		model->gfxData.vsShaders = READ_ARRAY(char, vsTotalSize);
+		model->gfxData.psShaders = READ_ARRAY(char, psTotalSize);
+	END_READ_SECTION();
+
 	// Vertex, Index Buffer registration is handled on the next draw
 	BEGIN_READ_SECTION("vib1");
 		model->gfxData.nVertexIndexBuffers = READ(u16);
@@ -690,9 +882,9 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 	END_READ_SECTION();
 
 	BEGIN_READ_SECTION("tex1");
-		u16 nSamplerStates = READ(u16);
-		model->gfxData.nSamplerStates = nSamplerStates;
-		model->gfxData.samplerStates = READ_ARRAY(GC3D::SamplerState, nSamplerStates);
+		u16 nTextureResources = READ(u16);
+		model->gfxData.nTextureResources = nTextureResources;
+		model->gfxData.textureResources = READ_ARRAY(TextureResource, nTextureResources);
 
 		u16 nTextures = READ(u16);
 		model->gfxData.nTextures = nTextures;
@@ -705,6 +897,37 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 	model->loadGPU = true;
 
 	return S_OK;
+}
+
+void ApplyMaterial(Renderer* renderer, MaterialInfo mat)
+{
+	static char samplerName[9] = { 'S', 'a', 'm', 'p', 'l', 'e', 'r', 'I' };
+	static char textureName[9] = { 'T', 'e', 'x', 't', 'u', 'r', 'e', 'I' };
+	
+	// Shader
+	renderer->setShader(mat.shader);
+	renderer->setVertexFormat(0);
+	
+	//TODO: HACK: to make link's eyes work
+	//renderer->setBlendState(3);
+	renderer->setBlendState(mat.blendMode);
+	renderer->setDepthState(mat.depthMode);
+	renderer->setRasterizerState(mat.rasterMode);
+
+	// Colors
+	renderer->setShaderConstant4f("matColor0", float4(0.5f, 0.5f, 0.5f, 0.5f));
+	renderer->setShaderConstant4f("matColor1", float4(0.5f, 0.5f, 0.5f, 0.5f));
+	renderer->setShaderConstant4f("ambColor0", float4(1.0f, 1.0f, 1.0f, 1.0f));
+	renderer->setShaderConstant4f("ambColor1", float4(1.0f, 1.0f, 1.0f, 1.0f));
+
+	// Textures
+	for (uint i = 0; mat.samplers[i] != 0xffff; i++)
+	{
+		samplerName[7] = '0' + i;
+		textureName[7] = '0' + i;
+		renderer->setSamplerState(samplerName, mat.samplers[i]);
+		renderer->setTexture(textureName, mat.textures[i]);
+	}
 }
 
 void FillMatrixTable(GDModel::GDModel* model, mat4* matrixTable, u16* matrixIndices, u16 nMatrixIndices)
@@ -769,9 +992,8 @@ void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model
 		device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);  
 
 		renderer->reset();
-			//applyMaterial(renderer, matIndex);
+			ApplyMaterial(renderer, model->materials[matIndex]);
 			renderer->setVertexFormat(model->vertFormat);
-			renderer->setShader(model->shaderID);
 			renderer->setVertexBuffer(0, vbID);
 			renderer->setIndexBuffer(ibID);
 			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, nMatrixIndices);
@@ -824,7 +1046,7 @@ const GDModel::Scenegraph* DrawScenegraph(Renderer *renderer, ID3D10Device *devi
 		case GDModel::SG_PRIM:
 			if (drawOnDown)
 			{
-				WARN("Drawing batch %u with Material%u", node->index, matIndex);
+				WARN("Drawing batch %u with MaterialInfo%u", node->index, matIndex);
 				DrawBatch(renderer, device, model, node->index, matIndex);
 			}	
 			break;	
@@ -847,9 +1069,87 @@ RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
 {
 	if (model->loadGPU)
 	{
+		TemporaryGFXData& gfxData = model->gfxData;
+		uint samplers[256];
+		uint blendModes[256];
+		uint cullModes[256];
+		uint depthModes[256];
+
+		uint shaders[256];
+		uint textures[256];
+
+		// Register our samplers
+		for (uint i = 0; i < gfxData.nTextureResources; i++)
+		{
+			TextureResource& res = gfxData.textureResources[i];
+			samplers[i] = renderer->addSamplerState(res.filter, res.wrapS, res.wrapT, CLAMP);
+		}
+		
+		// Register our textures
+		Image imgResource;
+		for (uint i = 0; i < gfxData.nTextures; i++)
+		{
+			TextureDesc& tex = gfxData.textures[i];
+			
+			imgResource.loadFromMemory(gfxData.textureData + tex.texDataOffset, tex.format, 
+				tex.width, tex.height, 1, tex.numMips, true);
+
+			textures[i] = renderer->addTexture(imgResource);
+		}
+
+		// Register our depth, blend, cull modes
+		for (uint i = 0; i < gfxData.nBlendModes; i++)
+		{
+			BlendMode& bm = gfxData.blendModes[i];
+			blendModes[i] = renderer->addBlendState(bm.srcFactor, bm.dstFactor, bm.blendOp);
+		}
+		for (uint i = 0; i < gfxData.nDepthModes; i++)
+		{
+			DepthMode& dm = gfxData.depthModes[i];
+			depthModes[i] = renderer->addDepthState(dm.testEnable, dm.writeEnable, dm.func);
+		}
+		for (uint i = 0; i < gfxData.nCullModes; i++)
+		{
+			u8 cm = gfxData.cullModes[i];
+			cullModes[i] = renderer->addRasterizerState(cm);
+		}
+
+		// Register our shaders
+		for (uint i = 0; i < gfxData.nShaders; i++)
+		{
+			char* vsText = gfxData.vsShaders + gfxData.vsOffsets[i];
+			char* psText = gfxData.psShaders + gfxData.psOffsets[i];
+			shaders[i] = renderer->addShader(vsText, nullptr, psText, 0, 0, 0);
+		}
+
+		// Fixup our Materials with their runtime IDs
+		for (uint i = 0; i < model->nMaterials; i++)
+		{
+			MaterialInfo& mat = model->materials[i];
+			mat.blendMode = blendModes[mat.blendMode];
+			mat.depthMode = depthModes[mat.depthMode];
+			mat.rasterMode = cullModes[mat.rasterMode];
+			mat.shader = shaders[mat.shader];
+			
+			for (uint i = 0; i < 8; i++)
+			{
+				u16 texIndex = mat.samplers[i];
+
+				if (texIndex == 0xffff)
+					break;
+
+				mat.samplers[i] = samplers[texIndex];
+				TextureResource& res = gfxData.textureResources[texIndex];
+				mat.textures[i] = textures[res.texIndex];
+			}
+		}
+
+		// TODO: This is currently hacked to be the full vertex every time
+		model->vertFormat = GC3D::CreateVertexFormat(renderer, FULL_VERTEX_ATTRIBS, shaders[0]);
+
 		// Register vertex and index buffers
-		ubyte* head = model->gfxData.vertexIndexBuffers;
-		for (uint i = 0; i < model->gfxData.nVertexIndexBuffers; i++)
+		ubyte* head = gfxData.vertexIndexBuffers;
+		for (uint i = 0; i < gfxData.nVertexIndexBuffers; i++)
 		{
 			ubyte* batch = model->_asset + model->batchOffsetTable[i];
 			VertexBufferID* batchVBID = (VertexBufferID*)batch;
@@ -868,30 +1168,6 @@ RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
 			*batchVBID = renderer->addVertexBuffer(vbSize, STATIC, vertices);
 			*batchIBID = renderer->addIndexBuffer(ibSize, 2, STATIC, indices);
 		}
-
-		// Register our samplers and textures
-		for (uint i = 0; i < model->gfxData.nSamplerStates; i++)
-		{
-			GC3D::SamplerState ss = model->gfxData.samplerStates[i];
-			SamplerStateID throwaway = renderer->addSamplerState(ss.filter, ss.s, ss.t, CLAMP);
-		}
-		
-		Image imgResource;
-		for (uint i = 0; i < model->gfxData.nTextures; i++)
-		{
-			TextureDesc& tex = model->gfxData.textures[i];
-			
-			imgResource.loadFromMemory(model->gfxData.textureData + tex.texDataOffset, tex.format, 
-				tex.width, tex.height, 1, tex.numMips, true);
-
-			TextureID throwaway = renderer->addTexture(imgResource);
-		}
-
-		// Register our shaders
-		model->shaderID = renderer->addShader("Test.shd");
-
-		// TODO: This is currently hacked to be the full vertex every time
-		model->vertFormat = GC3D::CreateVertexFormat(renderer, FULL_VERTEX_ATTRIBS, model->shaderID);
 
 		model->loadGPU = false;
 	}

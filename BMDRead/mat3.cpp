@@ -35,10 +35,10 @@ struct Mat3Header
     2 - string table
 *   3 - MatIndirectTexturingEntry array, count many for all files i've seen
     4 - cull mode                               (indexed by MatEntry.unk[1])
-  5 - color1 (rgba8) (amb color??)
+  5 - ambColor (rgba8) (amb color??)
   6 - numChans (?)                              (indexed by MatEntry.unk[2])
   7 - colorChanInfo
-* 8 - color2 (rgba8) (mat color??)
+* 8 - matColor (rgba8) (mat color??)
 * 9 - light
     10 - texgen counts (-> vr_back_cloud.bdl)   (indexed by MatEntry.unk[3])
     11 - TexGen
@@ -47,8 +47,8 @@ struct Mat3Header
   14 - TexMtxInfo2
     15 - index to texture table
     16 - TevOrderInfo array
-    17 - colorS10 (rgba16) (prev, c0-c2)
-    18 - color3 (rgba8) (konst0-3)
+    17 - registerColor (rgba16) (prev, c0-c2)
+    18 - konstColor (rgba8) (konst0-3)
     19 - tev counts                             (indexed by MatEntry.unk[4])
     20 - tev stages
     21 - tev swap mode info
@@ -82,14 +82,14 @@ struct MatEntry
   //enable/disable blend alphatest depthtest, ...)
   u8 unk[8];
 
-  // 0, 1 - index into color1 (e.g. map_delfino3.bmd)
-  // 6, 7 - index into color2 (e.g. mo.bdl)
+  // 0, 1 - index into ambColor (e.g. map_delfino3.bmd)
+  // 6, 7 - index into matColor (e.g. mo.bdl)
   // 2, 3, 4, 5 - index into chanControls
   //u16 chanControls[8];
 
-  u16 color1[2];
+  u16 ambColor[2];
   u16 chanControls[4];
-  u16 color2[2]; //not in MAT2 block
+  u16 matColor[2]; //not in MAT2 block
 
   u16 lights[8]; //all 0xffff most of the time, not in MAT2 block
 
@@ -102,7 +102,7 @@ struct MatEntry
   u16 texStages[8]; //indices into textureTable
 
   //constColor (GX_TEV_KCSEL_K0-3)
-  u16 color3[4]; //direct index
+  u16 konstColor[4]; //direct index
 
   u8 constColorSel[16]; //0x0c most of the time (const color sel, GX_TEV_KCSEL_*)
   u8 constAlphaSel[16]; //0x1c most of the time (const alpha sel, GX_TEV_KASEL_*)
@@ -111,7 +111,7 @@ struct MatEntry
 
   //this is to be loaded into
   //GX_CC_CPREV - GX_CC_A2??
-  u16 colorS10[4]; //direct index
+  u16 registerColor[4]; //direct index
 
 
   //these two always contained the same data in all files
@@ -167,46 +167,12 @@ struct MatIndirectTexturingEntry
 
 struct ColorChanInfo
 {
-  //this is wrong, the third element is sometimes 3 or 4,
-  //so perhaps the third argument is the channel, but
-  //then the order of the other fields may be different too
-
-  //perhaps no "channel" but two pad bytes at the end?
-
-  //observation:
-  //the second byte is always 0 if the model has not vertex colors,
-  //sometimes 1 otherwise
-#if 0
-  u8 channel; // /* chan id */
-  u8 enable; //0/1
-  u8 ambSrc; //GX_SRC_REG, GX_SRC_VTX (0, 1) (??)
-  u8 matSrc; //GX_SRC_REG, GX_SRC_VTX (0, 1) (??)
-  u8 litMask; //GL_LIGHT* ??
-  u8 diffuseAttenuationFunc; //GX_DF_NONE, GX_DF_SIGNED, GX_DF_CLAMP (0, 1, 2) (??)
-  u8 attenuationFracFunc; //GX_AF_SPEC, GX_AF_SPOT, GX_AUF_NONE (0, 1, 2) (??)
-  u8 pad;
-#endif
-#if 0
-  //this could be right: (no)
-  u8 unk1;
-  u8 matColorSource;
-  u8 unk2;
-  u8 attenuationFracFunc; //quite sure
-  u8 diffuseAttenuationFunc; //quite sure
-  u8 unk3;
-  u8 pad[2];
-
-  //(lit mask is implied by index position in array in MatEntry)
-#endif
-
-  //I think I finally got it:
-  //(enable = litMask != 0...)
-  u8 ambColorSource;
+  u8 enable;
   u8 matColorSource;
   u8 litMask;
-  u8 attenuationFracFunc;
   u8 diffuseAttenuationFunc;
-  u8 unk;
+  u8 attenuationFracFunc;
+  u8 ambColorSource;
   u8 pad[2];
 };
 
@@ -220,20 +186,20 @@ struct TexGenInfo
 
 struct TexMtxInfo
 {
-  u16 unk;
-  u16 pad; //0xffff most of the time
+  u8 projection;
+  u8 type;
+  u16 padding0; // 0xFFFF
 
-  //0, 1 - translate u, v ????? scale center????
-  //2    - rotate u, v ?????
-  //3, 4 - repeat texture this many times
-  //       (texcoord scale u, v) (-> model (texmtx).bmd)
-  f32 f1[5];
+  f32 center_s,center_t;
+  f32 unknown0;
+  f32 scale_s,scale_t;
 
-  u16 unk2;
-  u16 pad2;
+  u16 rotate; // -32768 = -180 deg, 32768 = 180 deg
+  u16 padding1; // 0xFFFF
 
-  f32 f2[2];
-  f32 f3[16]; //nearly always an 4x4 identity matrix
+  f32 translate_s,translate_t;
+
+  f32 prematrix[4][4];
 };
 
 
@@ -469,10 +435,10 @@ void writeMat3Data(ostream& debugOut, FILE* f, int mat3Offset,
   //2: string table
   displaySize(debugOut, "IndirectTexturing", lengths[3], 312);
   displayData(debugOut, "cull mode", f, mat3Offset + h.offsets[4], lengths[4], 4);
-  displayData(debugOut, "color1", f, mat3Offset + h.offsets[5], lengths[5], 4);
+  displayData(debugOut, "ambColor", f, mat3Offset + h.offsets[5], lengths[5], 4);
   displayData(debugOut, "numChans (?) (unk[2])", f, mat3Offset + h.offsets[6], lengths[6], 1);
   displayData(debugOut, "colorChanInfo", f, mat3Offset + h.offsets[7], lengths[7], 8);
-  displayData(debugOut, "color2", f, mat3Offset + h.offsets[8], lengths[8], 4);
+  displayData(debugOut, "matColor", f, mat3Offset + h.offsets[8], lengths[8], 4);
   displayData(debugOut, "light", f, mat3Offset + h.offsets[9], lengths[9], 52); //there's one dr_comp.bdl
   displayData(debugOut, "texCounts (unk[3])", f, mat3Offset + h.offsets[10], lengths[10], 1);
   displayData(debugOut, "TexGen", f, mat3Offset + h.offsets[11], lengths[11], 4);
@@ -481,8 +447,8 @@ void writeMat3Data(ostream& debugOut, FILE* f, int mat3Offset,
   displaySize(debugOut, "TexMtxInfo2", lengths[14]);
   displayData(debugOut, "indexToTexIndex", f, mat3Offset + h.offsets[15], lengths[15], 2);
   displayData(debugOut, "tevOrderInfo", f, mat3Offset + h.offsets[16], lengths[16], 4);
-  displayData(debugOut, "colorS10", f, mat3Offset + h.offsets[17], lengths[17], 8);
-  displayData(debugOut, "color3", f, mat3Offset + h.offsets[18], lengths[18], 4);
+  displayData(debugOut, "registerColor", f, mat3Offset + h.offsets[17], lengths[17], 8);
+  displayData(debugOut, "konstColor", f, mat3Offset + h.offsets[18], lengths[18], 4);
   displayData(debugOut, "tevStageCounts (unk[4])", f, mat3Offset + h.offsets[19], lengths[19], 1);
   displayTevStage(debugOut, f, mat3Offset + h.offsets[20], lengths[20]);
   displayData(debugOut, "tevSwapModeInfo", f, mat3Offset + h.offsets[21], lengths[21], 4);
@@ -503,14 +469,14 @@ void writeMatEntry(ostream& debugOut, const bmd::MatEntry& init)
   debugOut << "unk: unk1, cull, numChans, texCounts, tevCounts, matData6Index, zMode, matData7Index:";
   for(j = 0; j < 8; ++j) debugOut << " " << hex << setw(2) << (int)init.unk[j]; debugOut << endl;
 
-  debugOut << "color1 (?): ";
-  for(j = 0; j < 2; ++j) debugOut << setw(4) << init.color1[j]; debugOut << endl;
+  debugOut << "ambColor (?): ";
+  for(j = 0; j < 2; ++j) debugOut << setw(4) << init.ambColor[j]; debugOut << endl;
 
   debugOut << "chanControls (?): ";
   for(j = 0; j < 4; ++j) debugOut << setw(4) << init.chanControls[j]; debugOut << endl;
 
-  debugOut << "color2 (?): ";
-  for(j = 0; j < 2; ++j) debugOut << setw(4) << init.color2[j]; debugOut << endl;
+  debugOut << "matColor (?): ";
+  for(j = 0; j < 2; ++j) debugOut << setw(4) << init.matColor[j]; debugOut << endl;
 
   debugOut << "lights: ";
   for(j = 0; j < 8; ++j) debugOut << setw(4) << init.lights[j]; debugOut << endl;
@@ -530,8 +496,8 @@ void writeMatEntry(ostream& debugOut, const bmd::MatEntry& init)
   debugOut << "Textures: ";
   for(j = 0; j < 8; ++j) debugOut << setw(4) << init.texStages[j]; debugOut << endl;
 
-  debugOut << "color3: ";
-  for(j = 0; j < 4; ++j) debugOut << setw(4) << init.color3[j]; debugOut << endl;
+  debugOut << "konstColor: ";
+  for(j = 0; j < 4; ++j) debugOut << setw(4) << init.konstColor[j]; debugOut << endl;
 
   debugOut << "constColorSel: ";
   for(j = 0; j < 16; ++j) debugOut << hex << setw(2) << (int)init.constColorSel[j]; debugOut << endl;
@@ -542,8 +508,8 @@ void writeMatEntry(ostream& debugOut, const bmd::MatEntry& init)
   debugOut << "tevOrderInfo: ";
   for(j = 0; j < 16; ++j) debugOut << setw(4) << init.tevOrderInfo[j]; debugOut << endl;
 
-  debugOut << "colorS10: ";
-  for(j = 0; j < 4; ++j) debugOut << setw(4) << init.colorS10[j]; debugOut << endl;
+  debugOut << "registerColor: ";
+  for(j = 0; j < 4; ++j) debugOut << setw(4) << init.registerColor[j]; debugOut << endl;
 
   debugOut << "tevStageInfo: ";
   for(j = 0; j < 16; ++j) debugOut << setw(4) << init.tevStageInfo[j]; debugOut << endl;
@@ -561,27 +527,6 @@ void writeMatEntry(ostream& debugOut, const bmd::MatEntry& init)
   debugOut << "index fog, alphaComp, blend, nbtScale: ";
   for(j = 0; j < 4; ++j) debugOut << setw(4) << init.indices2[j]; debugOut << endl;
   debugOut << endl;
-}
-
-void writeTexMtxInfo(ostream& debugOut, const bmd::TexMtxInfo& info)
-{
-  int j;
-  debugOut << hex;
-  debugOut << info.unk << " ";
-  debugOut << info.pad << endl;
-  for(j = 0; j < 5; ++j)
-    debugOut << info.f1[j] << " ";
-  debugOut << endl << info.unk2<< " ";
-  debugOut << info.pad2 << endl;
-  for(j = 0; j < 2; ++j)
-    debugOut << info.f2[j] << " "; debugOut << endl;
-  for(j = 0; j < 16; ++j)
-  {
-    debugOut << info.f3[j] << " ";
-    if((j+1)%4 == 0) debugOut << endl;
-  }
-  debugOut << endl;
-  debugOut << dec;
 }
 
 void readMat3Header(FILE* f, bmd::Mat3Header& h)
@@ -634,12 +579,12 @@ void readMatEntry(FILE* f, bmd::MatEntry& init, bool isMat2)
 {
   int j;
   fread(init.unk, 1, 8, f);
-  for(j = 0; j < 2; ++j) readWORD(f, init.color1[j]);
+  for(j = 0; j < 2; ++j) readWORD(f, init.ambColor[j]);
   for(j = 0; j < 4; ++j) readWORD(f, init.chanControls[j]);
   
   //these two fields are only in mat3 headers, not in mat2
-  if(!isMat2) for(j = 0; j < 2; ++j) readWORD(f, init.color2[j]);
-  else memset(init.color2, 0xff, 2*2);
+  if(!isMat2) for(j = 0; j < 2; ++j) readWORD(f, init.matColor[j]);
+  else memset(init.matColor, 0xff, 2*2);
   if(!isMat2) for(j = 0; j < 8; ++j) readWORD(f, init.lights[j]);
   else memset(init.lights, 0xff, 8*2);
   
@@ -648,11 +593,11 @@ void readMatEntry(FILE* f, bmd::MatEntry& init, bool isMat2)
   for(j = 0; j < 10; ++j) readWORD(f, init.texMatrices[j]);
   for(j = 0; j < 20; ++j) readWORD(f, init.dttMatrices[j]);
   for(j = 0; j < 8; ++j) readWORD(f, init.texStages[j]);
-  for(j = 0; j < 4; ++j) readWORD(f, init.color3[j]);
+  for(j = 0; j < 4; ++j) readWORD(f, init.konstColor[j]);
   fread(init.constColorSel, 1, 16, f);
   fread(init.constAlphaSel, 1, 16, f);
   for(j = 0; j < 16; ++j) readWORD(f, init.tevOrderInfo[j]);
-  for(j = 0; j < 4; ++j) readWORD(f, init.colorS10[j]);
+  for(j = 0; j < 4; ++j) readWORD(f, init.registerColor[j]);
   for(j = 0; j < 16; ++j) readWORD(f, init.tevStageInfo[j]);
   for(j = 0; j < 16; ++j) readWORD(f, init.tevSwapModeInfo[j]);
   for(j = 0; j < 4; ++j) readWORD(f, init.tevSwapModeTable[j]);
@@ -664,16 +609,24 @@ void readMatEntry(FILE* f, bmd::MatEntry& init, bool isMat2)
 void readTexMtxInfo(FILE* f, bmd::TexMtxInfo& info)
 {
   int j;
-  readWORD(f, info.unk);
-  readWORD(f, info.pad);
-  for(j = 0; j < 5; ++j)
-    readFLOAT(f, info.f1[j]);
-  readWORD(f, info.unk2);
-  readWORD(f, info.pad2);
-  for(j = 0; j < 2; ++j)
-    readFLOAT(f, info.f2[j]);
+  fread(&info.projection, 1, 1, f);
+  fread(&info.type, 1, 1, f);
+  readWORD(f, info.padding0);
+
+  readFLOAT(f, info.center_s);
+  readFLOAT(f, info.center_t);
+  readFLOAT(f, info.unknown0);
+  readFLOAT(f, info.scale_s);
+  readFLOAT(f, info.scale_t);
+
+  readWORD(f, info.rotate);
+  readWORD(f, info.padding1);
+  
+  readFLOAT(f, info.translate_s);
+  readFLOAT(f, info.translate_t);
+
   for(j = 0; j < 16; ++j)
-    readFLOAT(f, info.f3[j]);
+    readFLOAT(f, info.prematrix[j/4][j%4]);
 }
 
 void readTevStageInfo(FILE* f, bmd::TevStageInfo& info)
@@ -776,16 +729,16 @@ void dumpMat3(FILE* f, Mat3& dst)
     dst.cullModes[i] = tmp;
   }
 
-  //offset[5] (color1)
+  //offset[5] (ambColor)
   fseek(f, mat3Offset + h.offsets[5], SEEK_SET);
-  dst.color1.resize(lengths[5]/4);
-  for(i = 0; i < dst.color1.size(); ++i)
+  dst.ambColor.resize(lengths[5]/4);
+  for(i = 0; i < dst.ambColor.size(); ++i)
   {
     u8 col[4]; fread(col, 1, 4, f);
-    dst.color1[i].r = col[0];
-    dst.color1[i].g = col[1];
-    dst.color1[i].b = col[2];
-    dst.color1[i].a = col[3];
+    dst.ambColor[i].r = col[0];
+    dst.ambColor[i].g = col[1];
+    dst.ambColor[i].b = col[2];
+    dst.ambColor[i].a = col[3];
   }
 
   //offset[6] (numChans)
@@ -799,18 +752,18 @@ void dumpMat3(FILE* f, Mat3& dst)
   for(i = 0; i < dst.colorChanInfos.size(); ++i)
   {
     bmd::ColorChanInfo info;
-    fread(&info.ambColorSource, 1, 1, f);
+    fread(&info.enable, 1, 1, f);
     fread(&info.matColorSource, 1, 1, f);
     fread(&info.litMask, 1, 1, f);
-    fread(&info.attenuationFracFunc, 1, 1, f);
     fread(&info.diffuseAttenuationFunc, 1, 1, f);
-    fread(&info.unk, 1, 1, f);
+    fread(&info.attenuationFracFunc, 1, 1, f);
+    fread(&info.ambColorSource, 1, 1, f);
     fread(&info.pad[0], 1, 1, f);
     fread(&info.pad[1], 1, 1, f);
-
+	
     ColorChanInfo& dstInfo = dst.colorChanInfos[i];
 
-    //this is wrong:
+	dstInfo.enable = info.enable;
     dstInfo.ambColorSource = info.ambColorSource;
     dstInfo.matColorSource = info.matColorSource;
     dstInfo.litMask = info.litMask;
@@ -819,16 +772,16 @@ void dumpMat3(FILE* f, Mat3& dst)
   }
 
 
-  //offset[8] (color2)
+  //offset[8] (matColor)
   fseek(f, mat3Offset + h.offsets[8], SEEK_SET);
-  dst.color2.resize(lengths[8]/4);
-  for(i = 0; i < dst.color2.size(); ++i)
+  dst.matColor.resize(lengths[8]/4);
+  for(i = 0; i < dst.matColor.size(); ++i)
   {
     u8 col[4]; fread(col, 1, 4, f);
-    dst.color2[i].r = col[0];
-    dst.color2[i].g = col[1];
-    dst.color2[i].b = col[2];
-    dst.color2[i].a = col[3];
+    dst.matColor[i].r = col[0];
+    dst.matColor[i].g = col[1];
+    dst.matColor[i].b = col[2];
+    dst.matColor[i].a = col[3];
   }
 
   //offset[0] (MatEntries)
@@ -859,8 +812,8 @@ void dumpMat3(FILE* f, Mat3& dst)
     }
     for(j = 0; j < 4; ++j)
     {
-      dstMat.color3[j] = init.color3[j];
-      dstMat.colorS10[j] = init.colorS10[j];
+      dstMat.konstColor[j] = init.konstColor[j];
+      dstMat.registerColor[j] = init.registerColor[j];
 
       dstMat.chanControls[j] = init.chanControls[j];
 
@@ -868,8 +821,8 @@ void dumpMat3(FILE* f, Mat3& dst)
     }
     for(j = 0; j < 2; ++j)
     {
-      dstMat.color1[j] = init.color1[j];
-      dstMat.color2[j] = init.color2[j];
+      dstMat.ambColor[j] = init.ambColor[j];
+      dstMat.matColor[j] = init.matColor[j];
     }
     for(j = 0; j < 16; ++j)
     {
@@ -925,29 +878,6 @@ void dumpMat3(FILE* f, Mat3& dst)
     dst.texGenInfos[i].matrix = info.matrix;
   }
 
-  //offset[13] (texmtxinfo debug)
-  if(lengths[13]%(100) != 0)
-    warn("ARGH: unexpected texmtxinfo lengths[13]: %d", lengths[13]);
-  else
-  {
-    fseek(f, mat3Offset + h.offsets[13], SEEK_SET);
-
-    for(size_t m = 0; m < lengths[13]/(25*4); ++m)
-    {
-      bmd::TexMtxInfo info;
-      readTexMtxInfo(f, info);
-
-      if(info.unk != 0x0100) //sometimes violated
-        warn("(mat3texmtx) %x instead of 0x0100", info.unk);
-      if(info.pad != 0xffff)
-        warn("(mat3texmtx) %x instead of 0xffff", info.pad);
-      if(info.unk2 != 0x0000)
-        warn("(mat3texmtx) %x instead of 0x0000", info.unk2);
-      if(info.pad2 != 0xffff)
-        warn("(mat3texmtx) %x instead of 2nd 0xffff", info.pad2);
-    }
-  }
-
   //offsets[13] (read texMtxInfo)
   fseek(f, mat3Offset + h.offsets[13], SEEK_SET);
   dst.texMtxInfos.resize(lengths[13]/100);
@@ -955,7 +885,11 @@ void dumpMat3(FILE* f, Mat3& dst)
   {
     bmd::TexMtxInfo info;
     readTexMtxInfo(f, info);
-    TexMtxInfo dstInfo = { info.f1[0], info.f1[1], info.f1[3], info.f1[4] };
+    TexMtxInfo dstInfo = { 
+		info.projection, info.type, 
+		info.center_s, info.center_t, info.unknown0, info.scale_s, info.scale_t, 
+		info.rotate, info.translate_s, info.translate_t };
+	memcpy(dstInfo.prematrix, info.prematrix, sizeof(info.prematrix));
     dst.texMtxInfos[i] = dstInfo;
   }
 
@@ -985,28 +919,28 @@ void dumpMat3(FILE* f, Mat3& dst)
     dst.tevOrderInfos[i].chanId = info.chanId;
   }
 
-  //offsets[17] (read colorS10)
+  //offsets[17] (read registerColor)
   fseek(f, mat3Offset + h.offsets[17], SEEK_SET);
-  dst.colorS10.resize(lengths[17]/(4*2));
-  for(i = 0; i < dst.colorS10.size(); ++i)
+  dst.registerColor.resize(lengths[17]/(4*2));
+  for(i = 0; i < dst.registerColor.size(); ++i)
   {
     s16 col[4]; fread(col, 2, 4, f);
-    dst.colorS10[i].r = aSHORT(col[0]);
-    dst.colorS10[i].g = aSHORT(col[1]);
-    dst.colorS10[i].b = aSHORT(col[2]);
-    dst.colorS10[i].a = aSHORT(col[3]);
+    dst.registerColor[i].r = aSHORT(col[0]);
+    dst.registerColor[i].g = aSHORT(col[1]);
+    dst.registerColor[i].b = aSHORT(col[2]);
+    dst.registerColor[i].a = aSHORT(col[3]);
   }
 
-  //offsets[18] (color3)
+  //offsets[18] (konstColor)
   fseek(f, mat3Offset + h.offsets[18], SEEK_SET);
-  dst.color3.resize(lengths[18]/4);
-  for(i = 0; i < dst.color3.size(); ++i)
+  dst.konstColor.resize(lengths[18]/4);
+  for(i = 0; i < dst.konstColor.size(); ++i)
   {
     u8 col[4]; fread(col, 1, 4, f);
-    dst.color3[i].r = col[0];
-    dst.color3[i].g = col[1];
-    dst.color3[i].b = col[2];
-    dst.color3[i].a = col[3];
+    dst.konstColor[i].r = col[0];
+    dst.konstColor[i].g = col[1];
+    dst.konstColor[i].b = col[2];
+    dst.konstColor[i].a = col[3];
   }
 
   //offset[19] (tevCounts)
@@ -1229,7 +1163,6 @@ void writeMat3Info(FILE* f, ostream& out)
   {
     bmd::TexMtxInfo info;
     readTexMtxInfo(f, info);
-    writeTexMtxInfo(out, info);
   }
 }
 

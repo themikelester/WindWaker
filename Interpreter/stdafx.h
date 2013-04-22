@@ -10,6 +10,11 @@
 #include <stdio.h>
 #include <tchar.h>
 
+#include "common.h"
+#include "gx.h"
+#include "BMDRead\bmdread.h"
+#include "BMDRead\openfile.h"
+#include <sstream>
 
 
 // TODO: reference additional headers your program requires here

@@ -8,21 +8,21 @@
 
 namespace GC3D
 {
-	struct SamplerState
-	{
-		Filter filter;
-		AddressMode s;
-		AddressMode t;
-	};
-
 	void Init();
 	void Shutdown();
 	
 	int GetAttributeSize (u16 attrib);
 	int GetVertexSize (u16 attribFlags);
-	SamplerState GetSamplerState(u8 magFilter, u8 minFilter, u8 wrapS, u8 wrapT);
-	FORMAT GetTextureFormat(u8 gcFormat);
 
+	FORMAT ConvertGCTextureFormat(u8 format);
+	int ConvertGCDepthFunction (u8 gcDepthFunc);
+	int ConvertGCBlendFactor(u8 gcBlendFactor);
+	int ConvertGCBlendOp (u8 gcBlendOp);
+	int ConvertGCCullMode(u8 gcCullMode);
+	Filter ConvertGCTexFilter(u8 magFilter, u8 minFilter);
+	AddressMode ConvertGCTexWrap(u8 wrapMode);
+
+	// TODO: Remove these, they can't be used at compile time
 	SamplerStateID CreateSamplerState(Renderer* renderer, ImageHeader* imgHdr);
 	TextureID CreateTexture (Renderer* renderer, Image1* imgHdr);
 	
