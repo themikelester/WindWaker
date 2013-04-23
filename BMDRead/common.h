@@ -1,7 +1,8 @@
 #ifndef BMD_COMMON_H
 #define BMD_COMMON_H BMD_COMMON_H
 
-#include "common/gccommon.h"
+#include "gccommon.h"
+#include "Types.h"
 #include "json\json.h"
 #include <string>
 #include <vector>

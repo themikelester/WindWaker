@@ -41,7 +41,9 @@
     <Import Project="..\Common\Common.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -58,11 +60,14 @@
       <SubSystem>Windows</SubSystem>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(SolutionDir)Assets\Test.shd" "$(TargetDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
@@ -75,6 +80,9 @@
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(SolutionDir)Assets\Test.shd" "$(TargetDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\common.h" />
@@ -83,68 +91,26 @@
     <ClInclude Include="..\Common\Random.h" />
     <ClInclude Include="..\Common\Types.h" />
     <ClInclude Include="App.h" />
-    <ClInclude Include="Asset.h" />
-    <ClInclude Include="AssetPtr.h" />
-    <ClInclude Include="AssMan.h" />
     <ClInclude Include="Compile.h" />
     <ClInclude Include="GC3D.h" />
-    <ClInclude Include="GCModel.h" />
     <ClInclude Include="GDModel.h" />
-    <ClInclude Include="Package.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\Debug.cpp" />
     <ClCompile Include="App.cpp" />
-    <ClCompile Include="AssMan.cpp" />
     <ClCompile Include="GC3D.cpp" />
-    <ClCompile Include="GCModel.cpp" />
     <ClCompile Include="GDModel.cpp" />
-    <ClCompile Include="GeneratePS.cpp" />
-    <ClCompile Include="GenerateVS.cpp" />
-    <ClCompile Include="Package.cpp" />
     <ClCompile Include="Compile.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BMDLoad\BMDLoad.vcxproj">
-      <Project>{8d60e9da-3f12-4827-a788-70b5317dec58}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Foundation\Foundation.vcxproj">
-      <Project>{d03c0d38-c68b-4484-975e-323092a102fb}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\Framework3\Framework3.vcxproj">
       <Project>{adf87dbe-89fe-490b-abfd-3a5a48ca517e}</Project>
     </ProjectReference>
     <ProjectReference Include="..\JsonCpp\JsonCpp.vcxproj">
       <Project>{123422d4-ba11-482c-8360-6b59d16b77b6}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\RarcRead\RarcRead.vcxproj">
-      <Project>{7e96dfbc-fabb-47fc-9617-79c98fb671f9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\YAZ0Decode\YAZ0Decode.vcxproj">
-      <Project>{d2f67364-aa3c-47ce-835b-46e57f1c00cf}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Media Include="Test.shd">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
-    </Media>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\Assets\binfairy.bdl.json">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TargetDir)\Engine.exe -compile %(Identity)</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling intermediate JSON to binary blob</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">binfairy.bdl.blob</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkObjects>
-      <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</TreatOutputAsContent>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling intermediate JSON to binary blob</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">binfairy.bdl.blob</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(TargetDir)\Engine.exe -compile %(Identity)</Command>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkObjects>
-      <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</TreatOutputAsContent>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Engine\GDModel.cpp; Engine\Compile.cpp</AdditionalInputs>
-    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

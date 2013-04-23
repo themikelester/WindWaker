@@ -1,30 +1,15 @@
+#include "common.h"
+#include "util.h"
 #include "GC3D.h"
 
-#include <Framework3\Renderer.h>
-#include "Foundation\hash.h"
-#include "Foundation\murmur_hash.h"
-#include "Foundation\string_stream.h"
-#include "Foundation\memory.h"
-#include "Types.h"
-#include "util.h"
+//TODO: Remove all dependencies on gx.h
 #include "gx.h"
 
-using namespace foundation;
-
-#define ALLOC_SCRATCH memory_globals::default_scratch_allocator()
-#define ALLOC_DEFAULT memory_globals::default_allocator()
-
-static Hash<ShaderID>* __shaderMap;
-static Hash<VertexFormatID>* __vertexFormatMap;
-
-// These are in separate files because they're quite large
-extern std::string GenerateVS(Mat3* matInfo, int index);
-extern std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index);
+#include <Framework3\Renderer.h>
 
 namespace GC3D
 {
 	const int MAX_VERTEX_ATTRIBS = 13;
-	static const u64 hashSeed = 0x12345678;
 
 	FormatDesc __GCformat[MAX_VERTEX_ATTRIBS] =
 	{
@@ -44,23 +29,13 @@ namespace GC3D
 		{ 0, TYPE_TEXCOORD, FORMAT_FLOAT, 2 }, // Texture Coordinate 7
 	};
 		
-	static const int formatSize[] = { sizeof(float), sizeof(half), sizeof(ubyte), sizeof(uint) };
-
-	void Init()
-	{
-		__shaderMap = MAKE_NEW(ALLOC_DEFAULT, Hash<ShaderID>, ALLOC_DEFAULT);
-		__vertexFormatMap = MAKE_NEW(ALLOC_DEFAULT, Hash<VertexFormatID>, ALLOC_DEFAULT);
-	}
-
-	void Shutdown()
-	{
-		MAKE_DELETE(ALLOC_DEFAULT, Hash<ShaderID>, __shaderMap);
-		MAKE_DELETE(ALLOC_DEFAULT, Hash<VertexFormatID>, __vertexFormatMap);
-	}
-
+	static const int formatSize[] = { 
+		sizeof(float), sizeof(half), sizeof(ubyte), sizeof(uint) 
+	};
+	
 	int GetAttributeSize (u16 attrib)
 	{
-		uint attribIndex = uint(log10(attrib) / log10(2));
+		uint attribIndex = uint(log10(float(attrib)) / log10(2.0f));
 		return __GCformat[attribIndex].size * formatSize[__GCformat[attribIndex].format];
 	}
 
@@ -78,18 +53,10 @@ namespace GC3D
 
 		return vertSize;
 	}
-	
-	ShaderID CreateShader (Renderer* renderer, Tex1* texInfo, Mat3* matInfo, int matIndex)
-	{
-		std::string vs = GenerateVS(matInfo, matIndex);
-		std::string ps = GeneratePS(texInfo, matInfo, matIndex);
-		return renderer->addShader(vs.c_str(), nullptr, ps.c_str(), 0, 0, 0); 
-	}
 
-	VertexFormatID CreateVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader)
+	void GC3D::ConvertGCVertexFormat (u16 attribFlags, FormatDesc* formatBuf)
 	{
 		int numAttribs = util::bitcount(attribFlags);
-		FormatDesc formatBuf[MAX_VERTEX_ATTRIBS];
 
 		int formatBufIndex = 0;
 		for (int i = 0; i < MAX_VERTEX_ATTRIBS; ++i) 
@@ -99,10 +66,8 @@ namespace GC3D
 				formatBuf[formatBufIndex++] = __GCformat[i];
 			}
 		}
-
-		return renderer->addVertexFormat(formatBuf, numAttribs, shader); 
 	}
-	
+
 	int GC3D::ConvertGCDepthFunction (u8 gcDepthFunc)
 	{
 		switch(gcDepthFunc)
@@ -120,30 +85,6 @@ namespace GC3D
 			return ALWAYS;
 		}
 	}
-
-	DepthStateID CreateDepthState (Renderer* renderer, ZMode mode)
-	{
-		bool depthTestEnable = mode.enable;
-		bool depthWriteEnable = mode.enableUpdate;
-		int depthFunc;
-
-		switch(mode.zFunc)
-		{
-		case GX_NEVER:	 depthFunc = NEVER;	   break;
-		case GX_LESS:	 depthFunc = LESS;	   break;
-		case GX_EQUAL:	 depthFunc = EQUAL;	   break;
-		case GX_LEQUAL:	 depthFunc = LEQUAL;   break;
-		case GX_GREATER: depthFunc = GREATER;  break;
-		case GX_NEQUAL:	 depthFunc = NOTEQUAL; break;
-		case GX_GEQUAL:	 depthFunc = GEQUAL;   break;
-		case GX_ALWAYS:	 depthFunc = ALWAYS;   break;
-		default:
-			WARN("Unknown compare mode %d. Defaulting to 'ALWAYS'", mode.zFunc);
-			depthFunc = ALWAYS;
-		}
-
-		return renderer->addDepthState(depthTestEnable, depthWriteEnable, depthFunc);
-	}
 	
 	int GC3D::ConvertGCCullMode(u8 gcCullMode)
 	{
@@ -157,24 +98,6 @@ namespace GC3D
 			WARN("Unsupported cull mode %u. Defaulting to 'CULL_NONE'", gcCullMode);
 			return CULL_NONE;
 		}
-	}
-
-	RasterizerStateID CreateRasterizerState (Renderer* renderer, uint gcCullMode)
-	{
-		uint cullMode;
-
-		switch(gcCullMode)
-		{
-		case GX_CULL_NONE:  cullMode = CULL_NONE; break;
-		case GX_CULL_BACK:  cullMode = CULL_FRONT; break;
-		case GX_CULL_FRONT: cullMode = CULL_BACK; break;
-		case GX_CULL_ALL:   
-		default:
-			WARN("Unsupported cull mode %u. Defaulting to 'CULL_NONE'", gcCullMode);
-			cullMode = CULL_NONE;
-		}
-
-		return renderer->addRasterizerState(cullMode);
 	}
 
 	int GC3D::ConvertGCBlendFactor(u8 gcBlendFactor)
@@ -210,65 +133,15 @@ namespace GC3D
 		}
 	}
 
-	BlendStateID CreateBlendState (Renderer* renderer, BlendInfo blendInfo, u8 mask)
-	{
-		int srcFactor = ConvertGCBlendFactor(blendInfo.srcFactor);
-		int dstFactor = ConvertGCBlendFactor(blendInfo.dstFactor);
-		int blendOp;
-
-		switch (blendInfo.blendMode)
-		{
-			case GX_BM_NONE: 
-				srcFactor = ONE;
-				dstFactor = ZERO;
-				blendOp = BM_ADD;
-				break;
-
-			case GX_BM_BLEND: 
-				blendOp = BM_ADD; 
-				break;
-
-			case GX_BM_SUBSTRACT: 
-				blendOp = BM_SUBTRACT; 
-				break;
-
-			case GX_BM_LOGIC:
-			case GX_MAX_BLENDMODE:
-			default:
-				WARN("Unsupported blend mode %u. Defaulting to 'BM_ADD'", blendInfo.blendMode);
-				blendOp = BM_ADD;
-		}
-		
-		return renderer->addBlendState(srcFactor, dstFactor, blendOp, mask);
-	}
-
-	VertexFormatID GetVertexFormat (Renderer* renderer, u16 attribFlags, ShaderID shader)
-	{
-		VertexFormatID vfID;
-		u64 hashKey;
-		
-		//TODO: Move all hashing functionality like this up one level
-		//		GC3D should only be handling the creation. This is app logic.
-		hashKey = murmur_hash_64(&attribFlags, sizeof(attribFlags), hashSeed);
-		vfID = hash::get(*__vertexFormatMap, hashKey, VF_NONE);
-
-		if (vfID == VF_NONE)
-		{
-			vfID = CreateVertexFormat(renderer, attribFlags, shader);
-			hash::set(*__vertexFormatMap, hashKey, vfID);
-		}
-		
-		return vfID;
-	}
-
 	FORMAT GC3D::ConvertGCTextureFormat(u8 format)
 	{
+		// TODO: Define these formats in the common folder and share with Interpreter
 		switch (format)
 		{
-		case I8:	return FORMAT_R8;
-		case I8_A8:	return FORMAT_RG8;
-		case RGBA8: return FORMAT_RGBA8;
-		case DXT1:	return FORMAT_DXT1;
+		case /*I8:	*/ 0:	return FORMAT_R8;
+		case /*I8_A8*/ 1:	return FORMAT_RG8;
+		case /*RGBA8*/ 2:	return FORMAT_RGBA8;
+		case /*DXT1 */ 3:	return FORMAT_DXT1;
 		case 0xff: //Error case, fall through to default
 		default: WARN("Unknown texture format %u. Refusing to load", format); return FORMAT_NONE;
 		}
@@ -314,32 +187,4 @@ namespace GC3D
 			return NEAREST; 
 		}
 	}
-
-	SamplerStateID CreateSamplerState(Renderer* renderer, ImageHeader* imgHdr)
-	{
-		return renderer->addSamplerState(
-					ConvertGCTexFilter(imgHdr->magFilter, imgHdr->minFilter), 
-					ConvertGCTexWrap(imgHdr->wrapS), 
-					ConvertGCTexWrap(imgHdr->wrapT),
-					CLAMP);
-	}
-
-	TextureID CreateTexture (Renderer* renderer, Image1* img)
-	{
-		Image imgResource;
-
-		FORMAT format = GetTextureFormat(img->format);
-		if (format == FORMAT_NONE)
-		{
-			// Fail if we can't determine the format
-			return TEXTURE_NONE;
-		}
-
-		// This is probably reading the mipmap data incorrectly
-		imgResource.loadFromMemory(&img->imageData[0], format, 
-			img->width, img->height, 1, img->mipmaps.size(), false);
-		
-		return renderer->addTexture(imgResource);
-	}
-
 } // namespace GC3D

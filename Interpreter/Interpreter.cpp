@@ -1,9 +1,6 @@
 // Interpreter.cpp : Defines the entry point for the console application.
 //
 #include "stdafx.h"
-#include <stdarg.h>
-#include <fstream>
-#include "json\json.h"
 
 using namespace std;
 

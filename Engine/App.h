@@ -20,9 +20,7 @@
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <Framework3/Direct3D10/D3D10App.h>
-#include "GCModel.h"
 #include "GDModel.h"
-#include "AssMan.h"
 
 class App : public D3D10App
 {
@@ -44,12 +42,6 @@ public:
 
 	bool onKey(const uint key, const bool pressed);
 
-protected:
-	AssetManager m_AssMan;
-	
-	Package *m_Pkg;
-	AssetPtr<GCModel> m_Model;
-	ShaderID m_VerticesShader;
-
+protected:	
 	GDModel::GDModel m_GDModel;
 };

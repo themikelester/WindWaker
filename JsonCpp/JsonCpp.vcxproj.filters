@@ -20,7 +20,6 @@
   <ItemGroup>
     <None Include="src\lib_json\json_internalmap.inl" />
     <None Include="src\lib_json\json_valueiterator.inl" />
-    <None Include="src\lib_json\sconscript" />
     <None Include="src\lib_json\json_internalarray.inl" />
   </ItemGroup>
   <ItemGroup>

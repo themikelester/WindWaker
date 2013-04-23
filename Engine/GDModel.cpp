@@ -1,14 +1,11 @@
+#include "Framework3\Renderer.h"
 #include "GDModel.h"
 #include "Compile.h"
-#include "Framework3\Renderer.h"
 #include "GC3D.h"
 #include "util.h"
 
 #include <sstream>
 #include <fstream>
-
-#include "Foundation\hash.h"
-#include "Foundation\murmur_hash.h"
 
 //TODO: Remove the need for the D3D reference
 #include <Framework3\Direct3D10\Direct3D10Renderer.h>
@@ -234,7 +231,7 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx, 
 							   VertexBuffer* vb, IndexBuffer* ib, u16* packetIndexCounts)
 {
-	foundation::Hash<u16>* indexSet = new foundation::Hash<u16>(foundation::memory_globals::default_allocator());
+	std::map<u64, u16> indexSet;
 	int pointCount = 0;
 	int primCount = 0;
 			
@@ -278,7 +275,7 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 		{
 			STL_FOR_EACH(point, (*prim)["points"])
 			{
-				u16 index; 
+				uint index;
 				static const uint64_t seed = 101;
 
 				Point p = {};
@@ -297,16 +294,17 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 				p.texIdx[7] = (*point)["tex"].get(uint(7), 0).asUInt();
 
 				// Add the index of this vertex to our index buffer (every time)
-				uint64_t hashKey = foundation::murmur_hash_64(&p, sizeof(p), seed);
-				if (foundation::hash::has(*indexSet, hashKey))
+				uint64_t hashKey = util::hash64(&p, sizeof(p), seed);
+				auto indexPair = indexSet.find(hashKey);
+				if (indexPair != indexSet.end())
 				{
 					// An equivalent vertex already exists, use that index
-					index = foundation::hash::get(*indexSet, hashKey, u16(0));
+					index = indexPair->second;
 				} else {
 					// This points to a new vertex. Construct it.
 					index = vertexCount++;
 					buildInflatedVertex(vertices + vertexSize*index, p, vertexAttributes, vtx);
-					foundation::hash::set(*indexSet, hashKey, index);
+					indexPair->second = index;
 				}
 
 				// Always add a new index to our index buffer
@@ -351,9 +349,6 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 
 	// Disable the debug heap. JsonCpp uses a ton of malloc/free's.
 	DEBUG_ONLY(_CrtSetDbgFlag(0));
-
-	//TODO: HACK: Remove this
-	foundation::memory_globals::init(4 * 1024 * 1024);
 
 	// Post-processing data
 	const uint numSections = 9;
@@ -771,6 +766,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	hdr.version = COMPILER_VERSION;
 	hdr.sizeBytes = blobSize;
 
+//TODO: Fix this compile warning
 cleanup:
 	for (uint i = 0; i < nVertexIndexBuffers; i++)
 	{
@@ -908,17 +904,9 @@ void ApplyMaterial(Renderer* renderer, MaterialInfo mat)
 	renderer->setShader(mat.shader);
 	renderer->setVertexFormat(0);
 	
-	//TODO: HACK: to make link's eyes work
-	//renderer->setBlendState(3);
 	renderer->setBlendState(mat.blendMode);
 	renderer->setDepthState(mat.depthMode);
 	renderer->setRasterizerState(mat.rasterMode);
-
-	// Colors
-	renderer->setShaderConstant4f("matColor0", float4(0.5f, 0.5f, 0.5f, 0.5f));
-	renderer->setShaderConstant4f("matColor1", float4(0.5f, 0.5f, 0.5f, 0.5f));
-	renderer->setShaderConstant4f("ambColor0", float4(1.0f, 1.0f, 1.0f, 1.0f));
-	renderer->setShaderConstant4f("ambColor1", float4(1.0f, 1.0f, 1.0f, 1.0f));
 
 	// Textures
 	for (uint i = 0; mat.samplers[i] != 0xffff; i++)
@@ -1145,7 +1133,9 @@ RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
 		}
 
 		// TODO: This is currently hacked to be the full vertex every time
-		model->vertFormat = GC3D::CreateVertexFormat(renderer, FULL_VERTEX_ATTRIBS, shaders[0]);
+		FormatDesc formatBuf[13];
+		GC3D::ConvertGCVertexFormat(FULL_VERTEX_ATTRIBS, formatBuf);
+		model->vertFormat = renderer->addVertexFormat(formatBuf, util::bitcount(FULL_VERTEX_ATTRIBS), shaders[0]);
 
 		// Register vertex and index buffers
 		ubyte* head = gfxData.vertexIndexBuffers;

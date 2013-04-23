@@ -21,22 +21,7 @@
     <ClInclude Include="App.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Asset.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AssetPtr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AssMan.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="GC3D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GCModel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Package.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="util.h">
@@ -65,28 +50,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AssMan.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="App.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratePS.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GenerateVS.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Package.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GC3D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GCModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Common\Debug.cpp">
@@ -98,15 +68,5 @@
     <ClCompile Include="GDModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\Assets\binfairy.bdl.json">
-      <Filter>Assets</Filter>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <Media Include="Test.shd">
-      <Filter>Assets</Filter>
-    </Media>
   </ItemGroup>
 </Project>

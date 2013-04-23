@@ -33,7 +33,6 @@
     <None Include="src\lib_json\json_internalarray.inl" />
     <None Include="src\lib_json\json_internalmap.inl" />
     <None Include="src\lib_json\json_valueiterator.inl" />
-    <None Include="src\lib_json\sconscript" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\lib_json\json_reader.cpp" />
@@ -153,7 +152,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAsWinRT>false</CompileAsWinRT>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
@@ -165,7 +164,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAsWinRT>false</CompileAsWinRT>
       <SDLCheck>true</SDLCheck>
     </ClCompile>

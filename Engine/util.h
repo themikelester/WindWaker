@@ -7,4 +7,6 @@
 namespace util
 {
 	uint bitcount (uint n);
+
+	uint64_t hash64(const void * key, uint32_t len, uint64_t seed);
 }
