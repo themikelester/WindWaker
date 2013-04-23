@@ -61,10 +61,10 @@ bool App::load()
         file.read((char*)&version, 4);
         file.read((char*)&size, 4);
 
-		ubyte* blob = (ubyte*) malloc(size);
-		file.read((char*)blob, size);
+		m_Blob = (ubyte*) malloc(size);
+		file.read((char*)m_Blob, size);
 
-		GDModel::Load(&m_GDModel, blob);
+		GDModel::Load(&m_GDModel, m_Blob);
 	}
     file.close();
 
@@ -76,7 +76,8 @@ cleanup:
 
 void App::unload()
 {
-	// TODO: Unload our model
+	GDModel::Unload(&m_GDModel);
+	free(m_Blob);
 }
 
 bool App::onKey(const uint key, const bool pressed)
@@ -120,5 +121,5 @@ void App::drawFrame()
 	renderer->apply();
 
 	GDModel::Update(&m_GDModel);
-	GDModel::Draw(renderer, device, &m_GDModel);
+	GDModel::Draw(renderer, &m_GDModel);
 }

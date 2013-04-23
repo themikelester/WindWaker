@@ -43,5 +43,6 @@ public:
 	bool onKey(const uint key, const bool pressed);
 
 protected:	
+	ubyte* m_Blob;
 	GDModel::GDModel m_GDModel;
 };

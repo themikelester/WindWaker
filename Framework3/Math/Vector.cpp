@@ -775,6 +775,14 @@ void mat4::translate(const vec3 &v){
 	rows[3].w += dot(rows[3].xyz(), v);
 }
 
+bool operator == (const mat4 &m, const mat4 &n){
+	return (m.rows[0] == n.rows[0]) && (m.rows[1] == n.rows[1]) && (m.rows[2] == n.rows[2]) && (m.rows[3] == n.rows[3]);
+}
+
+bool operator != (const mat4 &m, const mat4 &n){
+	return !(m.rows[0] == n.rows[0]) || (m.rows[1] == n.rows[1]) || (m.rows[2] == n.rows[2]) || (m.rows[3] == n.rows[3]);
+}
+
 mat4 operator + (const mat4 &m, const mat4 &n){
 	return mat4(m.rows[0] + n.rows[0], m.rows[1] + n.rows[1], m.rows[2] + n.rows[2], m.rows[3] + n.rows[3]);
 }

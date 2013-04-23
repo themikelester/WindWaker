@@ -7,9 +7,6 @@
 #include <sstream>
 #include <fstream>
 
-//TODO: Remove the need for the D3D reference
-#include <Framework3\Direct3D10\Direct3D10Renderer.h>
-
 #define COMPILER_VERSION 1;
 #define WRITE(val) { s.write( (char*)&val, sizeof(val) ); totalSize += sizeof(val); }
 #define WRITE_ARRAY(arr, size) { s.write((char*)arr, size); totalSize += size; }
@@ -19,6 +16,7 @@
 //TODO: HACK: Remove this!
 #define FULL_VERTEX_ATTRIBS 0x1fff
 
+#define MAX_NAME_LENGTH 16
 
 struct SectionHeader
 {
@@ -50,8 +48,7 @@ struct Point
 
 struct TextureResource
 {
-	//TODO: Replace all instances like this with a constant NAME_LENGTH
-	char name[16];
+	char name[MAX_NAME_LENGTH];
 	u16 texIndex;
 
 	Filter filter;
@@ -95,6 +92,57 @@ struct BlendMode
 	u8 dstFactor;
 };
 
+struct DrwElement
+{
+	u16 index;
+	bool isWeighted;
+};
+
+struct JointElement
+{
+	mat4 matrix;
+	char name[MAX_NAME_LENGTH];
+	u16 parent;
+};
+	
+struct WeightedIndex
+{
+	float weight;
+	uint  index;
+};
+
+enum SgNodeType {
+	SG_END		= 0x00,
+	SG_DOWN		= 0x01,
+	SG_UP		= 0x02,
+	SG_JOINT	= 0x10,
+	SG_MATERIAL	= 0x11,
+	SG_PRIM		= 0x12
+};
+	
+enum VertexAttributeFlags
+{
+	HAS_MATRIX_INDICES	= 1 << 0,
+	HAS_POSITIONS		= 1 << 1,
+	HAS_NORMALS			= 1 << 2,
+	HAS_COLORS0			= 1 << 3,
+	HAS_COLORS1			= 1 << 4,
+	HAS_TEXCOORDS0		= 1 << 5,
+	HAS_TEXCOORDS1		= 1 << 6,
+	HAS_TEXCOORDS2		= 1 << 7,
+	HAS_TEXCOORDS3		= 1 << 8,
+	HAS_TEXCOORDS4		= 1 << 9,
+	HAS_TEXCOORDS5		= 1 << 10,
+	HAS_TEXCOORDS6		= 1 << 11,
+	HAS_TEXCOORDS7		= 1 << 12,
+};
+
+struct Scenegraph
+{
+	u16 index;
+	u16 type; //One of SgNodeType
+};
+
 // Compile a coordinate frame into an affine matrix
 void compileFrame(Json::Value& frameNode, mat4* matrix)
 {
@@ -115,11 +163,9 @@ void compileFrame(Json::Value& frameNode, mat4* matrix)
 			  float(scaleNode.get("y", 0).asDouble()), 
 			  float(scaleNode.get("z", 0).asDouble()));
 
-	// TODO: Implement == and != for mat4s 
 	if (s != identity4())
 		WARN("This model is using joint scaling. This is not yet tested!");
 
-  //this is probably right this way:
   //return t*rz*ry*rx*s; //scales seem to be local only
   *matrix = t*rz*ry*rx;
 }
@@ -129,21 +175,21 @@ u16 compileAttribs(Json::Value& attribsNode)
 {
 	u16 attribFlags = 0;
 
-	if (attribsNode.get("mtx", false).asBool()) attribFlags |= GDModel::HAS_MATRIX_INDICES;
-	if (attribsNode.get("pos", false).asBool()) attribFlags |= GDModel::HAS_POSITIONS;
-	if (attribsNode.get("nrm", false).asBool()) attribFlags |= GDModel::HAS_NORMALS;
+	if (attribsNode.get("mtx", false).asBool()) attribFlags |= HAS_MATRIX_INDICES;
+	if (attribsNode.get("pos", false).asBool()) attribFlags |= HAS_POSITIONS;
+	if (attribsNode.get("nrm", false).asBool()) attribFlags |= HAS_NORMALS;
 
-	if (attribsNode["clr"].get(uint(0), false).asBool()) attribFlags |= GDModel::HAS_COLORS0;
-	if (attribsNode["clr"].get(uint(1), false).asBool()) attribFlags |= GDModel::HAS_COLORS1;
+	if (attribsNode["clr"].get(uint(0), false).asBool()) attribFlags |= HAS_COLORS0;
+	if (attribsNode["clr"].get(uint(1), false).asBool()) attribFlags |= HAS_COLORS1;
 	
-	if (attribsNode["tex"].get(uint(0), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS0;
-	if (attribsNode["tex"].get(uint(1), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS1;
-	if (attribsNode["tex"].get(uint(2), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS2;
-	if (attribsNode["tex"].get(uint(3), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS3;
-	if (attribsNode["tex"].get(uint(4), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS4;
-	if (attribsNode["tex"].get(uint(5), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS5;
-	if (attribsNode["tex"].get(uint(6), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS6;
-	if (attribsNode["tex"].get(uint(7), false).asBool()) attribFlags |= GDModel::HAS_TEXCOORDS7;
+	if (attribsNode["tex"].get(uint(0), false).asBool()) attribFlags |= HAS_TEXCOORDS0;
+	if (attribsNode["tex"].get(uint(1), false).asBool()) attribFlags |= HAS_TEXCOORDS1;
+	if (attribsNode["tex"].get(uint(2), false).asBool()) attribFlags |= HAS_TEXCOORDS2;
+	if (attribsNode["tex"].get(uint(3), false).asBool()) attribFlags |= HAS_TEXCOORDS3;
+	if (attribsNode["tex"].get(uint(4), false).asBool()) attribFlags |= HAS_TEXCOORDS4;
+	if (attribsNode["tex"].get(uint(5), false).asBool()) attribFlags |= HAS_TEXCOORDS5;
+	if (attribsNode["tex"].get(uint(6), false).asBool()) attribFlags |= HAS_TEXCOORDS6;
+	if (attribsNode["tex"].get(uint(7), false).asBool()) attribFlags |= HAS_TEXCOORDS7;
 
 	return attribFlags;
 }
@@ -156,13 +202,13 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 	// Clear the vertex so that all of our missing data is zero'd
 	memset(dst, 0, vtxSize);
 	
-	if ( (attribs & GDModel::HAS_POSITIONS) == false )
+	if ( (attribs & HAS_POSITIONS) == false )
 		WARN("Model does not have required attributes");
 
 	// TODO: We can save a uint in the vertex structure if we remove this force
 	// Always set this attribute. The default is 0.
-	attribSize = GC3D::GetAttributeSize(GDModel::HAS_MATRIX_INDICES);
-	if (attribs & GDModel::HAS_MATRIX_INDICES) {
+	attribSize = GC3D::GetAttributeSize(HAS_MATRIX_INDICES);
+	if (attribs & HAS_MATRIX_INDICES) {
 		ASSERT(point.mtxIdx/3 < 10); 
 		uint matrixIndex = point.mtxIdx/3;
 		memcpy(dst, &matrixIndex, attribSize);
@@ -173,8 +219,8 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 	}
 	dst += attribSize;
 	
-	attribSize = GC3D::GetAttributeSize(GDModel::HAS_POSITIONS);
-	if (attribs & GDModel::HAS_POSITIONS) {
+	attribSize = GC3D::GetAttributeSize(HAS_POSITIONS);
+	if (attribs & HAS_POSITIONS) {
 		float3 pos;
 		pos.x = float(vtx["positions"][point.posIdx].get(uint(0), 0).asDouble());
 		pos.y = float(vtx["positions"][point.posIdx].get(uint(1), 0).asDouble());
@@ -183,8 +229,8 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 	}
 	dst += attribSize;
 	
-	attribSize = GC3D::GetAttributeSize(GDModel::HAS_NORMALS);
-	if (attribs & GDModel::HAS_NORMALS) {
+	attribSize = GC3D::GetAttributeSize(HAS_NORMALS);
+	if (attribs & HAS_NORMALS) {
 		float3 nrm;
 		nrm.x = float(vtx["normals"][point.nrmIdx].get(uint(0), 0).asDouble());
 		nrm.y = float(vtx["normals"][point.nrmIdx].get(uint(1), 0).asDouble());
@@ -195,7 +241,7 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 
 	for (uint i = 0; i < 2; i++)
 	{
-		u16 colorAttrib = GDModel::HAS_COLORS0 << i;
+		u16 colorAttrib = HAS_COLORS0 << i;
 		attribSize = GC3D::GetAttributeSize(colorAttrib);
 		
 		if (attribs & colorAttrib) {
@@ -212,7 +258,7 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 
 	for (uint i = 0; i < 8; i++)
 	{
-		u16 texAttrib = GDModel::HAS_TEXCOORDS0 << i;
+		u16 texAttrib = HAS_TEXCOORDS0 << i;
 		attribSize = GC3D::GetAttributeSize(texAttrib);
 
 		if (attribs & texAttrib) {
@@ -619,6 +665,9 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		s.write((char*)weightedIndexSizes, nWeights * sizeof(u8));
 		s.write((char*)weightedIndexOffsets, nWeights * sizeof(weightedIndexOffsets[0]));
 		s.seekp(0, std::ios_base::end);
+
+		free(weightedIndexOffsets);
+		free(weightedIndexSizes);
 	}
 	END_SECTION();	
 
@@ -661,6 +710,9 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		s.write((char*)&vsTotalSize, sizeof(uint));
 		s.write((char*)&psTotalSize, sizeof(uint));
 		s.seekp(0, std::ios_base::end);
+
+		free(vsOffsets);
+		free(psOffsets);
 	}
 	END_SECTION();
 
@@ -766,8 +818,6 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 	hdr.version = COMPILER_VERSION;
 	hdr.sizeBytes = blobSize;
 
-//TODO: Fix this compile warning
-cleanup:
 	for (uint i = 0; i < nVertexIndexBuffers; i++)
 	{
 		free(vertexBuffers[i].vertexBuf);
@@ -793,6 +843,300 @@ cleanup:
 
 #define END_READ_SECTION() { \
 	head = sectionHead + section.size; \
+}
+
+void ApplyMaterial(Renderer* renderer, MaterialInfo mat)
+{
+	static char samplerName[9] = { 'S', 'a', 'm', 'p', 'l', 'e', 'r', 'I' };
+	static char textureName[9] = { 'T', 'e', 'x', 't', 'u', 'r', 'e', 'I' };
+	
+	// Shader
+	renderer->setShader(mat.shader);
+	renderer->setVertexFormat(0);
+	
+	renderer->setBlendState(mat.blendMode);
+	renderer->setDepthState(mat.depthMode);
+	renderer->setRasterizerState(mat.rasterMode);
+
+	// Textures
+	for (uint i = 0; mat.samplers[i] != 0xffff; i++)
+	{
+		samplerName[7] = '0' + i;
+		textureName[7] = '0' + i;
+		renderer->setSamplerState(samplerName, mat.samplers[i]);
+		renderer->setTexture(textureName, mat.textures[i]);
+	}
+}
+
+void FillMatrixTable(GDModel::GDModel* model, mat4* matrixTable, u16* matrixIndices, u16 nMatrixIndices)
+{
+	for (uint i = 0; i < nMatrixIndices; i++)
+	{
+		mat4& matrix = matrixTable[i];
+		u16 drwIndex = matrixIndices[i];
+
+		if (drwIndex == 0xffff)
+			continue; // keep matrix set by previous packet
+		
+		DrwElement& drw = model->drwTable[drwIndex];
+		if (drw.isWeighted)
+		{
+			// TODO: Optimize this
+			memset(&matrix, 0, sizeof(mat4));
+			u8 nMatrices = model->evpWeightedIndexSizesTable[drw.index];
+			WeightedIndex* weightedIndices = 
+				model->evpWeightedIndexTable + model->evpWeightedIndexOffsetTable[drw.index];
+			
+			for (uint j = 0; j < nMatrices; j++)
+			{
+				uint evpAndJntIndex = weightedIndices[j].index;
+				float evpAndJntWeight = weightedIndices[j].weight;
+				const mat4& evpMatrix = model->evpMatrixTable[evpAndJntIndex];
+				const mat4& jntMatrix = model->jointTable[evpAndJntIndex].matrix;
+				matrix = (jntMatrix*evpMatrix) * evpAndJntWeight + matrix;
+			}
+			matrix.rows[3] = vec4(0, 0, 0, 1.0f);
+		}
+		else
+		{
+			matrix = model->jointTable[drw.index].matrix;
+		}
+
+		// TODO: Implement MatrixType (Billboard, Y-Billboard)
+	}
+}
+
+void DrawBatch(Renderer* renderer, GDModel::GDModel* model, u16 batchIndex, u16 matIndex)
+{
+	ubyte* head = model->_asset + model->batchOffsetTable[batchIndex];
+	
+	VertexBufferID vbID = READ(int);
+	IndexBufferID ibID = READ(int);
+	u16 numPackets = READ(u16);
+	
+	// These are partially updated by each packet
+	mat4 matrixTable[10];
+
+	int numIndicesSoFar = 0;
+	for (uint i = 0; i < numPackets; i++)
+	{
+		u16 nMatrixIndices = READ(u16);
+		u16* matrixIndices = READ_ARRAY(u16, nMatrixIndices);
+
+		// Setup Matrix table
+		FillMatrixTable(model, matrixTable, matrixIndices, nMatrixIndices);	
+
+		renderer->reset();
+			ApplyMaterial(renderer, model->materials[matIndex]);
+			renderer->setVertexFormat(model->vertFormat);
+			renderer->setVertexBuffer(0, vbID);
+			renderer->setIndexBuffer(ibID);
+			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, nMatrixIndices);
+		renderer->apply();
+
+		u16 indexCount = READ(u16);
+		renderer->drawElements(PRIM_TRIANGLE_STRIP, numIndicesSoFar, indexCount, 0, -1);
+		numIndicesSoFar += indexCount;
+	}
+}
+
+const Scenegraph* DrawScenegraph(
+		Renderer *renderer, GDModel::GDModel* model, const Scenegraph* node, 
+		uint matIndex = 0, bool drawOnDown = true )
+{
+	//TODO: implement drawOnDown. The joint and material states match up with the onDown implementation.
+	//		 the only thing that changes is the draw order. Does this make a difference?
+	
+	//TODO: Remove drawing with scenegraph. We should assign materials to batches and then draw batches linearly
+	//		We don't even need batches, just draw packets in sequence, occasionally switching materials
+	while (node->type != SG_END)
+	{
+		switch(node->type)
+		{	
+		case SG_MATERIAL: 
+			WARN("Applying material %u", node->index); 
+			matIndex = node->index;
+			break;
+
+		case SG_PRIM:
+			if (drawOnDown)
+			{
+				WARN("Drawing batch %u with MaterialInfo%u", node->index, matIndex);
+				DrawBatch(renderer, model, node->index, matIndex);
+			}	
+			break;	
+
+		case SG_DOWN: 
+			node = DrawScenegraph(renderer, model, node+1, matIndex, drawOnDown);
+			break;
+
+		case SG_UP:
+			return node;
+		}
+
+		node++;
+	}
+
+	return nullptr;
+}
+
+RESULT RegisterGFX(Renderer* renderer, GDModel::GDModel* model)
+{
+	GDModel::TemporaryGFXData& gfxData = model->gfxData;
+	uint samplers[256];
+	uint blendModes[256];
+	uint cullModes[256];
+	uint depthModes[256];
+
+	uint shaders[256];
+	uint textures[256];
+	
+	// Remember our creator
+	gfxData.renderer = renderer;
+
+	// Register our samplers
+	for (uint i = 0; i < gfxData.nTextureResources; i++)
+	{
+		TextureResource& res = gfxData.textureResources[i];
+		samplers[i] = renderer->addSamplerState(res.filter, res.wrapS, res.wrapT, CLAMP);
+	}
+		
+	// Register our textures
+	Image imgResource;
+	for (uint i = 0; i < gfxData.nTextures; i++)
+	{
+		TextureDesc& tex = gfxData.textures[i];
+			
+		imgResource.loadFromMemory(gfxData.textureData + tex.texDataOffset, tex.format, 
+			tex.width, tex.height, 1, tex.numMips, true);
+
+		textures[i] = renderer->addTexture(imgResource);
+	}
+
+	// Register our depth, blend, cull modes
+	for (uint i = 0; i < gfxData.nBlendModes; i++)
+	{
+		BlendMode& bm = gfxData.blendModes[i];
+		blendModes[i] = renderer->addBlendState(bm.srcFactor, bm.dstFactor, bm.blendOp);
+	}
+	for (uint i = 0; i < gfxData.nDepthModes; i++)
+	{
+		DepthMode& dm = gfxData.depthModes[i];
+		depthModes[i] = renderer->addDepthState(dm.testEnable, dm.writeEnable, dm.func);
+	}
+	for (uint i = 0; i < gfxData.nCullModes; i++)
+	{
+		u8 cm = gfxData.cullModes[i];
+		cullModes[i] = renderer->addRasterizerState(cm);
+	}
+
+	// Register our shaders
+	for (uint i = 0; i < gfxData.nShaders; i++)
+	{
+		char* vsText = gfxData.vsShaders + gfxData.vsOffsets[i];
+		char* psText = gfxData.psShaders + gfxData.psOffsets[i];
+		shaders[i] = renderer->addShader(vsText, nullptr, psText, 0, 0, 0);
+	}
+
+	// Fixup our Materials with their runtime IDs
+	for (uint i = 0; i < model->nMaterials; i++)
+	{
+		MaterialInfo& mat = model->materials[i];
+		mat.blendMode = blendModes[mat.blendMode];
+		mat.depthMode = depthModes[mat.depthMode];
+		mat.rasterMode = cullModes[mat.rasterMode];
+		mat.shader = shaders[mat.shader];
+			
+		for (uint i = 0; i < 8; i++)
+		{
+			u16 texIndex = mat.samplers[i];
+
+			if (texIndex == 0xffff)
+				break;
+
+			mat.samplers[i] = samplers[texIndex];
+			TextureResource& res = gfxData.textureResources[texIndex];
+			mat.textures[i] = textures[res.texIndex];
+		}
+	}
+
+	// TODO: This is currently hacked to be the full vertex every time
+	FormatDesc formatBuf[13];
+	GC3D::ConvertGCVertexFormat(FULL_VERTEX_ATTRIBS, formatBuf);
+	model->vertFormat = renderer->addVertexFormat(formatBuf, util::bitcount(FULL_VERTEX_ATTRIBS), shaders[0]);
+
+	// Register vertex and index buffers
+	ubyte* head = gfxData.vertexIndexBuffers;
+	for (uint i = 0; i < gfxData.nVertexIndexBuffers; i++)
+	{
+		ubyte* batch = model->_asset + model->batchOffsetTable[i];
+		VertexBufferID* batchVBID = (VertexBufferID*)batch;
+		IndexBufferID*  batchIBID = (IndexBufferID*)(batch + sizeof(batchVBID));
+		assert(*batchVBID == -1 && *batchIBID == -1);
+
+		u16 attributes = READ(u16);
+		int numVertices = READ(u16);
+		int vbSize = numVertices * GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
+		void* vertices = READ_ARRAY(ubyte, vbSize);
+
+		int numIndices = READ(u16);
+		int ibSize = numIndices * sizeof(u16);
+		void* indices = READ_ARRAY(ubyte, ibSize);
+
+		*batchVBID = renderer->addVertexBuffer(vbSize, STATIC, vertices);
+		*batchIBID = renderer->addIndexBuffer(ibSize, 2, STATIC, indices);
+	}
+
+	return S_OK;
+}
+
+RESULT UnregisterGFX(Renderer* renderer, GDModel::GDModel* model)
+{
+	for (uint i = 0; i < model->nMaterials; i++)
+	{
+		MaterialInfo& mat = model->materials[i];
+		//renderer->removeBlendState(mat.blendMode);
+		//renderer->removeDepthState(mat.depthMode);
+		//renderer->removeRasterizerState(mat.rasterMode);
+		//renderer->removeShader(mat.shader);
+			
+		for (uint i = 0; i < 8; i++)
+		{
+			u16 texIndex = mat.samplers[i];
+			if (texIndex == 0xffff)
+				break;
+
+			//renderer->removeSamplerState(mat.samplers[i]);
+			renderer->removeTexture(mat.textures[i]);
+		}
+
+		//renderer->removeVertexFormat(model->vertFormat);
+		
+		for (uint i = 0; i < model->gfxData.nVertexIndexBuffers; i++)
+		{
+			ubyte* batch = model->_asset + model->batchOffsetTable[i];
+			VertexBufferID* batchVBID = (VertexBufferID*)batch;
+			IndexBufferID*  batchIBID = (IndexBufferID*)(batch + sizeof(batchVBID));
+
+			//renderer->removeVertexBuffer(batchVBID);
+			//renderer->changeIndexBuffer(batchIBID);
+		}
+	}
+
+	return S_OK;
+}
+
+RESULT GDModel::Unload(GDModel* model)
+{
+	RESULT r;
+	
+	r = UnregisterGFX(model->gfxData.renderer, model);
+	free(model->emptyAnim);
+	
+	// Clear the whole model for safety
+	memset(model, 0, sizeof(model));
+
+	return r;
 }
 
 RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
@@ -843,7 +1187,6 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 		model->jointTable = READ_ARRAY(JointElement, nJnt);
 
 		// TODO: This is temporary until we start loading animations
-		// TODO: This is a memory leak, but we're going to leave it since it's temporary
 		// Store a copy of the joints as our "default" animation
 		uint jointTableSize = sizeof(JointElement) * nJnt;
 		model->emptyAnim = (JointElement*) malloc(jointTableSize);
@@ -887,110 +1230,11 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 		model->gfxData.textures = READ_ARRAY(TextureDesc, nTextures);
 	END_READ_SECTION();
 
-	//TODO: Confirm this is correct
 	model->gfxData.textureData = head;
 
 	model->loadGPU = true;
 
 	return S_OK;
-}
-
-void ApplyMaterial(Renderer* renderer, MaterialInfo mat)
-{
-	static char samplerName[9] = { 'S', 'a', 'm', 'p', 'l', 'e', 'r', 'I' };
-	static char textureName[9] = { 'T', 'e', 'x', 't', 'u', 'r', 'e', 'I' };
-	
-	// Shader
-	renderer->setShader(mat.shader);
-	renderer->setVertexFormat(0);
-	
-	renderer->setBlendState(mat.blendMode);
-	renderer->setDepthState(mat.depthMode);
-	renderer->setRasterizerState(mat.rasterMode);
-
-	// Textures
-	for (uint i = 0; mat.samplers[i] != 0xffff; i++)
-	{
-		samplerName[7] = '0' + i;
-		textureName[7] = '0' + i;
-		renderer->setSamplerState(samplerName, mat.samplers[i]);
-		renderer->setTexture(textureName, mat.textures[i]);
-	}
-}
-
-void FillMatrixTable(GDModel::GDModel* model, mat4* matrixTable, u16* matrixIndices, u16 nMatrixIndices)
-{
-	for (uint i = 0; i < nMatrixIndices; i++)
-	{
-		mat4& matrix = matrixTable[i];
-		u16 drwIndex = matrixIndices[i];
-
-		if (drwIndex == 0xffff)
-			continue; // keep matrix set by previous packet
-		
-		GDModel::DrwElement& drw = model->drwTable[drwIndex];
-		if (drw.isWeighted)
-		{
-			// TODO: Optimize this
-			memset(&matrix, 0, sizeof(mat4));
-			u8 nMatrices = model->evpWeightedIndexSizesTable[drw.index];
-			GDModel::WeightedIndex* weightedIndices = 
-				model->evpWeightedIndexTable + model->evpWeightedIndexOffsetTable[drw.index];
-			
-			for (uint j = 0; j < nMatrices; j++)
-			{
-				uint evpAndJntIndex = weightedIndices[j].index;
-				float evpAndJntWeight = weightedIndices[j].weight;
-				const mat4& evpMatrix = model->evpMatrixTable[evpAndJntIndex];
-				const mat4& jntMatrix = model->jointTable[evpAndJntIndex].matrix;
-				matrix = (jntMatrix*evpMatrix) * evpAndJntWeight + matrix;
-			}
-			matrix.rows[3] = vec4(0, 0, 0, 1.0f);
-		}
-		else
-		{
-			matrix = model->jointTable[drw.index].matrix;
-		}
-
-		// TODO: Implement MatrixType (Billboard, Y-Billboard)
-	}
-}
-
-void DrawBatch(Renderer* renderer, ID3D10Device* device, GDModel::GDModel* model, 
-			   u16 batchIndex, u16 matIndex)
-{
-	ubyte* head = model->_asset + model->batchOffsetTable[batchIndex];
-	
-	VertexBufferID vbID = READ(int);
-	IndexBufferID ibID = READ(int);
-	u16 numPackets = READ(u16);
-	
-	// These are partially updated by each packet
-	mat4 matrixTable[10];
-
-	int numIndicesSoFar = 0;
-	for (uint i = 0; i < numPackets; i++)
-	{
-		u16 nMatrixIndices = READ(u16);
-		u16* matrixIndices = READ_ARRAY(u16, nMatrixIndices);
-
-		// Setup Matrix table
-		FillMatrixTable(model, matrixTable, matrixIndices, nMatrixIndices);	
-		
-		device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);  
-
-		renderer->reset();
-			ApplyMaterial(renderer, model->materials[matIndex]);
-			renderer->setVertexFormat(model->vertFormat);
-			renderer->setVertexBuffer(0, vbID);
-			renderer->setIndexBuffer(ibID);
-			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, nMatrixIndices);
-		renderer->apply();
-
-		u16 indexCount = READ(u16);
-		device->DrawIndexed(indexCount, numIndicesSoFar, 0);	
-		numIndicesSoFar += indexCount;
-	}
 }
 
 RESULT GDModel::Update(GDModel* model)
@@ -1012,156 +1256,15 @@ RESULT GDModel::Update(GDModel* model)
 	return S_OK;
 }
 
-//TODO: Remove the need for the D3D reference
-const GDModel::Scenegraph* DrawScenegraph(Renderer *renderer, ID3D10Device *device, GDModel::GDModel* model, 
-										  const GDModel::Scenegraph* node, uint matIndex = 0, 
-										  bool drawOnDown = true)
-{
-	//TODO: implement drawOnDown. The joint and material states match up with the onDown implementation.
-	//		 the only thing that changes is the draw order. Does this make a difference?
-	
-	//TODO: Remove drawing with scenegraph. We should assign materials to batches and then draw batches linearly
-	//		We don't even need batches, just draw packets in sequence, occasionally switching materials
-	while (node->type != GDModel::SG_END)
-	{
-		switch(node->type)
-		{	
-		case GDModel::SG_MATERIAL: 
-			WARN("Applying material %u", node->index); 
-			matIndex = node->index;
-			break;
-
-		case GDModel::SG_PRIM:
-			if (drawOnDown)
-			{
-				WARN("Drawing batch %u with MaterialInfo%u", node->index, matIndex);
-				DrawBatch(renderer, device, model, node->index, matIndex);
-			}	
-			break;	
-
-		case GDModel::SG_DOWN: 
-			node = DrawScenegraph(renderer, device, model, node+1, matIndex, drawOnDown);
-			break;
-
-		case GDModel::SG_UP:
-			return node;
-		}
-
-		node++;
-	}
-
-	return nullptr;
-}
-
-RESULT GDModel::Draw(Renderer* renderer, ID3D10Device *device, GDModel* model)
+RESULT GDModel::Draw(Renderer* renderer, GDModel* model)
 {
 	if (model->loadGPU)
 	{
-		TemporaryGFXData& gfxData = model->gfxData;
-		uint samplers[256];
-		uint blendModes[256];
-		uint cullModes[256];
-		uint depthModes[256];
-
-		uint shaders[256];
-		uint textures[256];
-
-		// Register our samplers
-		for (uint i = 0; i < gfxData.nTextureResources; i++)
-		{
-			TextureResource& res = gfxData.textureResources[i];
-			samplers[i] = renderer->addSamplerState(res.filter, res.wrapS, res.wrapT, CLAMP);
-		}
-		
-		// Register our textures
-		Image imgResource;
-		for (uint i = 0; i < gfxData.nTextures; i++)
-		{
-			TextureDesc& tex = gfxData.textures[i];
-			
-			imgResource.loadFromMemory(gfxData.textureData + tex.texDataOffset, tex.format, 
-				tex.width, tex.height, 1, tex.numMips, true);
-
-			textures[i] = renderer->addTexture(imgResource);
-		}
-
-		// Register our depth, blend, cull modes
-		for (uint i = 0; i < gfxData.nBlendModes; i++)
-		{
-			BlendMode& bm = gfxData.blendModes[i];
-			blendModes[i] = renderer->addBlendState(bm.srcFactor, bm.dstFactor, bm.blendOp);
-		}
-		for (uint i = 0; i < gfxData.nDepthModes; i++)
-		{
-			DepthMode& dm = gfxData.depthModes[i];
-			depthModes[i] = renderer->addDepthState(dm.testEnable, dm.writeEnable, dm.func);
-		}
-		for (uint i = 0; i < gfxData.nCullModes; i++)
-		{
-			u8 cm = gfxData.cullModes[i];
-			cullModes[i] = renderer->addRasterizerState(cm);
-		}
-
-		// Register our shaders
-		for (uint i = 0; i < gfxData.nShaders; i++)
-		{
-			char* vsText = gfxData.vsShaders + gfxData.vsOffsets[i];
-			char* psText = gfxData.psShaders + gfxData.psOffsets[i];
-			shaders[i] = renderer->addShader(vsText, nullptr, psText, 0, 0, 0);
-		}
-
-		// Fixup our Materials with their runtime IDs
-		for (uint i = 0; i < model->nMaterials; i++)
-		{
-			MaterialInfo& mat = model->materials[i];
-			mat.blendMode = blendModes[mat.blendMode];
-			mat.depthMode = depthModes[mat.depthMode];
-			mat.rasterMode = cullModes[mat.rasterMode];
-			mat.shader = shaders[mat.shader];
-			
-			for (uint i = 0; i < 8; i++)
-			{
-				u16 texIndex = mat.samplers[i];
-
-				if (texIndex == 0xffff)
-					break;
-
-				mat.samplers[i] = samplers[texIndex];
-				TextureResource& res = gfxData.textureResources[texIndex];
-				mat.textures[i] = textures[res.texIndex];
-			}
-		}
-
-		// TODO: This is currently hacked to be the full vertex every time
-		FormatDesc formatBuf[13];
-		GC3D::ConvertGCVertexFormat(FULL_VERTEX_ATTRIBS, formatBuf);
-		model->vertFormat = renderer->addVertexFormat(formatBuf, util::bitcount(FULL_VERTEX_ATTRIBS), shaders[0]);
-
-		// Register vertex and index buffers
-		ubyte* head = gfxData.vertexIndexBuffers;
-		for (uint i = 0; i < gfxData.nVertexIndexBuffers; i++)
-		{
-			ubyte* batch = model->_asset + model->batchOffsetTable[i];
-			VertexBufferID* batchVBID = (VertexBufferID*)batch;
-			IndexBufferID*  batchIBID = (IndexBufferID*)(batch + sizeof(batchVBID));
-			assert(*batchVBID == -1 && *batchIBID == -1);
-
-			u16 attributes = READ(u16);
-			int numVertices = READ(u16);
-			int vbSize = numVertices * GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
-			void* vertices = READ_ARRAY(ubyte, vbSize);
-
-			int numIndices = READ(u16);
-			int ibSize = numIndices * sizeof(u16);
-			void* indices = READ_ARRAY(ubyte, ibSize);
-
-			*batchVBID = renderer->addVertexBuffer(vbSize, STATIC, vertices);
-			*batchIBID = renderer->addIndexBuffer(ibSize, 2, STATIC, indices);
-		}
-
+		RegisterGFX(renderer, model);
 		model->loadGPU = false;
 	}
 
-	DrawScenegraph(renderer, device, model, model->scenegraph);
+	DrawScenegraph(renderer, model, model->scenegraph);
+
 	return S_OK; 
 }

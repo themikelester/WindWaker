@@ -405,6 +405,9 @@ struct mat4 {
 	void translate(const vec3 &v);
 };
 
+bool operator == (const mat4 &m, const mat4 &n);
+bool operator != (const mat4 &m, const mat4 &n);
+
 mat4 operator + (const mat4 &m, const mat4 &n);
 mat4 operator - (const mat4 &m, const mat4 &n);
 mat4 operator - (const mat4 &m);
