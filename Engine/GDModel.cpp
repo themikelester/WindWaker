@@ -437,7 +437,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 				break;
 
 			case SG_JOINT:
-				jointParents.push_back(tempParentJoint);
+				jointParents.push_back(parentJoints.top());
 				tempParentJoint = sg.index;
 				break;
 
