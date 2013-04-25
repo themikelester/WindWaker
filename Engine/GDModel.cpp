@@ -350,7 +350,7 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 					// This points to a new vertex. Construct it.
 					index = vertexCount++;
 					buildInflatedVertex(vertices + vertexSize*index, p, vertexAttributes, vtx);
-					indexPair->second = index;
+					indexSet[hashKey] = index;
 				}
 
 				// Always add a new index to our index buffer

@@ -35,8 +35,11 @@ namespace GC3D
 	
 	int GetAttributeSize (u16 attrib)
 	{
-		uint attribIndex = uint(log10(float(attrib)) / log10(2.0f));
-		return __GCformat[attribIndex].size * formatSize[__GCformat[attribIndex].format];
+		uint index = 0;
+		while ( (attrib >> index) != 1 ) ++index; 
+		uint count = __GCformat[index].size;
+		uint size = formatSize[__GCformat[index].format];
+		return count * size;
 	}
 
 	int GetVertexSize (u16 attribFlags)
@@ -138,10 +141,10 @@ namespace GC3D
 		// TODO: Define these formats in the common folder and share with Interpreter
 		switch (format)
 		{
-		case /*I8:	*/ 0:	return FORMAT_R8;
-		case /*I8_A8*/ 1:	return FORMAT_RG8;
-		case /*RGBA8*/ 2:	return FORMAT_RGBA8;
-		case /*DXT1 */ 3:	return FORMAT_DXT1;
+		case /*I8:	*/ 1:	return FORMAT_R8;
+		case /*I8_A8*/ 3:	return FORMAT_RG8;
+		case /*RGBA8*/ 6:	return FORMAT_RGBA8;
+		case /*DXT1 */ 14:	return FORMAT_DXT1;
 		case 0xff: //Error case, fall through to default
 		default: WARN("Unknown texture format %u. Refusing to load", format); return FORMAT_NONE;
 		}

@@ -63,9 +63,6 @@ struct Image
   //r5g5b5a3 and r5g6b5 are converted to rgba8.
   //(that is, only formats 1 (i8), 3* (i8a8), 6 (rgba8)
   //and 14 (dxt1) are used after conversion)
-
-  //TODO: gl image conversions (rgba -> abgr, ai -> ia
-  //somewhere else?)
     
   int originalFormat, paletteFormat;
 
