@@ -66,6 +66,10 @@ bool App::load()
 
 		GDModel::Load(&m_GDModel, m_Blob);
 	}
+	else
+	{
+		return false;
+	}
     file.close();
 
 	defaultFont = renderer->addFont("../Assets/Fonts/Future.dds", "../Assets/Fonts/Future.font", linearClamp);
