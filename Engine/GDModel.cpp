@@ -788,7 +788,8 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 
 	//Append our binary texture data
 	std::string filename = root["Info"]["name"].asString();
-	std::ifstream texFile(filename + ".tex", std::ios::in | std::ios::binary);
+	std::string baseDir = "..\\";
+	std::ifstream texFile(baseDir + filename + ".tex", std::ios::in | std::ios::binary);
 	if (!texFile.is_open())
 	{
 		//TODO: Test this
