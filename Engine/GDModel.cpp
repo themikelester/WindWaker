@@ -417,7 +417,6 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		// TODO: Switch all of the Json::Value references to use &! This should speed it up
 		Json::Value sgNode = root["Inf1"]["scenegraph"];
 		uint nNodes = sgNode.size();
-		WRITE(nNodes);
 
 		// Table to convert scene node indexes into material indexes
 		Json::Value indexToMatIndex = root["Mat3"]["indexToMatIndex"];
@@ -433,7 +432,16 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 			switch(sg.type)
 			{
 			case SG_MATERIAL:
-				sg.index = indexToMatIndex.get(sg.index, 0).asUInt();		
+				sg.index = indexToMatIndex.get(sg.index, 0).asUInt();
+				WRITE(sg);		
+				break;
+
+			case SG_PRIM:
+				WRITE(sg);
+				break;
+				
+			case SG_END:
+				WRITE(sg);
 				break;
 
 			case SG_JOINT:
@@ -450,9 +458,11 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 				parentJoints.pop();
 				tempParentJoint = parentJoints.top();
 				break;
-			}
 
-			WRITE(sg);
+			default:
+				WARN("Unrecognized scenegraph node type");
+				return E_FAIL;
+			}
 		}
 	END_SECTION();
 
@@ -941,46 +951,6 @@ void DrawBatch(Renderer* renderer, GDModel::GDModel* model, u16 batchIndex, u16 
 	}
 }
 
-const Scenegraph* DrawScenegraph(
-		Renderer *renderer, GDModel::GDModel* model, const Scenegraph* node, 
-		uint matIndex = 0, bool drawOnDown = true )
-{
-	//TODO: implement drawOnDown. The joint and material states match up with the onDown implementation.
-	//		 the only thing that changes is the draw order. Does this make a difference?
-	
-	//TODO: Remove drawing with scenegraph. We should assign materials to batches and then draw batches linearly
-	//		We don't even need batches, just draw packets in sequence, occasionally switching materials
-	while (node->type != SG_END)
-	{
-		switch(node->type)
-		{	
-		case SG_MATERIAL: 
-			WARN("Applying material %u", node->index); 
-			matIndex = node->index;
-			break;
-
-		case SG_PRIM:
-			if (drawOnDown)
-			{
-				WARN("Drawing batch %u with MaterialInfo%u", node->index, matIndex);
-				DrawBatch(renderer, model, node->index, matIndex);
-			}	
-			break;	
-
-		case SG_DOWN: 
-			node = DrawScenegraph(renderer, model, node+1, matIndex, drawOnDown);
-			break;
-
-		case SG_UP:
-			return node;
-		}
-
-		node++;
-	}
-
-	return nullptr;
-}
-
 RESULT RegisterGFX(Renderer* renderer, GDModel::GDModel* model)
 {
 	GDModel::TemporaryGFXData& gfxData = model->gfxData;
@@ -1136,7 +1106,7 @@ RESULT GDModel::Unload(GDModel* model)
 	
 	// Clear the whole model for safety
 	memset(model, 0, sizeof(model));
-
+	 
 	return r;
 }
 
@@ -1149,8 +1119,7 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 
 	// Scenegraph first	
 	BEGIN_READ_SECTION("scn1");
-		uint nNodes = READ(uint);
-		model->scenegraph = READ_ARRAY(Scenegraph, nNodes);
+		model->scenegraph = READ_ARRAY(Scenegraph, 0);
 	END_READ_SECTION();
 
 	// Batches
@@ -1259,13 +1228,28 @@ RESULT GDModel::Update(GDModel* model)
 
 RESULT GDModel::Draw(Renderer* renderer, GDModel* model)
 {
+	u16 matIndex = -1;
+
 	if (model->loadGPU)
 	{
 		RegisterGFX(renderer, model);
 		model->loadGPU = false;
 	}
 
-	DrawScenegraph(renderer, model, model->scenegraph);
+	for (Scenegraph* node = model->scenegraph; node->type != SG_END; node++)
+	{
+		switch(node->type)
+		{	
+		case SG_MATERIAL: 
+			WARN("Applying material %u", node->index); 
+			matIndex = node->index;
+			break;
+
+		case SG_PRIM:
+			DrawBatch(renderer, model, node->index, matIndex);
+			break;	
+		}
+	}
 
 	return S_OK; 
 }
