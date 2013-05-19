@@ -387,6 +387,86 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 	currentSection++; }
 
 
+uint RecordScenegraph(std::stringstream& s, uint& totalSize, const Json::Value& root, std::vector<u16>& jointParents, 
+					  uint nodeIndex = 0, uint matIndex = -1, bool onDown = true, uint parentJoint = -1) 
+{
+	// Table to convert scene node indexes into material indexes
+	static Json::Value sgNode = root["Inf1"]["scenegraph"];
+	static uint nNodes = sgNode.size();
+	static Json::Value indexToMatIndex = root["Mat3"]["indexToMatIndex"];
+	static uint lastMatIndex = uint(-1);
+
+	uint tmpJoint = parentJoint;
+	uint tmpMat = matIndex;
+
+	Scenegraph prevPrim = {-1, -1};
+
+	for (uint i = nodeIndex; i < nNodes; i++)
+	{
+		Scenegraph sg;
+		sg.index = u16(sgNode[i].get("index", -1).asUInt());
+		sg.type =  u16(sgNode[i].get("type", -1).asUInt());
+
+		switch(sg.type)
+		{
+		case SG_MATERIAL:
+			tmpMat = indexToMatIndex.get(sg.index, -1).asUInt();
+			ASSERT(tmpMat != uint(-1));
+			onDown = (root["Mat3"]["materials"][tmpMat]["flag"].asUInt() == 1);
+			break;
+
+		case SG_PRIM:
+			if (onDown)
+			{
+				if (matIndex != lastMatIndex)
+				{
+					Scenegraph material = {matIndex, SG_MATERIAL};
+					WRITE(material);
+					lastMatIndex = matIndex;
+				}
+				WRITE(sg);
+			}
+			else
+			{
+				prevPrim = sg;
+			}
+			break;
+
+		case SG_JOINT:
+			jointParents.push_back(parentJoint);
+			tmpJoint = sg.index;
+			break;
+
+		case SG_DOWN:
+			i += RecordScenegraph(s, totalSize, root, jointParents, i+1, tmpMat, onDown, tmpJoint); 
+			
+			if ( prevPrim.type == SG_PRIM && !onDown) 
+			{
+				if (matIndex != lastMatIndex)
+				{
+					Scenegraph material = {matIndex, SG_MATERIAL};
+					WRITE(material);
+					lastMatIndex = matIndex;
+				}
+				WRITE(prevPrim);
+			}
+			break;
+
+		case SG_UP:
+			return (i - nodeIndex) + 1;
+			break;
+				
+		case SG_END:
+			WRITE(sg);
+			break;
+
+		default:
+			WARN("Unrecognized scenegraph node type");
+			return E_FAIL;
+		}
+	}
+}
+
 RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 {
 	std::stringstream s;
@@ -413,57 +493,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 
 	// Scenegraph
 	BEGIN_SECTION("scn1");
-		Scenegraph sg;
-		// TODO: Switch all of the Json::Value references to use &! This should speed it up
-		Json::Value sgNode = root["Inf1"]["scenegraph"];
-		uint nNodes = sgNode.size();
-
-		// Table to convert scene node indexes into material indexes
-		Json::Value indexToMatIndex = root["Mat3"]["indexToMatIndex"];
-
-		std::stack<u16> parentJoints;
-		parentJoints.push(-1);
-		u16 tempParentJoint = parentJoints.top();
-		for (uint i = 0; i < nNodes; i++)
-		{
-			sg.index = u16(sgNode[i].get("index", 0).asUInt());
-			sg.type = u16(sgNode[i].get("type", 0).asUInt());
-
-			switch(sg.type)
-			{
-			case SG_MATERIAL:
-				sg.index = indexToMatIndex.get(sg.index, 0).asUInt();
-				WRITE(sg);		
-				break;
-
-			case SG_PRIM:
-				WRITE(sg);
-				break;
-				
-			case SG_END:
-				WRITE(sg);
-				break;
-
-			case SG_JOINT:
-				jointParents.push_back(parentJoints.top());
-				tempParentJoint = sg.index;
-				break;
-
-			case SG_DOWN:
-				parentJoints.push(tempParentJoint);
-				tempParentJoint = tempParentJoint;
-				break;
-
-			case SG_UP:
-				parentJoints.pop();
-				tempParentJoint = parentJoints.top();
-				break;
-
-			default:
-				WARN("Unrecognized scenegraph node type");
-				return E_FAIL;
-			}
-		}
+	RecordScenegraph(s, totalSize, root, jointParents);
 	END_SECTION();
 
 	// Batches
@@ -1241,11 +1271,11 @@ RESULT GDModel::Draw(Renderer* renderer, GDModel* model)
 		switch(node->type)
 		{	
 		case SG_MATERIAL: 
-			WARN("Applying material %u", node->index); 
 			matIndex = node->index;
 			break;
 
 		case SG_PRIM:
+			WARN("Drawing Batch %u with Material %u", node->index, matIndex); 
 			DrawBatch(renderer, model, node->index, matIndex);
 			break;	
 		}
