@@ -5,6 +5,8 @@
 
 namespace GC3D
 {
+	#define MAX_VERTEX_ATTRIBS 13
+	
 	int GetAttributeSize (u16 attrib);
 	int GetVertexSize (u16 attribFlags);
 	

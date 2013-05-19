@@ -228,6 +228,7 @@ struct FormatDesc {
 	AttributeType type;
 	AttributeFormat format;
 	int size;
+	bool empty;
 };
 
 #define MAX_MRTS 8

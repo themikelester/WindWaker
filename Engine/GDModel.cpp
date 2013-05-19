@@ -13,9 +13,6 @@
 #define READ(type) *(type*)head; head += sizeof(type);
 #define READ_ARRAY(type, count) (type*)head; head += sizeof(type) * count;
 
-//TODO: HACK: Remove this!
-#define FULL_VERTEX_ATTRIBS 0x1fff
-
 #define MAX_NAME_LENGTH 16
 
 struct SectionHeader
@@ -194,16 +191,12 @@ u16 compileAttribs(Json::Value& attribsNode)
 	return attribFlags;
 }
 
-RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Value& vtx)
+RESULT buildVertex(ubyte* dst, Point& point, u16 attribs, const Json::Value& vtx)
 {
 	uint attribSize;
-	uint vtxSize = GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
-
-	// Clear the vertex so that all of our missing data is zero'd
-	memset(dst, 0, vtxSize);
+	uint vtxSize = GC3D::GetVertexSize(attribs);
 	
-	if ( (attribs & HAS_POSITIONS) == false )
-		WARN("Model does not have required attributes");
+	ASSERT(attribs & HAS_POSITIONS);
 
 	// TODO: We can save a uint in the vertex structure if we remove this force
 	// Always set this attribute. The default is 0.
@@ -226,8 +219,8 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 		pos.y = float(vtx["positions"][point.posIdx].get(uint(1), 0).asDouble());
 		pos.z = float(vtx["positions"][point.posIdx].get(uint(2), 0).asDouble());
 		memcpy(dst, &pos, attribSize);
+		dst += attribSize;
 	}
-	dst += attribSize;
 	
 	attribSize = GC3D::GetAttributeSize(HAS_NORMALS);
 	if (attribs & HAS_NORMALS) {
@@ -236,8 +229,8 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 		nrm.y = float(vtx["normals"][point.nrmIdx].get(uint(1), 0).asDouble());
 		nrm.z = float(vtx["normals"][point.nrmIdx].get(uint(2), 0).asDouble());
 		memcpy(dst, &nrm, attribSize);
+		dst += attribSize;
 	}
-	dst += attribSize;
 
 	for (uint i = 0; i < 2; i++)
 	{
@@ -252,8 +245,8 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 			clr[3] = ubyte(vtx["colors"][point.clrIdx[i]].get("a", 0).asUInt());
 			memcpy(dst, clr, attribSize);
 			ASSERT(attribSize == sizeof(clr));
+			dst += attribSize;
 		}
-		dst += attribSize;
 	}
 
 	for (uint i = 0; i < 8; i++)
@@ -267,8 +260,8 @@ RESULT buildInflatedVertex(ubyte* dst, Point& point, u16 attribs, const Json::Va
 			st.y = float(vtx["texcoords"][i][point.texIdx[i]].get("t", 0).asDouble());
 			memcpy(dst, st, attribSize);
 			ASSERT(attribSize == sizeof(st));
+			dst += attribSize;
 		}
-		dst += attribSize;
 	}
 
 	return S_OK;
@@ -303,7 +296,7 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 	}
 	
 	// Create vertex buffer for this batch based on available attributes
-	int vertexSize = GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
+	int vertexSize = GC3D::GetVertexSize(vertexAttributes);
 	int bufferSize = pointCount * vertexSize; // we may not need all this space, see pointCount above
 
 	ubyte*	vertices = (ubyte*)malloc( bufferSize );
@@ -325,19 +318,19 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 				static const uint64_t seed = 101;
 
 				Point p = {};
-				p.mtxIdx = (*point).get("mtx", 0).asUInt();
-				p.posIdx = (*point).get("pos", 0).asUInt();
-				p.nrmIdx = (*point).get("nrm", 0).asUInt();
-				p.clrIdx[0] = (*point)["clr"].get(uint(0), 0).asUInt();
-				p.clrIdx[1] = (*point)["clr"].get(uint(1), 0).asUInt();
-				p.texIdx[0] = (*point)["tex"].get(uint(0), 0).asUInt();
-				p.texIdx[1] = (*point)["tex"].get(uint(1), 0).asUInt();
-				p.texIdx[2] = (*point)["tex"].get(uint(2), 0).asUInt();
-				p.texIdx[3] = (*point)["tex"].get(uint(3), 0).asUInt();
-				p.texIdx[4] = (*point)["tex"].get(uint(4), 0).asUInt();
-				p.texIdx[5] = (*point)["tex"].get(uint(5), 0).asUInt();
-				p.texIdx[6] = (*point)["tex"].get(uint(6), 0).asUInt();
-				p.texIdx[7] = (*point)["tex"].get(uint(7), 0).asUInt();
+				p.mtxIdx = (*point).get("mtx", -1).asUInt();
+				p.posIdx = (*point).get("pos", -1).asUInt();
+				p.nrmIdx = (*point).get("nrm", -1).asUInt();
+				p.clrIdx[0] = (*point)["clr"].get(uint(0), -1).asUInt();
+				p.clrIdx[1] = (*point)["clr"].get(uint(1), -1).asUInt();
+				p.texIdx[0] = (*point)["tex"].get(uint(0), -1).asUInt();
+				p.texIdx[1] = (*point)["tex"].get(uint(1), -1).asUInt();
+				p.texIdx[2] = (*point)["tex"].get(uint(2), -1).asUInt();
+				p.texIdx[3] = (*point)["tex"].get(uint(3), -1).asUInt();
+				p.texIdx[4] = (*point)["tex"].get(uint(4), -1).asUInt();
+				p.texIdx[5] = (*point)["tex"].get(uint(5), -1).asUInt();
+				p.texIdx[6] = (*point)["tex"].get(uint(6), -1).asUInt();
+				p.texIdx[7] = (*point)["tex"].get(uint(7), -1).asUInt();
 
 				// Add the index of this vertex to our index buffer (every time)
 				uint64_t hashKey = util::hash64(&p, sizeof(p), seed);
@@ -349,7 +342,7 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 				} else {
 					// This points to a new vertex. Construct it.
 					index = vertexCount++;
-					buildInflatedVertex(vertices + vertexSize*index, p, vertexAttributes, vtx);
+					buildVertex(vertices + vertexSize*index, p, vertexAttributes, vtx);
 					indexSet[hashKey] = index;
 				}
 
@@ -462,9 +455,11 @@ uint RecordScenegraph(std::stringstream& s, uint& totalSize, const Json::Value& 
 
 		default:
 			WARN("Unrecognized scenegraph node type");
-			return E_FAIL;
+			return (i - nodeIndex) + 1;
 		}
 	}
+
+	return 0;
 }
 
 RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
@@ -516,10 +511,12 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		{
 			batchOffsets[i] = totalSize;
 		
-			// Save space for our vertexBufferID and indexBufferID
+			// Save space for our vertexBufferID, indexBufferID, and inputLayoutID
 			int vertexIndexBufferInvalidID = -1;
+			int inputLayoutInvalidID = -1;
 			WRITE(vertexIndexBufferInvalidID);
 			WRITE(vertexIndexBufferInvalidID);
+			WRITE(inputLayoutInvalidID);
 
 			Json::Value packetNodes = batchNodes[i]["packets"];
 			u16 nPackets = packetNodes.size();
@@ -763,7 +760,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 		{
 			WRITE(vertexBuffers[i].vertexAttributes);
 			WRITE(vertexBuffers[i].vertexCount);
-			uint vertBufSize = vertexBuffers[i].vertexCount * GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
+			uint vertBufSize = vertexBuffers[i].vertexCount * GC3D::GetVertexSize(vertexBuffers[i].vertexAttributes);
 			WRITE_ARRAY(vertexBuffers[i].vertexBuf, vertBufSize);
 
 			WRITE(indexBuffers[i].indexCount);
@@ -953,6 +950,7 @@ void DrawBatch(Renderer* renderer, GDModel::GDModel* model, u16 batchIndex, u16 
 	
 	VertexBufferID vbID = READ(int);
 	IndexBufferID ibID = READ(int);
+	VertexFormatID vfID = READ(int);
 	u16 numPackets = READ(u16);
 	
 	// These are partially updated by each packet
@@ -971,6 +969,7 @@ void DrawBatch(Renderer* renderer, GDModel::GDModel* model, u16 batchIndex, u16 
 			ApplyMaterial(renderer, model->materials[matIndex]);
 			renderer->setVertexFormat(model->vertFormat);
 			renderer->setVertexBuffer(0, vbID);
+			renderer->setVertexFormat(vfID);
 			renderer->setIndexBuffer(ibID);
 			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, nMatrixIndices);
 		renderer->apply();
@@ -1061,11 +1060,6 @@ RESULT RegisterGFX(Renderer* renderer, GDModel::GDModel* model)
 		}
 	}
 
-	// TODO: This is currently hacked to be the full vertex every time
-	FormatDesc formatBuf[13];
-	GC3D::ConvertGCVertexFormat(FULL_VERTEX_ATTRIBS, formatBuf);
-	model->vertFormat = renderer->addVertexFormat(formatBuf, util::bitcount(FULL_VERTEX_ATTRIBS), shaders[0]);
-
 	// Register vertex and index buffers
 	ubyte* head = gfxData.vertexIndexBuffers;
 	for (uint i = 0; i < gfxData.nVertexIndexBuffers; i++)
@@ -1073,19 +1067,24 @@ RESULT RegisterGFX(Renderer* renderer, GDModel::GDModel* model)
 		ubyte* batch = model->_asset + model->batchOffsetTable[i];
 		VertexBufferID* batchVBID = (VertexBufferID*)batch;
 		IndexBufferID*  batchIBID = (IndexBufferID*)(batch + sizeof(batchVBID));
-		assert(*batchVBID == -1 && *batchIBID == -1);
+		VertexFormatID* batchVFID = (VertexFormatID*)(batch + sizeof(batchVBID) + sizeof(batchIBID));
+		assert(*batchVBID == -1 && *batchIBID == -1 && *batchVFID == -1);
 
 		u16 attributes = READ(u16);
 		int numVertices = READ(u16);
-		int vbSize = numVertices * GC3D::GetVertexSize(FULL_VERTEX_ATTRIBS);
+		int vbSize = numVertices * GC3D::GetVertexSize(attributes);
 		void* vertices = READ_ARRAY(ubyte, vbSize);
 
 		int numIndices = READ(u16);
 		int ibSize = numIndices * sizeof(u16);
 		void* indices = READ_ARRAY(ubyte, ibSize);
 
+		FormatDesc formatBuf[MAX_VERTEX_ATTRIBS];
+		GC3D::ConvertGCVertexFormat(attributes, formatBuf);
+
 		*batchVBID = renderer->addVertexBuffer(vbSize, STATIC, vertices);
 		*batchIBID = renderer->addIndexBuffer(ibSize, 2, STATIC, indices);
+		*batchVFID = renderer->addVertexFormat(formatBuf, MAX_VERTEX_ATTRIBS, shaders[0]);
 	}
 
 	return S_OK;
@@ -1275,7 +1274,7 @@ RESULT GDModel::Draw(Renderer* renderer, GDModel* model)
 			break;
 
 		case SG_PRIM:
-			WARN("Drawing Batch %u with Material %u", node->index, matIndex); 
+			LOG("Drawing Batch %u with Material %u", node->index, matIndex); 
 			DrawBatch(renderer, model, node->index, matIndex);
 			break;	
 		}

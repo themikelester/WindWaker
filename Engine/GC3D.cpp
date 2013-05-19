@@ -9,8 +9,6 @@
 
 namespace GC3D
 {
-	const int MAX_VERTEX_ATTRIBS = 13;
-
 	FormatDesc __GCformat[MAX_VERTEX_ATTRIBS] =
 	{
 		// Stream, Type, Format, Size
@@ -44,9 +42,9 @@ namespace GC3D
 
 	int GetVertexSize (u16 attribFlags)
 	{
-
-		int vertSize = 0;
-		for (int i = 0; i < MAX_VERTEX_ATTRIBS; ++i) 
+		// Always include Matrix Index (whether it's enabled or not)
+		int vertSize = __GCformat[0].size * formatSize[__GCformat[0].format];
+		for (int i = 1; i < MAX_VERTEX_ATTRIBS; ++i) 
 		{
 			if ( attribFlags & (1 << i) )
 			{
@@ -64,9 +62,14 @@ namespace GC3D
 		int formatBufIndex = 0;
 		for (int i = 0; i < MAX_VERTEX_ATTRIBS; ++i) 
 		{
-			if ( attribFlags & (1 << i) )
+			formatBuf[i] = __GCformat[i];
+
+			if (i == 0) continue; // Never disable the Matrix Index (we'll set it to 0)
+			
+			// Every attribute will be enabled, but set the size to 0 for those we don't need
+			if ( (attribFlags & (1 << i)) == 0 )
 			{
-				formatBuf[formatBufIndex++] = __GCformat[i];
+				formatBuf[i].empty = true;
 			}
 		}
 	}

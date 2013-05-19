@@ -1654,7 +1654,7 @@ VertexFormatID Direct3D10Renderer::addVertexFormat(const FormatDesc *formatDesc,
 		desc[i].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
 		desc[i].InstanceDataStepRate = 0;
 
-		vf.vertexSize[stream] += size * getFormatSize(formatDesc[i].format);
+		vf.vertexSize[stream] += (formatDesc[i].empty ? 0 : size * getFormatSize(formatDesc[i].format));
 	}
 
 	HRESULT hr = device->CreateInputLayout(desc, nAttribs, shaders[shader].inputSignature->GetBufferPointer(), shaders[shader].inputSignature->GetBufferSize(), &vf.inputLayout);
@@ -2516,8 +2516,8 @@ void Direct3D10Renderer::drawTextured(const Primitives primitives, TexVertex *ve
 		texShader = addShader(texVS, NULL, texPS, 0, 0, 0, texDefs);
 
 		FormatDesc format[] = {
-			0, TYPE_VERTEX,   FORMAT_FLOAT, 2,
-			0, TYPE_TEXCOORD, FORMAT_FLOAT, 2,
+			0, TYPE_VERTEX,   FORMAT_FLOAT, 2, false, 
+			0, TYPE_TEXCOORD, FORMAT_FLOAT, 2, false
 		};
 		texVF = addVertexFormat(format, elementsOf(format), texShader);
 	}
