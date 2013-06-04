@@ -22,6 +22,7 @@
 #include "App.h"
 #include "GC3D.h"
 #include "GDModel.h"
+#include "GDAnim.h"
 
 //TODO: Remove HACK
 #include <fstream>
@@ -65,6 +66,27 @@ bool App::load()
 		file.read((char*)m_Blob, size);
 
 		GDModel::Load(&m_GDModel, m_Blob);
+	}
+	else
+	{
+		return false;
+	}
+    file.close();
+
+	file.open("../assets/walk.bck.blob", std::ios::in|std::ios::binary);
+	if(file.is_open())
+    {
+		char fourcc[4];
+		uint version;
+		uint size;
+        file.read(fourcc, 4);
+        file.read((char*)&version, 4);
+        file.read((char*)&size, 4);
+
+		m_AnimBlob = (ubyte*) malloc(size);
+		file.read((char*)m_AnimBlob, size);
+
+		GDAnim::Load(&m_restAnim, m_AnimBlob);
 	}
 	else
 	{
@@ -124,6 +146,6 @@ void App::drawFrame()
 		renderer->setGlobalConstant4x4f("WorldViewProj", view_proj);
 	renderer->apply();
 
-	GDModel::Update(&m_GDModel);
+	GDModel::Update(&m_GDModel, &m_restAnim, time*30);
 	GDModel::Draw(renderer, &m_GDModel);
 }

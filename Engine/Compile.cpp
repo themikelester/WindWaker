@@ -6,6 +6,7 @@
 
 #include "Compile.h"
 #include "GDModel.h"
+#include "GDAnim.h"
 
 using namespace std;
 
@@ -54,9 +55,13 @@ int _Compile(string filename)
 		{
 			IFC( GDModel::Compile(root, hdr, &data) );
 		}
+		else if (type == "bck")
+		{
+			IFC( GDAnim::Compile(root, hdr, &data) );
+		}
 		else 
 		{
-			std::cout << "Asset type " << type << " unsupported. Exiting." << endl;
+			WARN("Asset type \"%s\" unsupported. Exiting.\n", type.c_str());
 			IFC(-3);
 		}
 

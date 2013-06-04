@@ -21,6 +21,7 @@
 
 #include <Framework3/Direct3D10/D3D10App.h>
 #include "GDModel.h"
+#include "GDAnim.h"
 
 class App : public D3D10App
 {
@@ -44,5 +45,7 @@ public:
 
 protected:	
 	ubyte* m_Blob;
+	ubyte* m_AnimBlob;
 	GDModel::GDModel m_GDModel;
+	GDAnim::GDAnim m_restAnim;
 };

@@ -3,6 +3,7 @@
 #include "Common\common.h"
 #include "Framework3\Renderer.h"
 #include "GC3D.h"
+#include "GDAnim.h"
 
 // TODO: Remove this
 #include <d3d10.h>
@@ -58,11 +59,11 @@ namespace GDModel
 		char* psShaders;
 	};
 
-	typedef ubyte ModelAsset;
+	typedef ubyte* ModelAsset;
 
 	struct GDModel
 	{
-		ModelAsset* _asset;
+		ModelAsset _asset;
 
 		Scenegraph* scenegraph;
 		uint* batchOffsetTable; // Batch* batch3 = _asset + batchOffsetTable[3];
@@ -79,13 +80,6 @@ namespace GDModel
 		u16*   evpWeightedIndexOffsetTable;
 		WeightedIndex* evpWeightedIndexTable;
 
-		// TODO: This is only temporary until we start loading animations
-		// Store a copy of our original joints 
-		JointElement* emptyAnim;
-		
-		// TODO: Temprorary for testing
-		VertexFormatID vertFormat;
-
 		// This is set on load/reload, and tells the next draw call 
 		//		to load/reload all the GPU assets that we own
 		bool loadGPU; 
@@ -93,7 +87,7 @@ namespace GDModel
 	};
 	
 	
-	RESULT Update(GDModel* model);
+	RESULT Update(GDModel* model, GDAnim::GDAnim* anim, float time);
 
 	RESULT Draw(Renderer* renderer, GDModel* model);
 	
@@ -101,7 +95,7 @@ namespace GDModel
 	RESULT Compile(const Json::Value& root, Header& hdr, char** data);
 
 	//Save our asset reference and initialize the model in the renderer
-	RESULT Load(GDModel* model, ModelAsset* blob);
+	RESULT Load(GDModel* model, ModelAsset blob);
 	
 	//Unregister our old asset with the renderer. Delete our asset reference
 	RESULT Unload(GDModel* model);

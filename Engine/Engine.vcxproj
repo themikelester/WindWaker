@@ -95,6 +95,7 @@
     <ClInclude Include="App.h" />
     <ClInclude Include="Compile.h" />
     <ClInclude Include="GC3D.h" />
+    <ClInclude Include="GDAnim.h" />
     <ClInclude Include="GDModel.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
@@ -102,6 +103,7 @@
     <ClCompile Include="..\Common\Debug.cpp" />
     <ClCompile Include="App.cpp" />
     <ClCompile Include="GC3D.cpp" />
+    <ClCompile Include="GDAnim.cpp" />
     <ClCompile Include="GDModel.cpp" />
     <ClCompile Include="Compile.cpp" />
     <ClCompile Include="Util.cpp" />

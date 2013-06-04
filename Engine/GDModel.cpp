@@ -967,7 +967,6 @@ void DrawBatch(Renderer* renderer, GDModel::GDModel* model, u16 batchIndex, u16 
 
 		renderer->reset();
 			ApplyMaterial(renderer, model->materials[matIndex]);
-			renderer->setVertexFormat(model->vertFormat);
 			renderer->setVertexBuffer(0, vbID);
 			renderer->setVertexFormat(vfID);
 			renderer->setIndexBuffer(ibID);
@@ -1131,7 +1130,6 @@ RESULT GDModel::Unload(GDModel* model)
 	RESULT r;
 	
 	r = UnregisterGFX(model->gfxData.renderer, model);
-	free(model->emptyAnim);
 	
 	// Clear the whole model for safety
 	memset(model, 0, sizeof(model));
@@ -1139,7 +1137,7 @@ RESULT GDModel::Unload(GDModel* model)
 	return r;
 }
 
-RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
+RESULT GDModel::Load(GDModel* model, ModelAsset asset)
 {
 	model->_asset = asset;
 	ubyte* head = asset;
@@ -1184,12 +1182,6 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 		uint nJnt = READ(uint);
 		model->numJoints = nJnt;
 		model->jointTable = READ_ARRAY(JointElement, nJnt);
-
-		// TODO: This is temporary until we start loading animations
-		// Store a copy of the joints as our "default" animation
-		uint jointTableSize = sizeof(JointElement) * nJnt;
-		model->emptyAnim = (JointElement*) malloc(jointTableSize);
-		memcpy(model->emptyAnim, model->jointTable, jointTableSize);
 	END_READ_SECTION();
 	
 	BEGIN_READ_SECTION("evp1");
@@ -1236,17 +1228,18 @@ RESULT GDModel::Load(GDModel* model, ModelAsset* asset)
 	return S_OK;
 }
 
-RESULT GDModel::Update(GDModel* model)
+RESULT GDModel::Update(GDModel* model, GDAnim::GDAnim* anim, float time)
 {
 	// Grab the root joint straight from the animation. It's parent is the identity
-	model->jointTable[0].matrix = model->emptyAnim[0].matrix;
+	float weights[1] = {1.0f};
+	model->jointTable[0].matrix = GDAnim::GetJoint(&anim, weights, 1, 0, time);
 
 	for (uint i = 1; i < model->numJoints; i++)
 	{
 		JointElement& joint = model->jointTable[i];
 
 		// Calculate joint from animation at current time
-		mat4& animMatrix = model->emptyAnim[i].matrix;
+		mat4 animMatrix = animMatrix = GDAnim::GetJoint(&anim, weights, 1, i, time);
 
 		// Put in parent's frame
 		joint.matrix = model->jointTable[joint.parent].matrix * animMatrix;

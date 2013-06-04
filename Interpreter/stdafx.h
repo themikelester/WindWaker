@@ -18,4 +18,5 @@
 #include "common.h"
 #include "gx.h"
 #include "BMDRead\bmdread.h"
+#include "BMDRead\bck.h"
 #include "BMDRead\openfile.h"

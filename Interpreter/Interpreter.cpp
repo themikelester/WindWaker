@@ -1,6 +1,7 @@
 // Interpreter.cpp : Defines the entry point for the console application.
 //
 #include "stdafx.h"
+#include "BMDRead\bck.h"
 
 using namespace std;
 
@@ -43,24 +44,25 @@ Json::Value compileMaterials(Mat3& mat, Tex1& tex)
 	return node;
 }
 
-int _tmain(int argc, TCHAR* argv[])
+Json::Value ParseBCK(FILE* f, const char* filename)
 {
-	if(argc < 2)
-		return -1;
+	Json::Value root;
 
-	char* filename = argv[1];
-	OpenedFile* f = openFile(filename);
-	if(f == nullptr)
-		return -2;
-  
-	BModel* bmd = loadBmd(f->f);
-	if (bmd != nullptr)
-	{
-		cout << "Opened " << filename 
-		<< " for interpreting to intermediate format" << endl;
-	}
+	Bck* bck = readBck(f);
+	root["Info"]["type"] = "bck";
+	root["Info"]["version"] = 1.0;
+	root["Info"]["name"] = filename;
 
-	closeFile(f);
+	root["Anim"] = ( serializeBck(bck) );
+
+	return root;
+}
+
+Json::Value ParseBMD(FILE* f, const char* filename)
+{
+	Json::Value root;
+
+	BModel* bmd = loadBmd(f);
 
 	// Open our texture output file
 	char texFilename[128];
@@ -76,7 +78,6 @@ int _tmain(int argc, TCHAR* argv[])
 		return -4;
 	}
 
-	Json::Value root;
 	root["Info"]["type"] = "bmd";
 	root["Info"]["version"] = 1.0;
 	root["Info"]["name"] = filename;
@@ -94,10 +95,44 @@ int _tmain(int argc, TCHAR* argv[])
 	
 	root["Shd1"] = compileMaterials(bmd->mat3, bmd->tex1);
 
+	texFile.close();
+
+	return root;
+}
+
+int _tmain(int argc, TCHAR* argv[])
+{
+	Json::Value root;
+	
+	if(argc < 2)
+		return -1;
+
+	char* filename = argv[1];
+	OpenedFile* f = openFile(filename);
+	if(f == nullptr)
+	{
+		return -2;
+	}
+	else
+	{
+		cout << "Opened " << filename 
+		<< " for interpreting to intermediate format" << endl;
+	}
+
+	// Read the file type
+	char type[3];
+	fseek(f->f, 0x04, SEEK_CUR);
+	fread(type, 1, 3, f->f);
+
+	if ( memcmp(type, "bmd", 3) == 0 || memcmp(type, "bdl", 3) == 0 )
+		root = ParseBMD(f->f, filename);
+	else if ( memcmp(type, "bck", 3) == 0 )
+		root = ParseBCK(f->f, filename);
+	
+	closeFile(f);
+
 	Json::StyledWriter writer;
 	std::string outBmd = writer.write( root );
-
-	texFile.close();
 
 	char jsonFilename[128];
 	_snprintf_s(jsonFilename, 128, "%s.json", filename);
