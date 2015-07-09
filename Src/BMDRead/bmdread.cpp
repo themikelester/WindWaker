@@ -10,7 +10,7 @@ using namespace std;
 void readBmd(FILE* f, BModel* dst)
 { 
   //Make sure this is actually a BMD/BDL file
-  fseek(f, 0x04, SEEK_CUR);
+  fseek(f, 0x04, SEEK_SET);
   char hdr[3];
   fread(hdr, 1, 3, f);
   assert( memcmp(hdr, "bdl", 3) == 0 || memcmp(hdr, "bmd", 3) == 0 );

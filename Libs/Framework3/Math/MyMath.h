@@ -100,12 +100,16 @@ inline unsigned int getLowerPowerOfTwo(const unsigned int x){
 	return i >> 1;
 }
 
+#ifdef NEVER
 inline int round(float x){
 	if (x > 0){
 		return int(x + 0.5f);
-	} else {
+	}
+	else {
 		return int(x - 0.5f);
 	}
 }
+#endif // DEBUG
+
 
 #endif // _MYMATH_H_

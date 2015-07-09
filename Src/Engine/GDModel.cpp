@@ -161,7 +161,7 @@ void compileFrame(Json::Value& frameNode, mat4* matrix)
 			  float(scaleNode.get("z", 0).asDouble()));
 
 	if (s != identity4())
-		WARN("This model is using joint scaling. This is not yet tested!");
+		WARN("This model is using joint scaling. This is not yet tested!\n");
 
   //return t*rz*ry*rx*s; //scales seem to be local only
   *matrix = t*rz*ry*rx;
@@ -825,7 +825,7 @@ RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
 
 	//Append our binary texture data
 	std::string filename = root["Info"]["name"].asString();
-	std::string baseDir = "..\\";
+	std::string baseDir = "";
 	std::ifstream texFile(baseDir + filename + ".tex", std::ios::in | std::ios::binary);
 	if (!texFile.is_open())
 	{
@@ -1267,7 +1267,7 @@ RESULT GDModel::Draw(Renderer* renderer, GDModel* model)
 			break;
 
 		case SG_PRIM:
-			LOG("Drawing Batch %u with Material %u", node->index, matIndex); 
+			LOG("Drawing Batch %u with Material %u\n", node->index, matIndex); 
 			DrawBatch(renderer, model, node->index, matIndex);
 			break;	
 		}

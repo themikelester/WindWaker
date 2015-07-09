@@ -315,6 +315,7 @@ int WINAPI WinMain(HINSTANCE hThisInst, HINSTANCE hLastInst, LPTSTR lpszCmdLine,
 				} else {
 					Sleep(100);
 				}
+				Sleep(20);
 			}
 		} while (!app->isDone());
 

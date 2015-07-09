@@ -2342,7 +2342,8 @@ extern PNG_EXPORT(void, png_write_png) PNGARG((png_structp png_ptr,
  */
 #ifdef PNG_DEBUG
 #if (PNG_DEBUG > 0)
-#if !defined(PNG_DEBUG_FILE) && defined(_MSC_VER)
+#if !defined(PNG_DEBUG_FILE) && defined(_
+)
 #include <crtdbg.h>
 #if (PNG_DEBUG > 1)
 #define png_debug(l,m)  _RPT0(_CRT_WARN,m)

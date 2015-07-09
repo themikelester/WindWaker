@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -11,109 +11,91 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{C67796B3-899D-4AAA-B626-1BBF89887457}</ProjectGuid>
-    <RootNamespace>Engine</RootNamespace>
+    <ProjectGuid>{3F4B5F20-DB2E-4A76-A889-DA5923387AF6}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-    <UseOfMfc>false</UseOfMfc>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\Common\Common.props" />
+    <Import Project="TmlExe.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\Common\Common.props" />
+    <Import Project="TmlExe.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ROOT_DIR);$(ROOT_DIR)\Common;$(LIB_DIR);$(LIB_DIR)\JsonCpp\include</IncludePath>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ROOT_DIR);$(ROOT_DIR)\Common;$(LIB_DIR);$(LIB_DIR)\JsonCpp\include</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
+      <TargetMachine>MachineX86</TargetMachine>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EntryPointSymbol>
-      </EntryPointSymbol>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
-      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
+      <TargetMachine>MachineX86</TargetMachine>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <SubSystem>Windows</SubSystem>
-      <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\Common\common.h" />
-    <ClInclude Include="..\Common\Configuration.h" />
-    <ClInclude Include="..\Common\Debug.h" />
-    <ClInclude Include="..\Common\Random.h" />
-    <ClInclude Include="..\Common\Types.h" />
-    <ClInclude Include="App.h" />
-    <ClInclude Include="Compile.h" />
-    <ClInclude Include="GC3D.h" />
-    <ClInclude Include="GDAnim.h" />
-    <ClInclude Include="GDModel.h" />
-    <ClInclude Include="util.h" />
+    <ClCompile Include="..\src\engine\App.cpp" />
+    <ClCompile Include="..\src\engine\Compile.cpp" />
+    <ClCompile Include="..\src\engine\GC3D.cpp" />
+    <ClCompile Include="..\src\engine\GDAnim.cpp" />
+    <ClCompile Include="..\src\engine\GDModel.cpp" />
+    <ClCompile Include="..\src\engine\Util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Common\Debug.cpp" />
-    <ClCompile Include="App.cpp" />
-    <ClCompile Include="GC3D.cpp" />
-    <ClCompile Include="GDAnim.cpp" />
-    <ClCompile Include="GDModel.cpp" />
-    <ClCompile Include="Compile.cpp" />
-    <ClCompile Include="Util.cpp" />
+    <ClInclude Include="..\src\engine\App.h" />
+    <ClInclude Include="..\src\engine\Compile.h" />
+    <ClInclude Include="..\src\engine\GC3D.h" />
+    <ClInclude Include="..\src\engine\GDAnim.h" />
+    <ClInclude Include="..\src\engine\GDModel.h" />
+    <ClInclude Include="..\src\engine\util.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Framework3\Framework3.vcxproj">
-      <Project>{adf87dbe-89fe-490b-abfd-3a5a48ca517e}</Project>
+    <ProjectReference Include="Framework3.vcxproj">
+      <Project>{1c0a2b89-b426-405c-8f94-48a38b64ef7e}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\JsonCpp\JsonCpp.vcxproj">
-      <Project>{123422d4-ba11-482c-8360-6b59d16b77b6}</Project>
+    <ProjectReference Include="JsonCpp.vcxproj">
+      <Project>{ad1c53cd-7f33-4afd-a36f-ad7c80ac29a7}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

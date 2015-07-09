@@ -171,7 +171,6 @@ Common/Foundation/rakefile
 VerticesPreprocessed.txt
 
 ErrorLog.txt
-Assets/
-JsonCpp/doc/
-Tools/
+Data/Scratch
+Libs/bin
 *.sleepy

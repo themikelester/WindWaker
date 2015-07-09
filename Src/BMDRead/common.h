@@ -7,7 +7,8 @@
 #include <string>
 #include <vector>
 #include <cstdio>
-#include <iosfwd>
+#include <iosfwd> 
+#include <algorithm>
 
 typedef unsigned int uint;
 

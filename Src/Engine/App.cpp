@@ -52,7 +52,7 @@ bool App::load()
 {
 	RESULT r = S_OK;
 
-	std::ifstream file ("../assets/cl.bdl.blob", std::ios::in|std::ios::binary);
+	std::ifstream file ("../../Data/Scratch/Link/archive/bdl/cl.bdl.blob", std::ios::in|std::ios::binary);
 	if(file.is_open())
     {
 		char fourcc[4];
@@ -73,7 +73,7 @@ bool App::load()
 	}
     file.close();
 
-	file.open("../assets/walk.bck.blob", std::ios::in|std::ios::binary);
+	file.open("../../Data/Scratch/LkAnm/archive/bcks/walk.bck.blob", std::ios::in|std::ios::binary);
 	if(file.is_open())
     {
 		char fourcc[4];

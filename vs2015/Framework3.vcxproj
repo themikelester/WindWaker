@@ -1,0 +1,168 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{1C0A2B89-B426-405C-8F94-48A38B64EF7E}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="TmlLib.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="TmlLib.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ROOT_DIR)\Src;$(IncludePath);$(LIB_DIR)\JsonCpp\include</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ROOT_DIR)\Src;$(IncludePath);$(LIB_DIR)\JsonCpp\include</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NO_PNG;NO_JPEG;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NO_PNG;NO_JPEG;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\libs\framework3\audio\Audio.cpp" />
+    <ClCompile Include="..\libs\framework3\BaseApp.cpp" />
+    <ClCompile Include="..\libs\framework3\Config.cpp" />
+    <ClCompile Include="..\libs\framework3\CPU.cpp" />
+    <ClCompile Include="..\libs\framework3\direct3d10\D3D10App.cpp" />
+    <ClCompile Include="..\libs\framework3\direct3d10\Direct3D10Renderer.cpp" />
+    <ClCompile Include="..\libs\framework3\gui\Button.cpp" />
+    <ClCompile Include="..\libs\framework3\gui\CheckBox.cpp" />
+    <ClCompile Include="..\libs\framework3\gui\Dialog.cpp" />
+    <ClCompile Include="..\libs\framework3\gui\DropDownList.cpp" />
+    <ClCompile Include="..\libs\framework3\gui\Label.cpp" />
+    <ClCompile Include="..\libs\framework3\gui\Slider.cpp" />
+    <ClCompile Include="..\libs\framework3\gui\Widget.cpp" />
+    <ClCompile Include="..\libs\framework3\imaging\Image.cpp" />
+    <ClCompile Include="..\libs\framework3\math\Frustum.cpp" />
+    <ClCompile Include="..\libs\framework3\math\MathTools.cpp" />
+    <ClCompile Include="..\libs\framework3\math\Noise.cpp" />
+    <ClCompile Include="..\libs\framework3\math\Reorder.cpp" />
+    <ClCompile Include="..\libs\framework3\math\Scissor.cpp" />
+    <ClCompile Include="..\libs\framework3\math\SphericalHarmonics.cpp" />
+    <ClCompile Include="..\libs\framework3\math\Vector.cpp" />
+    <ClCompile Include="..\libs\framework3\Platform.cpp" />
+    <ClCompile Include="..\libs\framework3\Renderer.cpp" />
+    <ClCompile Include="..\libs\framework3\util\BSP.cpp" />
+    <ClCompile Include="..\libs\framework3\util\ConvexHull.cpp" />
+    <ClCompile Include="..\libs\framework3\util\Model.cpp" />
+    <ClCompile Include="..\libs\framework3\util\String.cpp" />
+    <ClCompile Include="..\libs\framework3\util\TexturePacker.cpp" />
+    <ClCompile Include="..\libs\framework3\util\Thread.cpp" />
+    <ClCompile Include="..\libs\framework3\util\Tokenizer.cpp" />
+    <ClCompile Include="..\libs\framework3\windows\WindowsBase.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\libs\framework3\audio\al.h" />
+    <ClInclude Include="..\libs\framework3\audio\alc.h" />
+    <ClInclude Include="..\libs\framework3\audio\alut.h" />
+    <ClInclude Include="..\libs\framework3\audio\Audio.h" />
+    <ClInclude Include="..\libs\framework3\audio\codec.h" />
+    <ClInclude Include="..\libs\framework3\audio\os_types.h" />
+    <ClInclude Include="..\libs\framework3\audio\vorbisfile.h" />
+    <ClInclude Include="..\libs\framework3\BaseApp.h" />
+    <ClInclude Include="..\libs\framework3\Config.h" />
+    <ClInclude Include="..\libs\framework3\CPU.h" />
+    <ClInclude Include="..\libs\framework3\direct3d10\D3D10App.h" />
+    <ClInclude Include="..\libs\framework3\direct3d10\Direct3D10Renderer.h" />
+    <ClInclude Include="..\libs\framework3\gui\Button.h" />
+    <ClInclude Include="..\libs\framework3\gui\CheckBox.h" />
+    <ClInclude Include="..\libs\framework3\gui\Dialog.h" />
+    <ClInclude Include="..\libs\framework3\gui\DropDownList.h" />
+    <ClInclude Include="..\libs\framework3\gui\Label.h" />
+    <ClInclude Include="..\libs\framework3\gui\Slider.h" />
+    <ClInclude Include="..\libs\framework3\gui\Widget.h" />
+    <ClInclude Include="..\libs\framework3\imaging\Image.h" />
+    <ClInclude Include="..\libs\framework3\imaging\jconfig.h" />
+    <ClInclude Include="..\libs\framework3\imaging\jmorecfg.h" />
+    <ClInclude Include="..\libs\framework3\imaging\jpeglib.h" />
+    <ClInclude Include="..\libs\framework3\imaging\png.h" />
+    <ClInclude Include="..\libs\framework3\imaging\pngconf.h" />
+    <ClInclude Include="..\libs\framework3\imaging\zconf.h" />
+    <ClInclude Include="..\libs\framework3\imaging\zlib.h" />
+    <ClInclude Include="..\libs\framework3\math\Frustum.h" />
+    <ClInclude Include="..\libs\framework3\math\MathTools.h" />
+    <ClInclude Include="..\libs\framework3\math\MyMath.h" />
+    <ClInclude Include="..\libs\framework3\math\Noise.h" />
+    <ClInclude Include="..\libs\framework3\math\Reorder.h" />
+    <ClInclude Include="..\libs\framework3\math\Scissor.h" />
+    <ClInclude Include="..\libs\framework3\math\SIMD.h" />
+    <ClInclude Include="..\libs\framework3\math\SphericalHarmonics.h" />
+    <ClInclude Include="..\libs\framework3\math\Vector.h" />
+    <ClInclude Include="..\libs\framework3\Platform.h" />
+    <ClInclude Include="..\libs\framework3\Renderer.h" />
+    <ClInclude Include="..\libs\framework3\util\Array.h" />
+    <ClInclude Include="..\libs\framework3\util\BSP.h" />
+    <ClInclude Include="..\libs\framework3\util\ConvexHull.h" />
+    <ClInclude Include="..\libs\framework3\util\Hash.h" />
+    <ClInclude Include="..\libs\framework3\util\KdTree.h" />
+    <ClInclude Include="..\libs\framework3\util\Model.h" />
+    <ClInclude Include="..\libs\framework3\util\Queue.h" />
+    <ClInclude Include="..\libs\framework3\util\String.h" />
+    <ClInclude Include="..\libs\framework3\util\TexturePacker.h" />
+    <ClInclude Include="..\libs\framework3\util\Thread.h" />
+    <ClInclude Include="..\libs\framework3\util\Tokenizer.h" />
+    <ClInclude Include="..\libs\framework3\windows\resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\libs\framework3\windows\Resources.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
