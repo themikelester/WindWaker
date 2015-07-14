@@ -34,7 +34,7 @@ public:
 	bool initAPI();
 	void exitAPI();
 
-	bool load();
+	bool load(int argc, char** argv);
 	void unload();
 
 	void resetCamera();

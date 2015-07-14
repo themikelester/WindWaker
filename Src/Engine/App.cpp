@@ -48,11 +48,15 @@ void App::exitAPI()
 	D3D10App::exitAPI();
 }
 
-bool App::load()
+bool App::load(int argc, char** argv)
 {
 	RESULT r = S_OK;
 
-	std::ifstream file ("../../Data/Scratch/Link/archive/bdl/cl.bdl.blob", std::ios::in|std::ios::binary);
+	if (argc < 1) { return false; }
+
+	char* filename = argv[0];
+
+	std::ifstream file(filename, std::ios::in | std::ios::binary);
 	if(file.is_open())
     {
 		char fourcc[4];
