@@ -52,10 +52,11 @@ bool App::load(int argc, char** argv)
 {
 	RESULT r = S_OK;
 
+	// Parse arguments
 	if (argc < 1) { return false; }
-
 	char* filename = argv[0];
 
+	// Load Model
 	std::ifstream file(filename, std::ios::in | std::ios::binary);
 	if(file.is_open())
     {
@@ -77,6 +78,7 @@ bool App::load(int argc, char** argv)
 	}
     file.close();
 
+	// Load Animation
 	file.open("../../Data/Scratch/LkAnm/archive/bcks/walk.bck.blob", std::ios::in|std::ios::binary);
 	if(file.is_open())
     {
@@ -98,7 +100,8 @@ bool App::load(int argc, char** argv)
 	}
     file.close();
 
-	defaultFont = renderer->addFont("../Assets/Fonts/Future.dds", "../Assets/Fonts/Future.font", linearClamp);
+	// Load Font
+	defaultFont = renderer->addFont("../../Data/Fonts/Future.dds", "../../Data/Fonts/Future.font", linearClamp);
 
 cleanup:
 	return SUCCEEDED(r);
