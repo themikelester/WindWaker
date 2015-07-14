@@ -58,7 +58,7 @@ public:
 
 	void initGUI();
 
-	virtual bool load(){ return true; };
+	virtual bool load( int argc, char** argv ){ return true; };
 	virtual void unload(){};
 
 	virtual void beginFrame() = 0;

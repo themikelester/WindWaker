@@ -151,18 +151,20 @@ int WINAPI WinMain(HINSTANCE hThisInst, HINSTANCE hLastInst, LPTSTR lpszCmdLine,
 	}
 
 	// Parse the command line
+	int argc = 0;
+	char* argv[256] = {};
 	char* arg = strtok(lpszCmdLine, " ");
-	if (arg != nullptr)
+	while (arg != nullptr)
 	{
-		do 
-		{
-			if (strcmp(arg, "-compile") == 0)
-			{
-				int result = _Compile(strtok(nullptr, " "));
-				exit(result);
-			}
-		} while ((arg = strtok(nullptr, " ")) != nullptr);
+		argv[argc] = arg;
+		++argc;
+		arg = strtok(nullptr, " ");
 	}
+
+#ifdef COMPILER
+	int result = _Compile( argv[0] );
+	exit(result);
+#endif
 
 	MSG msg;
 	WNDCLASS wincl;
@@ -243,7 +245,7 @@ int WINAPI WinMain(HINSTANCE hThisInst, HINSTANCE hLastInst, LPTSTR lpszCmdLine,
 			if (!app->initCaps()) break;
 			if (!app->initAPI()) break;
 
-			if (!app->load()){
+			if (!app->load( argc, argv )){
 				app->closeWindow(true, false);
 			}
 
