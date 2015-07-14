@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Configuration.h" // Must be included first
-#include "Debug.h"
 #include "Types.h"
+#include <Framework3\Debug.h>
 #include <Framework3\Platform.h>
 
 // RESULT Enum and related functions
