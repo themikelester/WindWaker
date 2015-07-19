@@ -744,6 +744,11 @@ RESULT GDModel::Load(GDModel* model, const BModel* bdl)
 			memset(batch, 0xff, sizeof(_Batch));
 			model->batchPtrs[i] = (ubyte*)batch;
 
+			if (batches[i].matrixType != 0)
+			{
+				WARN("Batch matrix type %u not yet supported!\n", batches[i].matrixType);
+			}
+
 			const u32 kMaxPackets = 1024;
 			u16 packetIdxCounts[ kMaxPackets ];
 			loadVertexIndexBuffers(batches[i], bdl->vtx1, 
