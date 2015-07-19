@@ -70,6 +70,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(ROOT_DIR)\Src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -84,6 +85,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(ROOT_DIR)\Src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -97,6 +99,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>$(ROOT_DIR)\Src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -107,14 +110,46 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Common\Debug.cpp" />
+    <ClCompile Include="..\Src\BMDRead\bck.cpp" />
+    <ClCompile Include="..\Src\BMDRead\bmdread.cpp" />
+    <ClCompile Include="..\Src\BMDRead\common.cpp" />
+    <ClCompile Include="..\Src\BMDRead\drw1.cpp" />
+    <ClCompile Include="..\Src\BMDRead\evp1.cpp" />
+    <ClCompile Include="..\Src\BMDRead\inf1.cpp" />
+    <ClCompile Include="..\Src\BMDRead\jnt1.cpp" />
+    <ClCompile Include="..\Src\BMDRead\mat3.cpp" />
+    <ClCompile Include="..\Src\BMDRead\mdl3.cpp" />
+    <ClCompile Include="..\Src\BMDRead\openfile.cpp" />
+    <ClCompile Include="..\Src\BMDRead\shp1.cpp" />
+    <ClCompile Include="..\Src\BMDRead\tex1.cpp" />
+    <ClCompile Include="..\Src\BMDRead\vtx1.cpp" />
     <ClCompile Include="..\src\engine\App.cpp" />
-    <ClCompile Include="..\src\engine\Compile.cpp" />
     <ClCompile Include="..\src\engine\GC3D.cpp" />
     <ClCompile Include="..\src\engine\GDAnim.cpp" />
     <ClCompile Include="..\src\engine\GDModel.cpp" />
+    <ClCompile Include="..\Src\Engine\GeneratePS.cpp" />
+    <ClCompile Include="..\Src\Engine\GenerateVS.cpp" />
     <ClCompile Include="..\src\engine\Util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Common\Configuration.h" />
+    <ClInclude Include="..\Common\Debug.h" />
+    <ClInclude Include="..\Src\BMDRead\bck.h" />
+    <ClInclude Include="..\Src\BMDRead\bmdread.h" />
+    <ClInclude Include="..\Src\BMDRead\common.h" />
+    <ClInclude Include="..\Src\BMDRead\drw1.h" />
+    <ClInclude Include="..\Src\BMDRead\evp1.h" />
+    <ClInclude Include="..\Src\BMDRead\inf1.h" />
+    <ClInclude Include="..\Src\BMDRead\jnt1.h" />
+    <ClInclude Include="..\Src\BMDRead\mat3.h" />
+    <ClInclude Include="..\Src\BMDRead\mdl3.h" />
+    <ClInclude Include="..\Src\BMDRead\openfile.h" />
+    <ClInclude Include="..\Src\BMDRead\resource.h" />
+    <ClInclude Include="..\Src\BMDRead\shp1.h" />
+    <ClInclude Include="..\Src\BMDRead\tex1.h" />
+    <ClInclude Include="..\Src\BMDRead\Vector3.h" />
+    <ClInclude Include="..\Src\BMDRead\vtx1.h" />
     <ClInclude Include="..\src\engine\App.h" />
     <ClInclude Include="..\src\engine\Compile.h" />
     <ClInclude Include="..\src\engine\GC3D.h" />
@@ -129,6 +164,9 @@
     <ProjectReference Include="JsonCpp.vcxproj">
       <Project>{ad1c53cd-7f33-4afd-a36f-ad7c80ac29a7}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Src\BMDRead\Vector3.inc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

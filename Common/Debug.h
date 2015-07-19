@@ -1,5 +1,6 @@
 #pragma once
 #include <assert.h>
+#include "Configuration.h"
 
 #ifdef _DEBUG
 #	define DEBUG_ONLY(x) x

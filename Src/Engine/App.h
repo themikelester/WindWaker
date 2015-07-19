@@ -44,7 +44,6 @@ public:
 	bool onKey(const uint key, const bool pressed);
 
 protected:	
-	ubyte* m_Blob;
 	ubyte* m_AnimBlob;
 	GDModel::GDModel m_GDModel;
 	GDAnim::GDAnim m_restAnim;

@@ -1,30 +1,11 @@
 #pragma once
 #include "Common\common.h"
-#include "Compile.h"
 #include "Framework3\Math\Vector.h"
 
+struct Bck;
 
 namespace GDAnim
 {	
-	typedef ubyte* AnimAssetPtr;
-
-	struct AnimAsset
-	{
-		u16 animationLength; //in time units
-
-		u16 numJoints;	//that many animated joints at offsetToJoints
-		u16 scaleCount; //that many keys at offsetToScales
-		u16 rotCount;   //that many keys at offsetToRots
-		u16 transCount; //that many keys at offsetToTrans
-
-		u32 offsetToJoints; // offset (from "data") to array of JointTimeline array
-		u32 offsetToScales;	// offset (from "data") to array of scale Keys
-		u32 offsetToRots;	// offset (from "data") to array of rotation Keys
-		u32 offsetToTrans;	// offset (from "data") to array of translation Keys
-
-		ubyte data[0];
-	};
-
 	struct Key
 	{
 		float time;
@@ -47,22 +28,18 @@ namespace GDAnim
 
 	struct GDAnim
 	{
-		AnimAsset* __asset;
-		
 		Key* scaleKeys;
 		Key* rotKeys;
 		Key* transKeys;
 
+		u16 animLength; //in time units
 		JointTimeline* jointTimelines;
 	};
 
 	mat4& GetJoint(GDAnim** anims, float* weights, uint numAnims, uint jointID, float time);
 
-	//Given a JSON object, compile a binary blob that can be loaded with Load() and Reload()
-	RESULT Compile(const Json::Value& root, Header& hdr, char** data);
-
 	//Save our asset reference and any other initialization
-	RESULT Load(GDAnim* , ubyte* blob);
+	RESULT Load(GDAnim* anim, const Bck* bck);
 	
 	//Our backing asset is about to be deleted. Do any necessary cleanup.
 	RESULT Unload(GDAnim* anim);

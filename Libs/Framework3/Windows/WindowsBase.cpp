@@ -21,8 +21,6 @@
 
 #include "Resource.h"
 
-#include "Engine\Compile.h"
-
 #include "../CPU.h"
 #include "../BaseApp.h"
 #include <direct.h>
@@ -160,11 +158,6 @@ int WINAPI WinMain(HINSTANCE hThisInst, HINSTANCE hLastInst, LPTSTR lpszCmdLine,
 		++argc;
 		arg = strtok(nullptr, " ");
 	}
-
-#ifdef COMPILER
-	int result = _Compile( argv[0] );
-	exit(result);
-#endif
 
 	MSG msg;
 	WNDCLASS wincl;

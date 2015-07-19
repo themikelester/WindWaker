@@ -108,9 +108,6 @@
     <ClCompile Include="..\libs\framework3\windows\WindowsBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Libs\Framework3\Debug.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\libs\framework3\BaseApp.h">

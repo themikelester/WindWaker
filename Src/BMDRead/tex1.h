@@ -8,7 +8,7 @@
 
 uint serializeImage(int ID, u8* buf, int size);
 
-struct Image;
+struct BmdImage;
 struct ImageHeader
 {
   uint imageIndex;
@@ -48,7 +48,7 @@ const int I8_A8 = 3;
 const int RGBA8 = 6;
 const int DXT1 = 14;
 
-struct Image
+struct BmdImage
 {
   int format;
   int width, height;
@@ -96,7 +96,7 @@ struct Tex1
   //separately to save some memory
   //(this way only about 1/6 of the memory required
   //otherwise is used)
-  std::vector<Image > images;
+  std::vector<BmdImage > images;
 
   Json::Value serialize()
   {

@@ -12,8 +12,6 @@
 
 typedef unsigned int uint;
 
-const float PI = 3.14159265358979323f;
-
 void log(const char* msg, ...);
 void warn(const char* msg, ...);
 std::string getString(int pos, FILE* f);

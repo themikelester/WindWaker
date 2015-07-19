@@ -1,103 +1,102 @@
 #include "GDAnim.h"
-#include <sstream>
+#include "BMDRead\bck.h"
 
-uint CompileChannel(Json::Value jointsRoot, char* channelName, GDAnim::KeyIndex* channelIndexSparseArray, std::stringstream& writer)
+RESULT GDAnim::Load(GDAnim* anim, const Bck* bck)
 {
-	GDAnim::Key key;
-	uint keyCount = 0;
-	uint numSubChannels = 3;
+	u32 jointCount = bck->anims.size();
+	anim->animLength = bck->animationLength;
 
-	for (uint subChannel = 0; subChannel < numSubChannels; subChannel++)
+	// jnt0.sx[0], jnt0.sx[1], ..., jnt1.sx[0], jnt1.sx[1], ... jnt0.sy[0], jnt0.sy[1], ...
+
+	const u32 kMaxKeysPerChannel = 1024;
+	anim->scaleKeys = (Key*)malloc(sizeof(Key) * kMaxKeysPerChannel);
+	anim->transKeys = (Key*)malloc(sizeof(Key) * kMaxKeysPerChannel);
+	anim->rotKeys = (Key*)malloc(sizeof(Key) * kMaxKeysPerChannel);
+	anim->jointTimelines = (JointTimeline*)malloc(sizeof(JointTimeline) * jointCount);
+
+	// Scale
+	u32 keyOffset = 0;
+	for (u32 i = 0; i < jointCount; i++)
 	{
-		GDAnim::KeyIndex* subchannelIndex = &channelIndexSparseArray[subChannel]; 
+		JointTimeline& jt = anim->jointTimelines[i];
 
-		for (uint jointIndex = 0; jointIndex < jointsRoot.size(); jointIndex++)
+		jt.s[0].index = keyOffset;
+		for (u32 j = 0; j < bck->anims[i].scalesX.size(); j++)
 		{
-			Json::Value channelNode = jointsRoot[jointIndex][channelName][subChannel];
-
-			subchannelIndex->count = channelNode.size();
-			subchannelIndex->index = keyCount;
-
-			for (uint i = 0; i < channelNode.size(); i++)
-			{
-				key.time =		float(channelNode[i]["Time"].asDouble());
-				key.value =		float(channelNode[i]["Value"].asDouble());
-				key.tangent =	float(channelNode[i]["Tangent"].asDouble());
-
-				keyCount++;
-				writer.write((char*)&key, sizeof(key));
-			}
-		
-			// channelIndexSparseArray is a pointer to an element of Joint Timeline
-			// the stride between the channel indices for this channel is thus the size of a JointTimeline
-			static const uint channelIndexStride = sizeof(GDAnim::JointTimeline);
-			subchannelIndex = (GDAnim::KeyIndex*)((char*)subchannelIndex + channelIndexStride);
+			anim->scaleKeys[keyOffset++] = (Key&)bck->anims[i].scalesX[j];
 		}
+		jt.s[0].count = keyOffset - jt.s[0].index;
+
+		jt.s[1].index = keyOffset;
+		for (u32 j = 0; j < bck->anims[i].scalesY.size(); j++)
+		{
+			anim->scaleKeys[keyOffset++] = (Key&)bck->anims[i].scalesY[j];
+		}
+		jt.s[1].count = keyOffset - jt.s[1].index;
+
+		jt.s[2].index = keyOffset;
+		for (u32 j = 0; j < bck->anims[i].scalesZ.size(); j++)
+		{
+			anim->scaleKeys[keyOffset++] = (Key&)bck->anims[i].scalesZ[j];
+		}
+		jt.s[2].count = keyOffset - jt.s[2].index;
 	}
 
-	return keyCount;
-}
+	// Translation
+	keyOffset = 0;
+	for (u32 i = 0; i < jointCount; i++)
+	{
+		JointTimeline& jt = anim->jointTimelines[i];
 
-RESULT GDAnim::Compile(const Json::Value& root, Header& hdr, char** data)
-{
-#	define COMPILER_VERSION 1
+		jt.t[0].index = keyOffset;
+		for (u32 j = 0; j < bck->anims[i].translationsX.size(); j++)
+		{
+			anim->transKeys[keyOffset++] = (Key&)bck->anims[i].translationsX[j];
+		}
+		jt.t[0].count = keyOffset - jt.t[0].index;
 
-	RESULT r = S_OK;
-	std::stringstream infoStream;
-	std::stringstream dataStream;
-	uint dataSize = 0;
+		jt.t[1].index = keyOffset;
+		for (u32 j = 0; j < bck->anims[i].translationsY.size(); j++)
+		{
+			anim->transKeys[keyOffset++] = (Key&)bck->anims[i].translationsY[j];
+		}
+		jt.t[1].count = keyOffset - jt.t[1].index;
 
-	// Disable the debug heap. JsonCpp uses a ton of malloc/free's.
-	DEBUG_ONLY(_CrtSetDbgFlag(0));
+		jt.t[2].index = keyOffset;
+		for (u32 j = 0; j < bck->anims[i].translationsZ.size(); j++)
+		{
+			anim->transKeys[keyOffset++] = (Key&)bck->anims[i].translationsZ[j];
+		}
+		jt.t[2].count = keyOffset - jt.t[2].index;
+	}
 
-	AnimAsset anim = {0};
-	
-	Json::Value jointRoot = root["Anim"]["Joints"];
-	uint numJoints = jointRoot.size();
-	
-	JointTimeline* timelines = (JointTimeline*) malloc(numJoints * sizeof(JointTimeline));
-		
-	anim.offsetToScales = dataStream.tellp();
-	anim.scaleCount += CompileChannel(jointRoot, "Scales", timelines[0].s, dataStream);
-	
-	anim.offsetToRots = dataStream.tellp();
-	anim.rotCount += CompileChannel(jointRoot, "Rotations", timelines[0].r, dataStream);
-	
-	anim.offsetToTrans = dataStream.tellp();
-	anim.transCount += CompileChannel(jointRoot, "Translations", timelines[0].t, dataStream);
+	// Rotation
+	keyOffset = 0;
+	for (u32 i = 0; i < jointCount; i++)
+	{
+		JointTimeline& jt = anim->jointTimelines[i];
 
-	anim.offsetToJoints = dataStream.tellp();
-	anim.numJoints = numJoints;
-	dataStream.write((char*) timelines, numJoints * sizeof(JointTimeline));
-	
-	anim.animationLength = root["Anim"]["AnimLength"].asUInt();
-		
-	infoStream.write((char*)&anim, sizeof(anim));
+		jt.r[0].index = keyOffset;
+		for (u32 j = 0; j < bck->anims[i].rotationsX.size(); j++)
+		{
+			anim->rotKeys[keyOffset++] = (Key&)bck->anims[i].rotationsX[j];
+		}
+		jt.r[0].count = keyOffset - jt.r[0].index;
 
-	// Copy our data to the new buffer
-	uint blobSize = infoStream.tellp() + dataStream.tellp();
-	*data = (char*) malloc(blobSize);
-	infoStream.read(*data, infoStream.tellp());
-	dataStream.read((*data + infoStream.tellp()), dataStream.tellp());
+		jt.r[1].index = keyOffset;
+		for (u32 j = 0; j < bck->anims[i].rotationsY.size(); j++)
+		{
+			anim->rotKeys[keyOffset++] = (Key&)bck->anims[i].rotationsY[j];
+		}
+		jt.r[1].count = keyOffset - jt.r[1].index;
 
-	memcpy(hdr.fourCC, "anm1", 4);
-	hdr.version = COMPILER_VERSION;
-	hdr.sizeBytes = blobSize;
-
-	DEBUG_ONLY(_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF));
-
-	return r;
-}
-
-RESULT GDAnim::Load(GDAnim* anim, ubyte* blob)
-{
-	anim->__asset = (AnimAsset*) blob;
-	
-	anim->scaleKeys = (Key*)(anim->__asset->data + anim->__asset->offsetToScales);
-	anim->rotKeys   = (Key*)(anim->__asset->data + anim->__asset->offsetToRots);
-	anim->transKeys = (Key*)(anim->__asset->data + anim->__asset->offsetToTrans);
-
-	anim->jointTimelines = (JointTimeline*)(anim->__asset->data + anim->__asset->offsetToJoints);
+		jt.r[2].index = keyOffset;
+		for (u32 j = 0; j < bck->anims[i].rotationsZ.size(); j++)
+		{
+			anim->rotKeys[keyOffset++] = (Key&)bck->anims[i].rotationsZ[j];
+		}
+		jt.r[2].count = keyOffset - jt.r[2].index;
+	}
 	
 	return S_OK;
 }
@@ -105,6 +104,10 @@ RESULT GDAnim::Load(GDAnim* anim, ubyte* blob)
 //Our backing asset is about to be deleted. Do any necessary cleanup.
 RESULT GDAnim::Unload(GDAnim* anim)
 {
+	free(anim->jointTimelines);
+	free(anim->rotKeys);
+	free(anim->scaleKeys);
+	free(anim->transKeys);
 	memset(anim, 0, sizeof(anim));
 	return S_OK;
 }
@@ -112,16 +115,8 @@ RESULT GDAnim::Unload(GDAnim* anim)
 //Initialize our new asset. The asset manager will then delete the old asset.
 RESULT GDAnim::Reload(GDAnim* anim, ubyte* blob)
 {
-	anim->__asset = (AnimAsset*) blob;
-	
-	anim->scaleKeys = (Key*)(anim->__asset->data + anim->__asset->offsetToScales);
-	anim->rotKeys   = (Key*)(anim->__asset->data + anim->__asset->offsetToRots);
-	anim->transKeys = (Key*)(anim->__asset->data + anim->__asset->offsetToTrans);
-
-	anim->jointTimelines = (JointTimeline*)(anim->__asset->data + anim->__asset->offsetToJoints);
 	return S_OK;
 }
-
 
 template<class T>
 T interpolate(T v1, T d1, T v2, T d2, T t) //t in [0, 1]
@@ -161,7 +156,7 @@ mat4& GDAnim::GetJoint(GDAnim** anims, float* weights, uint numAnims, uint joint
 {
 	GDAnim* anim = anims[0];
 		
-	time = fmod(time, anim->__asset->animationLength);
+	time = fmod(time, anim->animLength);
 
 	vec3 vscale;
 	vec3 rot;

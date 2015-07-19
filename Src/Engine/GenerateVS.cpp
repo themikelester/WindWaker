@@ -1,4 +1,18 @@
-#include "stdafx.h"
+#include <stdio.h>
+#include <tchar.h>
+#include <stdarg.h>
+#include <fstream>
+#include <sstream>
+
+#include "json\json.h"
+
+#include "common.h"
+#include "gx.h"
+#include "BMDRead\bmdread.h"
+#include "BMDRead\bck.h"
+#include "BMDRead\openfile.h"
+
+#define PI 3.14159265358979323846f
 
 // TODO: Diffuse lighting functions
 std::string getLightCalcString(uint litMask, uint attenuationFunc, uint diffuseFunc, bool alpha)
@@ -9,7 +23,7 @@ std::string getLightCalcString(uint litMask, uint attenuationFunc, uint diffuseF
 		return "0.5f";
 }
 
-std::string getColorString(MColor& color)
+std::string getColorString(const MColor& color)
 {
 	std::ostringstream out;
 	out.setf(std::ios::fixed, std::ios::floatfield);
@@ -18,7 +32,7 @@ std::string getColorString(MColor& color)
 	return out.str();
 }
 
-std::string getMtxString(uint slot, TexMtxInfo mtx, std::string texGenSrc)
+std::string getMtxString(uint slot, const TexMtxInfo mtx, std::string texGenSrc)
 {
 	std::ostringstream out;
 	out.setf(std::ios::fixed, std::ios::floatfield);
@@ -89,9 +103,9 @@ std::string getMtxString(uint slot, TexMtxInfo mtx, std::string texGenSrc)
 	return out.str();
 }
 
-std::string GenerateVS(Mat3* matInfo, int index)
+std::string GenerateVS(const Mat3* matInfo, int index)
 {
-	Material& mat = matInfo->materials[index];
+	const Material& mat = matInfo->materials[index];
 
 	std::ostringstream out;
 	out.setf(std::ios::fixed, std::ios::floatfield);
@@ -176,7 +190,7 @@ std::string GenerateVS(Mat3* matInfo, int index)
 	
 	for (uint chanSel = 0; chanSel < nChans; chanSel++)
 	{
-		ColorChanInfo& chanInfo = matInfo->colorChanInfos[mat.chanControls[chanSel]];
+		const ColorChanInfo& chanInfo = matInfo->colorChanInfos[mat.chanControls[chanSel]];
 		std::string chanTarget, vtxColor, ambColor, matColor, ambLight, diffLight;
 		std::string swizzle, chan;
 		bool alpha;
@@ -209,7 +223,7 @@ std::string GenerateVS(Mat3* matInfo, int index)
 
 	for (uint i = 0; i < nTexGens; i++)
 	{
-		TexGenInfo& texGen = matInfo->texGenInfos[mat.texGenInfos[i]];
+		const TexGenInfo& texGen = matInfo->texGenInfos[mat.texGenInfos[i]];
 		std::string texGenSrc, texGenFunc, matrix;
 		
 		switch(texGen.texGenSrc)

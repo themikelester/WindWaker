@@ -1,4 +1,16 @@
-#include "stdafx.h"
+#include <stdio.h>
+#include <tchar.h>
+#include <stdarg.h>
+#include <fstream>
+#include <sstream>
+
+#include "json\json.h"
+
+#include "common.h"
+#include "gx.h"
+#include "BMDRead\bmdread.h"
+#include "BMDRead\bck.h"
+#include "BMDRead\openfile.h"
 
 const std::string varResultName = "result";
 const std::string varRegisterName[3] = {"r0", "r1", "r2"};
@@ -15,7 +27,7 @@ bool IsNewTexCombo(uint texMap, uint texCoordId, bool oldCombos[] )
 	}
 }
 
-std::string GetSwapModeSwizzleString(TevSwapModeTable& table)
+std::string GetSwapModeSwizzleString(const TevSwapModeTable& table)
 {
 	const char* components[4] = { "r", "g", "b", "a" };
 	return std::string(".") + components[table.r] + components[table.g] + components[table.b] + components[table.a];
@@ -380,9 +392,9 @@ std::string GetAlphaOpString(uint op, uint bias, uint scale, uint clamp, uint ou
 	return str.str() + "\n";
 }
 
-std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
+std::string GeneratePS(const Tex1* texInfo, const Mat3* matInfo, int index)
 {
-	Material& mat = matInfo->materials[index];
+	const Material& mat = matInfo->materials[index];
 
 	std::ostringstream out;
 	out.setf(std::ios::fixed, std::ios::floatfield);
@@ -499,9 +511,9 @@ std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 		const TevOrderInfo& order = matInfo->tevOrderInfos[mat.tevOrderInfo[i]];
 		const TevStageInfo& stage = matInfo->tevStageInfos[mat.tevStageInfo[i]];
 		
-		TevSwapModeInfo& swap = matInfo->tevSwapModeInfos[mat.tevSwapModeInfo[i]];
-		TevSwapModeTable& rasTable = matInfo->tevSwapModeTables[mat.tevSwapModeTable[swap.rasSel]];
-		TevSwapModeTable& texTable = matInfo->tevSwapModeTables[mat.tevSwapModeTable[swap.texSel]];
+		const TevSwapModeInfo& swap = matInfo->tevSwapModeInfos[mat.tevSwapModeInfo[i]];
+		const TevSwapModeTable& rasTable = matInfo->tevSwapModeTables[mat.tevSwapModeTable[swap.rasSel]];
+		const TevSwapModeTable& texTable = matInfo->tevSwapModeTables[mat.tevSwapModeTable[swap.texSel]];
 		uint8 noSwap[4] = {0,1,2,3};
 
 		if (memcmp(&rasTable, noSwap, 4) != 0)
@@ -528,7 +540,7 @@ std::string GeneratePS(Tex1* texInfo, Mat3* matInfo, int index)
 		out << GetAlphaOpString(uint(stage.alphaOp), uint(stage.alphaBias), uint(stage.alphaScale), uint(stage.alphaClamp), uint(stage.alphaRegId), alphaInputs);
 	}
 
-	AlphaCompare& cmpInfo = matInfo->alphaCompares[mat.alphaCompIndex];
+	const AlphaCompare& cmpInfo = matInfo->alphaCompares[mat.alphaCompIndex];
 	std::string op;
 
 	switch (cmpInfo.alphaOp)

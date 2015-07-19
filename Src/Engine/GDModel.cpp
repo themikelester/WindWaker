@@ -1,25 +1,13 @@
 #include "Framework3\Renderer.h"
 #include "GDModel.h"
-#include "Compile.h"
 #include "GC3D.h"
 #include "util.h"
+#include "BMDRead\bmdread.h"
 
-#include <sstream>
-#include <fstream>
-
-#define COMPILER_VERSION 1;
-#define WRITE(val) { s.write( (char*)&val, sizeof(val) ); totalSize += sizeof(val); }
-#define WRITE_ARRAY(arr, size) { s.write((char*)arr, size); totalSize += size; }
 #define READ(type) *(type*)head; head += sizeof(type);
 #define READ_ARRAY(type, count) (type*)head; head += sizeof(type) * count;
 
 #define MAX_NAME_LENGTH 16
-
-struct SectionHeader
-{
-	char fourcc[4];
-	int size; // Including this header
-};
 
 struct VertexBuffer 
 {
@@ -43,6 +31,22 @@ struct Point
 	u16 texIdx[8];
 };
 
+struct _Packet
+{
+	u16 indexCount;
+	u16 matrixCount;
+	u16* matrixIndices;
+};
+
+struct _Batch
+{
+	VertexBufferID vbID;
+	IndexBufferID ibID;
+	VertexFormatID vfID;
+	u16 numPackets;
+	_Packet* packets;
+};
+
 struct TextureResource
 {
 	char name[MAX_NAME_LENGTH];
@@ -62,6 +66,7 @@ struct TextureDesc
 
 	uint sizeBytes;
 	uint texDataOffset;
+	u8* imgData;
 };
 
 struct MaterialInfo
@@ -140,70 +145,57 @@ struct Scenegraph
 	u16 type; //One of SgNodeType
 };
 
-// Compile a coordinate frame into an affine matrix
-void compileFrame(Json::Value& frameNode, mat4* matrix)
+void loadFrame(const Frame& frame, mat4* matrix)
 {
 	mat4 t, rx, ry, rz, s;
 
-	Json::Value& transNode = frameNode["translation"];
-	t = translate(float(transNode.get("x", 0).asDouble()), 
-				  float(transNode.get("y", 0).asDouble()), 
-				  float(transNode.get("z", 0).asDouble()));
+	t = translate(frame.t[0], frame.t[1], frame.t[2]);
 
-	Json::Value& rotNode = frameNode["rotation"];
-	rx = rotateX(float(rotNode.get("x", 0).asDouble()/360.0 * 2*PI));
-	ry = rotateY(float(rotNode.get("y", 0).asDouble()/360.0 * 2*PI));
-	rz = rotateZ(float(rotNode.get("z", 0).asDouble()/360.0 * 2*PI));
-	
-	Json::Value& scaleNode = frameNode["scale"];
-	s = scale(float(scaleNode.get("x", 0).asDouble()), 
-			  float(scaleNode.get("y", 0).asDouble()), 
-			  float(scaleNode.get("z", 0).asDouble()));
+	rx = rotateX(frame.rx / 360.0 * 2 * PI);
+	ry = rotateY(frame.ry / 360.0 * 2 * PI);
+	rz = rotateZ(frame.rz / 360.0 * 2 * PI);
+
+	s = scale(frame.sx, frame.sy, frame.sz);
 
 	if (s != identity4())
-		WARN("This model is using joint scaling. This is not yet tested!\n");
+		WARN("This model is using joint scaling. This is not yet implemented!\n");
 
-  //return t*rz*ry*rx*s; //scales seem to be local only
-  *matrix = t*rz*ry*rx;
+	//return t*rz*ry*rx*s; //scales seem to be local only
+	*matrix = t*rz*ry*rx;
 }
 
-// Read and interpret Batch1 vertex attribs
-u16 compileAttribs(Json::Value& attribsNode)
+u16 loadAttribs(const Attributes& attribs)
 {
 	u16 attribFlags = 0;
-
-	if (attribsNode.get("mtx", false).asBool()) attribFlags |= HAS_MATRIX_INDICES;
-	if (attribsNode.get("pos", false).asBool()) attribFlags |= HAS_POSITIONS;
-	if (attribsNode.get("nrm", false).asBool()) attribFlags |= HAS_NORMALS;
-
-	if (attribsNode["clr"].get(uint(0), false).asBool()) attribFlags |= HAS_COLORS0;
-	if (attribsNode["clr"].get(uint(1), false).asBool()) attribFlags |= HAS_COLORS1;
-	
-	if (attribsNode["tex"].get(uint(0), false).asBool()) attribFlags |= HAS_TEXCOORDS0;
-	if (attribsNode["tex"].get(uint(1), false).asBool()) attribFlags |= HAS_TEXCOORDS1;
-	if (attribsNode["tex"].get(uint(2), false).asBool()) attribFlags |= HAS_TEXCOORDS2;
-	if (attribsNode["tex"].get(uint(3), false).asBool()) attribFlags |= HAS_TEXCOORDS3;
-	if (attribsNode["tex"].get(uint(4), false).asBool()) attribFlags |= HAS_TEXCOORDS4;
-	if (attribsNode["tex"].get(uint(5), false).asBool()) attribFlags |= HAS_TEXCOORDS5;
-	if (attribsNode["tex"].get(uint(6), false).asBool()) attribFlags |= HAS_TEXCOORDS6;
-	if (attribsNode["tex"].get(uint(7), false).asBool()) attribFlags |= HAS_TEXCOORDS7;
-
+	if (attribs.hasMatrixIndices) { attribFlags |= HAS_MATRIX_INDICES; }
+	if (attribs.hasPositions) { attribFlags |= HAS_POSITIONS; }
+	if (attribs.hasNormals) { attribFlags |= HAS_NORMALS; }
+	if (attribs.hasColors[0]) { attribFlags |= HAS_COLORS0; }
+	if (attribs.hasColors[1]) { attribFlags |= HAS_COLORS1; }
+	if (attribs.hasTexCoords[0]) { attribFlags |= HAS_TEXCOORDS0; }
+	if (attribs.hasTexCoords[1]) { attribFlags |= HAS_TEXCOORDS1; }
+	if (attribs.hasTexCoords[2]) { attribFlags |= HAS_TEXCOORDS2; }
+	if (attribs.hasTexCoords[3]) { attribFlags |= HAS_TEXCOORDS3; }
+	if (attribs.hasTexCoords[4]) { attribFlags |= HAS_TEXCOORDS4; }
+	if (attribs.hasTexCoords[5]) { attribFlags |= HAS_TEXCOORDS5; }
+	if (attribs.hasTexCoords[6]) { attribFlags |= HAS_TEXCOORDS6; }
+	if (attribs.hasTexCoords[7]) { attribFlags |= HAS_TEXCOORDS7; }
 	return attribFlags;
 }
 
-RESULT buildVertex(ubyte* dst, Point& point, u16 attribs, const Json::Value& vtx)
+RESULT buildVertex(ubyte* dst, const Index& point, u16 attribs, const Vtx1& vtx)
 {
 	uint attribSize;
 	uint vtxSize = GC3D::GetVertexSize(attribs);
-	
+
 	ASSERT(attribs & HAS_POSITIONS);
 
 	// TODO: We can save a uint in the vertex structure if we remove this force
 	// Always set this attribute. The default is 0.
 	attribSize = GC3D::GetAttributeSize(HAS_MATRIX_INDICES);
 	if (attribs & HAS_MATRIX_INDICES) {
-		ASSERT(point.mtxIdx/3 < 10); 
-		uint matrixIndex = point.mtxIdx/3;
+		ASSERT(point.matrixIndex / 3 < 10);
+		uint matrixIndex = point.matrixIndex / 3;
 		memcpy(dst, &matrixIndex, attribSize);
 	}
 	else
@@ -211,23 +203,17 @@ RESULT buildVertex(ubyte* dst, Point& point, u16 attribs, const Json::Value& vtx
 		memset(dst, 0, attribSize);
 	}
 	dst += attribSize;
-	
+
 	attribSize = GC3D::GetAttributeSize(HAS_POSITIONS);
 	if (attribs & HAS_POSITIONS) {
-		float3 pos;
-		pos.x = float(vtx["positions"][point.posIdx].get(uint(0), 0).asDouble());
-		pos.y = float(vtx["positions"][point.posIdx].get(uint(1), 0).asDouble());
-		pos.z = float(vtx["positions"][point.posIdx].get(uint(2), 0).asDouble());
+		Vector3f pos = vtx.positions[point.posIndex];
 		memcpy(dst, &pos, attribSize);
 		dst += attribSize;
 	}
-	
+
 	attribSize = GC3D::GetAttributeSize(HAS_NORMALS);
 	if (attribs & HAS_NORMALS) {
-		float3 nrm;
-		nrm.x = float(vtx["normals"][point.nrmIdx].get(uint(0), 0).asDouble());
-		nrm.y = float(vtx["normals"][point.nrmIdx].get(uint(1), 0).asDouble());
-		nrm.z = float(vtx["normals"][point.nrmIdx].get(uint(2), 0).asDouble());
+		Vector3f nrm = vtx.normals[point.normalIndex];
 		memcpy(dst, &nrm, attribSize);
 		dst += attribSize;
 	}
@@ -236,15 +222,11 @@ RESULT buildVertex(ubyte* dst, Point& point, u16 attribs, const Json::Value& vtx
 	{
 		u16 colorAttrib = HAS_COLORS0 << i;
 		attribSize = GC3D::GetAttributeSize(colorAttrib);
-		
+
 		if (attribs & colorAttrib) {
-			ubyte clr[4];
-			clr[0] = ubyte(vtx["colors"][point.clrIdx[i]].get("r", 0).asUInt());
-			clr[1] = ubyte(vtx["colors"][point.clrIdx[i]].get("g", 0).asUInt());
-			clr[2] = ubyte(vtx["colors"][point.clrIdx[i]].get("b", 0).asUInt());
-			clr[3] = ubyte(vtx["colors"][point.clrIdx[i]].get("a", 0).asUInt());
-			memcpy(dst, clr, attribSize);
-			ASSERT(attribSize == sizeof(clr));
+			Color color = vtx.colors[i][point.colorIndex[i]];
+			memcpy(dst, &color, attribSize);
+			ASSERT(attribSize == sizeof(color));
 			dst += attribSize;
 		}
 	}
@@ -255,10 +237,8 @@ RESULT buildVertex(ubyte* dst, Point& point, u16 attribs, const Json::Value& vtx
 		attribSize = GC3D::GetAttributeSize(texAttrib);
 
 		if (attribs & texAttrib) {
-			float2 st;
-			st.x = float(vtx["texcoords"][i][point.texIdx[i]].get("s", 0).asDouble());
-			st.y = float(vtx["texcoords"][i][point.texIdx[i]].get("t", 0).asDouble());
-			memcpy(dst, st, attribSize);
+			TexCoord st = vtx.texCoords[i][point.texCoordIndex[i]];
+			memcpy(dst, &st, attribSize);
 			ASSERT(attribSize == sizeof(st));
 			dst += attribSize;
 		}
@@ -267,81 +247,65 @@ RESULT buildVertex(ubyte* dst, Point& point, u16 attribs, const Json::Value& vtx
 	return S_OK;
 }
 
-void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx, 
-							   VertexBuffer* vb, IndexBuffer* ib, u16* packetIndexCounts)
+void loadVertexIndexBuffers(const Batch& batch, const Vtx1& vtx,
+	VertexBuffer* vb, IndexBuffer* ib, u16* packetIndexCounts)
 {
 	std::map<u64, u16> indexSet;
 	int pointCount = 0;
 	int primCount = 0;
-			
-	u16 vertexAttributes = compileAttribs(batch["attribs"]);
+
+	u16 vertexAttributes = loadAttribs(batch.attribs);
 
 	// Count "points" in this batch
 	// A point is a struct of indexes that point to each attribute of the 3D vertex
 	// pointCount represents the maximum number of vertices needed. If we find dups, there may be less.
-	Json::Value packetNodes = batch["packets"];
-	for (uint i = 0; i < packetNodes.size(); i++)
-	{				
-		Json::Value primNodes = packetNodes[i]["primitives"];
-		for (uint j = 0; j < primNodes.size(); j++)
+	for (uint i = 0; i < batch.packets.size(); i++)
+	{
+		const std::vector<Primitive>& prims = batch.packets[i].primitives;
+		for (uint j = 0; j < prims.size(); j++)
 		{
 			primCount += 1;
-			pointCount += primNodes[j]["points"].size();
+			pointCount += prims[j].points.size();
 
-			// TODO: We're still writing the crazy type version to the intermediate file
-			//			Change this to something nice like 0 = TRISTRIP, 1 = TRIFAN, >1 = UNKNOWN 
-			if (primNodes[j]["type"].asInt() != 152)
+			if (prims[j].type != 0x98)
 				WARN("Unsupported primitive type detected! This will probably not draw correctly");
 		}
 	}
-	
+
 	// Create vertex buffer for this batch based on available attributes
 	int vertexSize = GC3D::GetVertexSize(vertexAttributes);
 	int bufferSize = pointCount * vertexSize; // we may not need all this space, see pointCount above
 
-	ubyte*	vertices = (ubyte*)malloc( bufferSize );
-	u16*	indices = (u16*)malloc( (pointCount + primCount) * sizeof(u16));
+	ubyte*	vertices = (ubyte*)malloc(bufferSize);
+	u16*	indices = (u16*)malloc((pointCount + primCount) * sizeof(u16));
 
 	// Interlace each attribute into a single vertex stream 
 	// (may be duplicates because it's using indices into the vtx1 buffer) 
 	int indexCount = 0;
-	int vertexCount = 0; 
+	int vertexCount = 0;
 	int packetCount = 0;
 	int packetIndexOffset = 0;
-	STL_FOR_EACH(packet, batch["packets"])
+	STL_FOR_EACH(packet, batch.packets)
 	{
-		STL_FOR_EACH(prim, (*packet)["primitives"])
+		STL_FOR_EACH(prim, packet->primitives)
 		{
-			STL_FOR_EACH(point, (*prim)["points"])
+			STL_FOR_EACH(point, prim->points)
 			{
 				uint index;
 				static const uint64_t seed = 101;
-
-				Point p = {};
-				p.mtxIdx = (*point).get("mtx", -1).asUInt();
-				p.posIdx = (*point).get("pos", -1).asUInt();
-				p.nrmIdx = (*point).get("nrm", -1).asUInt();
-				p.clrIdx[0] = (*point)["clr"].get(uint(0), -1).asUInt();
-				p.clrIdx[1] = (*point)["clr"].get(uint(1), -1).asUInt();
-				p.texIdx[0] = (*point)["tex"].get(uint(0), -1).asUInt();
-				p.texIdx[1] = (*point)["tex"].get(uint(1), -1).asUInt();
-				p.texIdx[2] = (*point)["tex"].get(uint(2), -1).asUInt();
-				p.texIdx[3] = (*point)["tex"].get(uint(3), -1).asUInt();
-				p.texIdx[4] = (*point)["tex"].get(uint(4), -1).asUInt();
-				p.texIdx[5] = (*point)["tex"].get(uint(5), -1).asUInt();
-				p.texIdx[6] = (*point)["tex"].get(uint(6), -1).asUInt();
-				p.texIdx[7] = (*point)["tex"].get(uint(7), -1).asUInt();
-
+				
 				// Add the index of this vertex to our index buffer (every time)
-				uint64_t hashKey = util::hash64(&p, sizeof(p), seed);
+				uint64_t hashKey = util::hash64(&point, sizeof(point), seed);
 				auto indexPair = indexSet.find(hashKey);
 				if (indexPair != indexSet.end())
 				{
 					// An equivalent vertex already exists, use that index
 					index = indexPair->second;
-				} else {
+				}
+				else {
 					// This points to a new vertex. Construct it.
 					index = vertexCount++;
+					const Index& p = point[0];
 					buildVertex(vertices + vertexSize*index, p, vertexAttributes, vtx);
 					indexSet[hashKey] = index;
 				}
@@ -353,7 +317,7 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 			// Add a strip-cut index to reset to a new triangle strip
 			indices[indexCount++] = STRIP_CUT_INDEX;
 		}
-			
+
 		// Might as well remove the last strip-cut index
 		indexCount -= 1;
 
@@ -370,23 +334,17 @@ void compileVertexIndexBuffers(Json::Value& batch, const Json::Value& vtx,
 	ib->indexBuf = indices;
 }
 
-#define BEGIN_SECTION(FOURCC) {	\
-	memcpy(sectionHeaders[currentSection].fourcc, FOURCC, 4); \
-	sectionHeaderOffsets[currentSection] = totalSize; \
-	WRITE(sectionHeaders[0]); }
-
-#define END_SECTION() { \
-	sectionHeaders[currentSection].size = totalSize - sectionHeaderOffsets[currentSection]; \
-	currentSection++; }
-
-
-uint RecordScenegraph(std::stringstream& s, uint& totalSize, const Json::Value& root, std::vector<u16>& jointParents, 
-					  uint nodeIndex = 0, uint matIndex = -1, bool onDown = true, uint parentJoint = -1) 
+uint RecordScenegraph( const BModel* bmodel, std::vector< Scenegraph >& scenelist, std::vector<u16>& jointParents, uint nodeIndex = 0, uint matIndex = -1, 
+	                  bool onDown = true, uint parentJoint = -1) 
 {
+	//static Json::Value sgNode = root["Inf1"]["scenegraph"];
+	//static uint nNodes = sgNode.size();
+	//static Json::Value indexToMatIndex = root["Mat3"]["indexToMatIndex"];
+	//static uint lastMatIndex = uint(-1);
+
 	// Table to convert scene node indexes into material indexes
-	static Json::Value sgNode = root["Inf1"]["scenegraph"];
-	static uint nNodes = sgNode.size();
-	static Json::Value indexToMatIndex = root["Mat3"]["indexToMatIndex"];
+	const std::vector<Node>& scenegraph = bmodel->inf1.scenegraph;
+	const std::vector<int>& indexToMatIndex = bmodel->mat3.indexToMatIndex;
 	static uint lastMatIndex = uint(-1);
 
 	uint tmpJoint = parentJoint;
@@ -394,18 +352,18 @@ uint RecordScenegraph(std::stringstream& s, uint& totalSize, const Json::Value& 
 
 	Scenegraph prevPrim = {-1, -1};
 
-	for (uint i = nodeIndex; i < nNodes; i++)
+	for (uint i = nodeIndex; i < scenegraph.size(); i++)
 	{
 		Scenegraph sg;
-		sg.index = u16(sgNode[i].get("index", -1).asUInt());
-		sg.type =  u16(sgNode[i].get("type", -1).asUInt());
+		sg.index = scenegraph[i].index;
+		sg.type = scenegraph[i].type;
 
 		switch(sg.type)
 		{
 		case SG_MATERIAL:
-			tmpMat = indexToMatIndex.get(sg.index, -1).asUInt();
+			tmpMat = indexToMatIndex[sg.index];
 			ASSERT(tmpMat != uint(-1));
-			onDown = (root["Mat3"]["materials"][tmpMat]["flag"].asUInt() == 1);
+			onDown = (bmodel->mat3.materials[ tmpMat ].flag == 1);
 			break;
 
 		case SG_PRIM:
@@ -414,10 +372,10 @@ uint RecordScenegraph(std::stringstream& s, uint& totalSize, const Json::Value& 
 				if (matIndex != lastMatIndex)
 				{
 					Scenegraph material = {matIndex, SG_MATERIAL};
-					WRITE(material);
+					scenelist.push_back(material);
 					lastMatIndex = matIndex;
 				}
-				WRITE(sg);
+				scenelist.push_back(sg);
 			}
 			else
 			{
@@ -431,17 +389,17 @@ uint RecordScenegraph(std::stringstream& s, uint& totalSize, const Json::Value& 
 			break;
 
 		case SG_DOWN:
-			i += RecordScenegraph(s, totalSize, root, jointParents, i+1, tmpMat, onDown, tmpJoint); 
+			i += RecordScenegraph(bmodel, scenelist, jointParents, i+1, tmpMat, onDown, tmpJoint); 
 			
 			if ( prevPrim.type == SG_PRIM && !onDown) 
 			{
 				if (matIndex != lastMatIndex)
 				{
-					Scenegraph material = {matIndex, SG_MATERIAL};
-					WRITE(material);
+					Scenegraph material = { matIndex, SG_MATERIAL };
+					scenelist.push_back(material);
 					lastMatIndex = matIndex;
 				}
-				WRITE(prevPrim);
+				scenelist.push_back(prevPrim);
 			}
 			break;
 
@@ -450,7 +408,7 @@ uint RecordScenegraph(std::stringstream& s, uint& totalSize, const Json::Value& 
 			break;
 				
 		case SG_END:
-			WRITE(sg);
+			scenelist.push_back(sg);
 			break;
 
 		default:
@@ -460,427 +418,6 @@ uint RecordScenegraph(std::stringstream& s, uint& totalSize, const Json::Value& 
 	}
 
 	return 0;
-}
-
-RESULT GDModel::Compile(const Json::Value& root, Header& hdr, char** data)
-{
-	std::stringstream s;
-	uint totalSize = 0;
-	uint currentSection = 0;
-
-	// Disable the debug heap. JsonCpp uses a ton of malloc/free's.
-	DEBUG_ONLY(_CrtSetDbgFlag(0));
-
-	// Post-processing data
-	const uint numSections = 9;
-	uint sectionHeaderOffsets[numSections];
-	SectionHeader sectionHeaders[numSections];
-	
-	uint batchOffsetsOffset;
-	
-	VertexBuffer* vertexBuffers;
-	IndexBuffer* indexBuffers;
-	u16 nVertexIndexBuffers = 0;
-
-	std::vector<u16> jointParents;
-
-	uint totalTexSize = 0;
-
-	// Scenegraph
-	BEGIN_SECTION("scn1");
-	RecordScenegraph(s, totalSize, root, jointParents);
-	END_SECTION();
-
-	// Batches
-	BEGIN_SECTION("bch1");
-		Json::Value batchNodes = root["Shp1"]["batches"];
-		u16 nBatches = batchNodes.size();
-		WRITE(nBatches);
-		
-		// Save some space for our batch offsets
-		// TODO: These should be offsets from the start of the batch list. Not _asset.
-		batchOffsetsOffset = totalSize;
-		uint* batchOffsets = (uint*) malloc(sizeof(uint) * nBatches);
-		WRITE_ARRAY(batchOffsets, sizeof(uint) * nBatches);
-
-		nVertexIndexBuffers = nBatches;
-		vertexBuffers = (VertexBuffer*) malloc(sizeof(VertexBuffer) * nBatches);
-		indexBuffers = (IndexBuffer*) malloc(sizeof(IndexBuffer) * nBatches);
-
-		for (uint i = 0; i < nBatches; i++)
-		{
-			batchOffsets[i] = totalSize;
-		
-			// Save space for our vertexBufferID, indexBufferID, and inputLayoutID
-			int vertexIndexBufferInvalidID = -1;
-			int inputLayoutInvalidID = -1;
-			WRITE(vertexIndexBufferInvalidID);
-			WRITE(vertexIndexBufferInvalidID);
-			WRITE(inputLayoutInvalidID);
-
-			Json::Value packetNodes = batchNodes[i]["packets"];
-			u16 nPackets = packetNodes.size();
-			WRITE(nPackets);
-			
-			u16* packetIndexCounts = (u16*)malloc(nPackets * sizeof(u16));
-			compileVertexIndexBuffers(batchNodes[i], root["Vtx1"], &vertexBuffers[i], 
-				&indexBuffers[i], packetIndexCounts);
-
-			for (uint j = 0; j < nPackets; j++)
-			{
-				Json::Value matrixTableNodes = packetNodes[j]["matrixTable"];
-				u16 nMatrixIndexes = matrixTableNodes.size();
-				WRITE(nMatrixIndexes);
-
-				for (uint k = 0; k < nMatrixIndexes; k++)
-				{
-					u16 mtxIdx = matrixTableNodes.get(k, 0).asInt();
-					WRITE(mtxIdx);
-				}
-
-				WRITE(packetIndexCounts[j]);
-			}
-
-			free(packetIndexCounts);
-		}
-	END_SECTION();
-
-	// Materials
-	BEGIN_SECTION("mat1");
-	{		
-		// Depth Modes
-		Json::Value depthNodes = root["Mat3"]["zModes"];
-		u16 nDepthStates = depthNodes.size();
-		WRITE(nDepthStates);
-		for (uint i = 0; i < nDepthStates; i++)
-		{
-			DepthMode dm;
-			dm.testEnable = depthNodes[i].get("enable", true).asBool();
-			dm.writeEnable = depthNodes[i].get("enableUpdate", true).asBool();
-			dm.func = GC3D::ConvertGCDepthFunction(depthNodes[i].get("zFunc", 3).asUInt());
-			WRITE(dm);
-		}
-		
-		// Blend Modes
-		Json::Value blendNodes = root["Mat3"]["blendInfos"];
-		u16 nBlendStates = blendNodes.size();
-		WRITE(nBlendStates);
-		for (uint i = 0; i < nBlendStates; i++)
-		{
-			BlendMode bm;
-			bm.blendOp = GC3D::ConvertGCBlendOp(blendNodes[i].get("blendMode", 0).asUInt());
-			bm.srcFactor = GC3D::ConvertGCBlendFactor(blendNodes[i].get("srcFactor", 0).asUInt());
-			bm.dstFactor = GC3D::ConvertGCBlendFactor(blendNodes[i].get("dstFactor", 0).asUInt());
-			WRITE(bm);
-		}
-
-		// Cull Modes
-		Json::Value cullNodes = root["Mat3"]["cullModes"];
-		u16 nCullStates = cullNodes.size();
-		WRITE(nCullStates);
-		for (uint i = 0; i < nCullStates; i++)
-		{
-			u8 cullMode = GC3D::ConvertGCCullMode(cullNodes[i].asUInt());
-			WRITE(cullMode);
-		}
-
-		// MaterialInfo info
-		Json::Value matNodes = root["Mat3"]["materials"];
-		Json::Value texLookupNodes = root["Mat3"]["texStageIndexToTextureIndex"];
-		u16 nMaterials = matNodes.size();
-		WRITE(nMaterials);
-		for (uint i = 0; i < nMaterials; i++)
-		{
-			MaterialInfo mat;
-			mat.shader = i;
-			mat.depthMode = matNodes[i].get("zModeIndex", 0).asUInt();
-			mat.blendMode = matNodes[i].get("blendIndex", 0).asUInt();
-			mat.rasterMode = matNodes[i].get("cullIndex", 0).asUInt();
-
-			for (uint j = 0; j < 8; j++)
-			{
-				int stageIndex = matNodes[i]["texStages"].get(uint(j), 0xffff).asUInt();
-				mat.samplers[j] = texLookupNodes.get(stageIndex, 0xffff).asUInt();
-				mat.textures[j] = 0;
-			}
-
-			WRITE(mat);
-		}
-
-		// MaterialInfo names
-		Json::Value nameNodes = root["Mat3"]["stringtable"];
-		u16 nMaterialNames = nameNodes.size();
-		WRITE(nMaterialNames);
-		for (uint i = 0; i < nMaterialNames; i++)
-		{
-			std::string name = nameNodes.get(uint(0), "UNKNOWN").asString();
-			WRITE_ARRAY(name.c_str(), name.size());
-		}
-	}
-	END_SECTION();
-
-	// Skeleton joints
-	BEGIN_SECTION("drw1");
-	{
-		Json::Value weightedNode = root["Drw1"]["isWeighted"];
-		Json::Value indexNode = root["Drw1"]["data"];
-		uint nNodes = indexNode.size();
-		WRITE(nNodes);
-		for (uint i = 0; i < nNodes; i++)
-		{
-			DrwElement drw;
-			drw.index = indexNode.get(i, 0).asUInt();
-			drw.isWeighted = weightedNode.get(i, false).asBool();
-			WRITE(drw);
-		}
-	}
-	END_SECTION();	
-	BEGIN_SECTION("jnt1");
-	{
-		Json::Value frameNode = root["Jnt1"]["frames"];
-		uint nNodes = frameNode.size();
-		WRITE(nNodes);
-		for (uint i = 0; i < nNodes; i++)
-		{
-			JointElement joint;
-			compileFrame(frameNode[i], &joint.matrix);
-			strncpy_s(joint.name, frameNode[i].get("name", "UnknownName").asCString(), 16);
-			joint.parent = jointParents[i];
-			WRITE(joint);
-		}
-	}
-	END_SECTION();	
-	BEGIN_SECTION("evp1");
-	{
-		Json::Value matNode = root["Evp1"]["matrices"];
-		Json::Value weightIndexNode = root["Evp1"]["weightedIndices"];
-		uint nMatrices = matNode.size();
-		uint nWeights = weightIndexNode.size();
-
-		WRITE(nMatrices);
-		WRITE(nWeights);
-
-		// These elements will be filled as a postprocess
-		std::streamoff offsetsPos = s.tellp();
-		u8*  weightedIndexSizes = (u8*)malloc(sizeof(u8) * nWeights);
-		u16* weightedIndexOffsets = (u16*)malloc(sizeof(uint) * nWeights);
-		WRITE_ARRAY(weightedIndexSizes, nWeights * sizeof(u8));
-		WRITE_ARRAY(weightedIndexOffsets, nWeights * sizeof(u16));
-
-		for (uint i = 0; i < nMatrices; i++)
-		{
-			mat4 matrix;
-			for (uint j = 0; j < 16; j += 4)
-			{
-				matrix.rows[j/4].x = float(matNode[i].get(uint(j+0), 0).asDouble());
-				matrix.rows[j/4].y = float(matNode[i].get(uint(j+1), 0).asDouble());
-				matrix.rows[j/4].z = float(matNode[i].get(uint(j+2), 0).asDouble());
-				matrix.rows[j/4].w = float(matNode[i].get(uint(j+3), 0).asDouble());
-			}
-			WRITE(matrix);
-		}
-		
-		for (uint i = 0; i < nWeights; i++)
-		{
-			Json::Value weightsNode = weightIndexNode[i]["weights"];
-			Json::Value indicesNode = weightIndexNode[i]["indices"];
-			uint nWeightedIndices = weightsNode.size();
-
-			weightedIndexSizes[i] = nWeightedIndices;
-			weightedIndexOffsets[i] = (i == 0) ? 0 : weightedIndexOffsets[i-1] + weightedIndexSizes[i-1];
-
-			for (uint j = 0; j < nWeightedIndices; j++)
-			{
-				WeightedIndex wi;
-				wi.weight = float(weightsNode.get(uint(j), 0).asDouble());
-				wi.index = indicesNode.get(uint(j), 0).asUInt();
-				WRITE(wi);
-			}
-		}
-
-		s.seekp(offsetsPos);
-		s.write((char*)weightedIndexSizes, nWeights * sizeof(u8));
-		s.write((char*)weightedIndexOffsets, nWeights * sizeof(weightedIndexOffsets[0]));
-		s.seekp(0, std::ios_base::end);
-
-		free(weightedIndexOffsets);
-		free(weightedIndexSizes);
-	}
-	END_SECTION();	
-
-	// Shader HLSL
-	BEGIN_SECTION("shd1");
-	{
-		Json::Value hlslNodes = root["Shd1"];
-		u16 nNodes = hlslNodes.size();
-		WRITE(nNodes);
-		
-		std::streamoff offsetsPos = s.tellp();
-		uint* vsOffsets = (uint*) malloc(nNodes * sizeof(uint));
-		uint* psOffsets = (uint*) malloc(nNodes * sizeof(uint));
-		uint vsTotalSize = 0;
-		uint psTotalSize = 0;
-		WRITE_ARRAY(vsOffsets, nNodes * sizeof(uint));
-		WRITE_ARRAY(psOffsets, nNodes * sizeof(uint));
-		WRITE(vsTotalSize);
-		WRITE(psTotalSize);
-
-		for (uint i = 0; i < nNodes; i++)
-		{
-			vsOffsets[i] = vsTotalSize;
-			std::string vs = hlslNodes[i].get("VS", "").asString();
-			WRITE_ARRAY(vs.c_str(), vs.size()+1);
-			vsTotalSize += vs.size()+1;
-		}
-		
-		for (uint i = 0; i < nNodes; i++)
-		{
-			psOffsets[i] = psTotalSize;
-			std::string ps = hlslNodes[i].get("PS", "").asString();
-			WRITE_ARRAY(ps.c_str(), ps.size()+1);
-			psTotalSize += ps.size()+1;
-		}
-		
-		s.seekp(offsetsPos);
-		s.write((char*)vsOffsets, nNodes * sizeof(uint));
-		s.write((char*)psOffsets, nNodes * sizeof(uint));
-		s.write((char*)&vsTotalSize, sizeof(uint));
-		s.write((char*)&psTotalSize, sizeof(uint));
-		s.seekp(0, std::ios_base::end);
-
-		free(vsOffsets);
-		free(psOffsets);
-	}
-	END_SECTION();
-
-	// Vertex, Index Buffers
-	BEGIN_SECTION("vib1");
-		WRITE(nVertexIndexBuffers);
-		for (uint i = 0; i < nVertexIndexBuffers; i++)
-		{
-			WRITE(vertexBuffers[i].vertexAttributes);
-			WRITE(vertexBuffers[i].vertexCount);
-			uint vertBufSize = vertexBuffers[i].vertexCount * GC3D::GetVertexSize(vertexBuffers[i].vertexAttributes);
-			WRITE_ARRAY(vertexBuffers[i].vertexBuf, vertBufSize);
-
-			WRITE(indexBuffers[i].indexCount);
-			WRITE_ARRAY(indexBuffers[i].indexBuf, indexBuffers[i].indexCount * sizeof(u16));
-		}
-	END_SECTION();
-
-	// Textures and samplers
-	BEGIN_SECTION("tex1");
-	{
-		// TODO: Turn the samplers into a set (using hashing) and simplify this
-		Json::Value hdrsNode = root["Tex1"]["imageHdrs"];
-		u16 nHdrs = hdrsNode.size();
-		WRITE(nHdrs);
-		for (uint i = 0; i < nHdrs; i++)
-		{
-			TextureResource res;
-
-			const char* name = hdrsNode[i].get("name", "UNKNOWN").asCString();
-			memcpy(res.name, name, 16);
-
-			u8 magFilter = hdrsNode[i].get("magFilter", 0).asUInt();
-			u8 minFilter = hdrsNode[i].get("minFilter", 0).asUInt();
-			res.filter = GC3D::ConvertGCTexFilter(magFilter, minFilter);
-			res.wrapS = GC3D::ConvertGCTexWrap(hdrsNode[i].get("wrapS", 0).asUInt());
-			res.wrapT = GC3D::ConvertGCTexWrap(hdrsNode[i].get("wrapT", 0).asUInt());
-			res.texIndex = hdrsNode[i].get("imageIdx", 0).asUInt();
-			
-			WRITE(res);
-		}
-
-		Json::Value imgsNode = root["Tex1"]["images"];
-		u16 nImgs = imgsNode.size();
-		WRITE(nImgs);
-		for (uint i = 0; i < nImgs; i++)
-		{
-			TextureDesc tex;
-			uint gcFormat = imgsNode[i].get("format", 0).asUInt();
-			tex.format = GC3D::ConvertGCTextureFormat(gcFormat);
-			tex.width = imgsNode[i].get("width", 0).asUInt();
-			tex.height = imgsNode[i].get("height", 0).asUInt();
-
-			Json::Value mipSizes = imgsNode[i]["mipmapSizes"];
-			tex.numMips = mipSizes.size();
-			
-			uint texSize = 0;
-			for (uint j = 0; j < tex.numMips; j++) { texSize += mipSizes[j].asUInt(); }
-			tex.sizeBytes = texSize;
-			totalTexSize += texSize;
-
-			tex.texDataOffset = imgsNode[i].get("imageDataOffset", 0).asUInt();
-
-			WRITE(tex);
-		}
-	}
-	END_SECTION();
-
-	uint blobSize = totalSize + totalTexSize;
-
-	*data = (char*) malloc(blobSize);
-	s.read(*data, totalSize);
-
-	//Append our binary texture data
-	std::string filename = root["Info"]["name"].asString();
-	std::string baseDir = "";
-	std::ifstream texFile(baseDir + filename + ".tex", std::ios::in | std::ios::binary);
-	if (!texFile.is_open())
-	{
-		//TODO: Test this
-		WARN("Failed to open texture file %s, no textures will be loaded!", filename + ".tex");
-		memset(*data + totalSize, 0, totalTexSize);
-	}
-	else
-	{
-		texFile.seekg (0, std::ios::end);
-		std::streamoff length = texFile.tellg();
-		texFile.seekg (0, std::ios::beg);
-		ASSERT(length == totalTexSize);
-		texFile.read(*data + totalSize, totalTexSize);
-	}
-
-	//Post-processing
-	for (uint i = 0; i < numSections; i++)
-	{
-		SectionHeader* pHdr = (SectionHeader*)(*data + sectionHeaderOffsets[i]);
-		memcpy(pHdr, &sectionHeaders[i], sizeof(SectionHeader));
-	}
-
-	uint* pBatchOffsetsTable = (uint*)(*data + batchOffsetsOffset);
-	memcpy(pBatchOffsetsTable, batchOffsets, nBatches * sizeof(uint));
-
-	memcpy(hdr.fourCC, "bmd1", 4);
-	hdr.version = COMPILER_VERSION;
-	hdr.sizeBytes = blobSize;
-
-	for (uint i = 0; i < nVertexIndexBuffers; i++)
-	{
-		free(vertexBuffers[i].vertexBuf);
-		free(indexBuffers[i].indexBuf);
-	}
-
-	free(vertexBuffers);
-	free(indexBuffers);
-	free(batchOffsets);
-	
-	texFile.close();
-
-	DEBUG_ONLY(_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF));
-
-	return S_OK;
-}
-
-#define BEGIN_READ_SECTION(FOURCC) { \
-	sectionHead = head; \
-	section = READ(SectionHeader); \
-	assert(memcmp(section.fourcc, FOURCC, 4) == 0); \
-}
-
-#define END_READ_SECTION() { \
-	head = sectionHead + section.size; \
 }
 
 void ApplyMaterial(Renderer* renderer, MaterialInfo mat)
@@ -946,12 +483,12 @@ void FillMatrixTable(GDModel::GDModel* model, mat4* matrixTable, u16* matrixIndi
 
 void DrawBatch(Renderer* renderer, GDModel::GDModel* model, u16 batchIndex, u16 matIndex)
 {
-	ubyte* head = model->_asset + model->batchOffsetTable[batchIndex];
+	_Batch* batch = (_Batch*)model->batchPtrs[batchIndex];
 	
-	VertexBufferID vbID = READ(int);
-	IndexBufferID ibID = READ(int);
-	VertexFormatID vfID = READ(int);
-	u16 numPackets = READ(u16);
+	VertexBufferID vbID = batch->vbID;
+	IndexBufferID ibID = batch->ibID;
+	VertexFormatID vfID = batch->vfID;
+	u16 numPackets = batch->numPackets;
 	
 	// These are partially updated by each packet
 	mat4 matrixTable[10];
@@ -959,8 +496,8 @@ void DrawBatch(Renderer* renderer, GDModel::GDModel* model, u16 batchIndex, u16 
 	int numIndicesSoFar = 0;
 	for (uint i = 0; i < numPackets; i++)
 	{
-		u16 nMatrixIndices = READ(u16);
-		u16* matrixIndices = READ_ARRAY(u16, nMatrixIndices);
+		u16 nMatrixIndices = batch->packets[ i ].matrixCount;
+		u16* matrixIndices = batch->packets[ i ].matrixIndices;
 
 		// Setup Matrix table
 		FillMatrixTable(model, matrixTable, matrixIndices, nMatrixIndices);	
@@ -973,7 +510,7 @@ void DrawBatch(Renderer* renderer, GDModel::GDModel* model, u16 batchIndex, u16 
 			renderer->setShaderConstantArray4x4f("ModelMat", matrixTable, nMatrixIndices);
 		renderer->apply();
 
-		u16 indexCount = READ(u16);
+		u16 indexCount = batch->packets[ i ].indexCount;
 		renderer->drawElements(PRIM_TRIANGLE_STRIP, numIndicesSoFar, indexCount, 0, -1);
 		numIndicesSoFar += indexCount;
 	}
@@ -1006,7 +543,7 @@ RESULT RegisterGFX(Renderer* renderer, GDModel::GDModel* model)
 	{
 		TextureDesc& tex = gfxData.textures[i];
 			
-		imgResource.loadFromMemory(gfxData.textureData + tex.texDataOffset, tex.format, 
+		imgResource.loadFromMemory(tex.imgData, tex.format, 
 			tex.width, tex.height, 1, tex.numMips, true);
 
 		textures[i] = renderer->addTexture(imgResource);
@@ -1063,7 +600,7 @@ RESULT RegisterGFX(Renderer* renderer, GDModel::GDModel* model)
 	ubyte* head = gfxData.vertexIndexBuffers;
 	for (uint i = 0; i < gfxData.nVertexIndexBuffers; i++)
 	{
-		ubyte* batch = model->_asset + model->batchOffsetTable[i];
+		ubyte* batch = model->batchPtrs[i];
 		VertexBufferID* batchVBID = (VertexBufferID*)batch;
 		IndexBufferID*  batchIBID = (IndexBufferID*)(batch + sizeof(batchVBID));
 		VertexFormatID* batchVFID = (VertexFormatID*)(batch + sizeof(batchVBID) + sizeof(batchIBID));
@@ -1085,6 +622,22 @@ RESULT RegisterGFX(Renderer* renderer, GDModel::GDModel* model)
 		*batchIBID = renderer->addIndexBuffer(ibSize, 2, STATIC, indices);
 		*batchVFID = renderer->addVertexFormat(formatBuf, MAX_VERTEX_ATTRIBS, shaders[0]);
 	}
+
+	// Cleanup
+	free(model->gfxData.depthModes);
+	free(model->gfxData.blendModes);
+	free(model->gfxData.cullModes);
+	free(model->gfxData.vsOffsets);
+	free(model->gfxData.psOffsets);
+	free(model->gfxData.vsShaders);
+	free(model->gfxData.psShaders);
+	free(model->gfxData.vertexIndexBuffers);
+	for (uint i = 0; i < gfxData.nTextures; i++)
+	{
+		free(gfxData.textures[i].imgData);
+	}
+	free(model->gfxData.textureResources);
+	free(model->gfxData.textures);
 
 	return S_OK;
 }
@@ -1113,7 +666,7 @@ RESULT UnregisterGFX(Renderer* renderer, GDModel::GDModel* model)
 		
 		for (uint i = 0; i < model->gfxData.nVertexIndexBuffers; i++)
 		{
-			ubyte* batch = model->_asset + model->batchOffsetTable[i];
+			ubyte* batch = model->batchPtrs[i];
 			VertexBufferID* batchVBID = (VertexBufferID*)batch;
 			IndexBufferID*  batchIBID = (IndexBufferID*)(batch + sizeof(batchVBID));
 
@@ -1134,94 +687,329 @@ RESULT GDModel::Unload(GDModel* model)
 	// Clear the whole model for safety
 	memset(model, 0, sizeof(model));
 	 
+	free(model->scenegraph);
+
+	for (uint i = 0; i < model->batchCount; i++)
+	{
+		_Batch* batch = (_Batch*) model->batchPtrs[i];
+		for (uint j = 0; j < batch->numPackets; j++)
+		{
+			free(batch->packets[j].matrixIndices);
+		}
+		free(batch->packets);
+		free(batch);
+	}
+	free(model->batchPtrs);
+
+	free(model->materials);
+	free(model->drwTable);
+	free(model->jointTable);
+	free(model->defaultPose);
+
+	free(model->evpWeightedIndexSizesTable);
+	free(model->evpWeightedIndexOffsetTable);
+	free(model->evpMatrixTable);
+	free(model->evpWeightedIndexTable);
+
 	return r;
 }
 
-RESULT GDModel::Load(GDModel* model, ModelAsset asset)
+extern std::string GenerateVS(const Mat3* matInfo, int index);
+extern std::string GeneratePS(const Tex1* texInfo, const Mat3* matInfo, int index);
+
+RESULT GDModel::Load(GDModel* model, const BModel* bdl)
 {
-	model->_asset = asset;
-	ubyte* head = asset;
-	ubyte* sectionHead = head;
-	SectionHeader section;
+	VertexBuffer* vertexBuffers;
+	IndexBuffer* indexBuffers;
 
-	// Scenegraph first	
-	BEGIN_READ_SECTION("scn1");
-		model->scenegraph = READ_ARRAY(Scenegraph, 0);
-	END_READ_SECTION();
+	// Scenegraph first		
+	std::vector<u16> jointParents;
+	std::vector<Scenegraph> scenelist;
+	RecordScenegraph(bdl, scenelist, jointParents);
+	model->scenegraph = (Scenegraph*)malloc(scenelist.size() * sizeof(Scenegraph));
+	memcpy(model->scenegraph, scenelist.data(), scenelist.size() * sizeof(Scenegraph));
 
-	// Batches
-	BEGIN_READ_SECTION("bch1");
-		uint nBatches = READ(u16);
-		model->batchOffsetTable = READ_ARRAY(uint, nBatches);
-	END_READ_SECTION();
-	
-	BEGIN_READ_SECTION("mat1");
-		u16 nDepthModes = READ(u16);
-		model->gfxData.nDepthModes = nDepthModes;
-		model->gfxData.depthModes = READ_ARRAY(DepthMode, nDepthModes);
+	// Batches	
+	{
+		const std::vector< Batch >& batches = bdl->shp1.batches;
 		
-		u16 nBlendModes = READ(u16);
-		model->gfxData.nBlendModes = nBlendModes;
-		model->gfxData.blendModes = READ_ARRAY(BlendMode, nBlendModes);
+		vertexBuffers = (VertexBuffer*)malloc(sizeof(VertexBuffer) * batches.size());
+		indexBuffers = (IndexBuffer*)malloc(sizeof(IndexBuffer) * batches.size());
 
-		u16 nCullModes = READ(u16);
-		model->gfxData.nCullModes = nCullModes;
-		model->gfxData.cullModes = READ_ARRAY(u8, nCullModes);
+		model->batchCount = batches.size();
+		model->batchPtrs = (ubyte**)malloc(sizeof(uint) * batches.size());
+		for (uint i = 0; i < batches.size(); i++)
+		{
+			_Batch* batch = (_Batch*)malloc(sizeof(_Batch) * batches.size());
+			memset(batch, 0xff, sizeof(_Batch));
+			model->batchPtrs[i] = (ubyte*)batch;
 
-		u16 nMaterials = READ(u16);
-		model->nMaterials = nMaterials;
-		model->materials = READ_ARRAY(MaterialInfo, nMaterials);
-	END_READ_SECTION();
+			const u32 kMaxPackets = 1024;
+			u16 packetIdxCounts[ kMaxPackets ];
+			loadVertexIndexBuffers(batches[i], bdl->vtx1, 
+				&vertexBuffers[i], &indexBuffers[i], packetIdxCounts);
+						
+			batch->numPackets = batches[i].packets.size();
+			ASSERT(batch->numPackets <= kMaxPackets);
+			batch->packets = (_Packet*)malloc(sizeof(_Packet) * batch->numPackets);
+			for (uint32_t j = 0; j < batch->numPackets; j++)
+			{
+				const std::vector< u16 >& mtxTable = batches[i].packets[j].matrixTable;
+				batch->packets[j].matrixCount = mtxTable.size();
+				batch->packets[j].matrixIndices = (u16*)malloc(sizeof(u16) * mtxTable.size());
+				memcpy(batch->packets[j].matrixIndices, mtxTable.data(), sizeof(u16) * mtxTable.size());
+				batch->packets[j].indexCount = packetIdxCounts[ j ];
+			}
+		}
+	}
 
-	BEGIN_READ_SECTION("drw1");
-		uint nDrw = READ(uint);
-		model->drwTable = READ_ARRAY(DrwElement, nDrw);
-	END_READ_SECTION();
+	// Materials
+	{
+		// Depth Modes
+		u32 zModeCount = bdl->mat3.zModes.size();
+		DepthMode* zModes = (DepthMode*)malloc(zModeCount * sizeof(DepthMode));
+		for (uint i = 0; i < zModeCount; i++)
+		{
+			zModes[i].testEnable = bdl->mat3.zModes[i].enable;
+			zModes[i].writeEnable = bdl->mat3.zModes[i].enableUpdate;
+			zModes[i].func = GC3D::ConvertGCDepthFunction(bdl->mat3.zModes[i].zFunc);
+		}
+		model->gfxData.nDepthModes = zModeCount;
+		model->gfxData.depthModes = zModes;
 
-	BEGIN_READ_SECTION("jnt1");
-		uint nJnt = READ(uint);
-		model->numJoints = nJnt;
-		model->jointTable = READ_ARRAY(JointElement, nJnt);
-	END_READ_SECTION();
+		// Blend Modes
+		u32 bModeCount = bdl->mat3.blendInfos.size();
+		BlendMode* bModes = (BlendMode*)malloc(bModeCount * sizeof(BlendMode));
+		for (uint i = 0; i < bModeCount; i++)
+		{
+			bModes[i].blendOp = GC3D::ConvertGCBlendOp(bdl->mat3.blendInfos[i].blendMode);
+			bModes[i].srcFactor = GC3D::ConvertGCBlendFactor(bdl->mat3.blendInfos[i].srcFactor);
+			bModes[i].dstFactor = GC3D::ConvertGCBlendFactor(bdl->mat3.blendInfos[i].dstFactor);
+		}
+		model->gfxData.nBlendModes = bModeCount;
+		model->gfxData.blendModes = bModes;
+
+		// Cull Modes
+		u32 cModeCount = bdl->mat3.cullModes.size();
+		u8* cModes = (u8*)malloc(cModeCount * sizeof(u8));
+		for (uint i = 0; i < cModeCount; i++)
+		{
+			cModes[i] = GC3D::ConvertGCCullMode(bdl->mat3.cullModes[i]);
+		}
+		model->gfxData.nCullModes = cModeCount;
+		model->gfxData.cullModes = cModes;
+
+		// MaterialInfo info
+		u32 matCount = bdl->mat3.materials.size();
+		MaterialInfo* matInfo = (MaterialInfo*) malloc(sizeof(MaterialInfo) * matCount);
+		for (uint i = 0; i < matCount; i++)
+		{
+			MaterialInfo& mat = matInfo[i];
+			mat.shader = i;
+			mat.depthMode = bdl->mat3.materials[i].zModeIndex;
+			mat.blendMode = bdl->mat3.materials[i].blendIndex;
+			mat.rasterMode = bdl->mat3.materials[i].cullIndex;
+
+			for (uint j = 0; j < 8; j++)
+			{
+				u16 stageIndex = bdl->mat3.materials[i].texStages[j];
+				mat.samplers[j] = stageIndex == 0xffff ? 0xffff : bdl->mat3.texStageIndexToTextureIndex[stageIndex];
+				mat.textures[j] = 0;
+			}
+		}
+		model->nMaterials = matCount;
+		model->materials = matInfo;
+
+		// MaterialInfo names
+		// @TODO: Add these to MaterialInfo
+		/*Json::Value nameNodes = root["Mat3"]["stringtable"];
+		u16 nMaterialNames = nameNodes.size();
+		WRITE(nMaterialNames);
+		for (uint i = 0; i < nMaterialNames; i++)
+		{
+			std::string name = nameNodes.get(uint(0), "UNKNOWN").asString();
+			WRITE_ARRAY(name.c_str(), name.size());
+		}*/
+	}
+
+	// Draw table
+	{
+		u32 drwCount = bdl->drw1.data.size();
+		DrwElement* drwTable = (DrwElement*)malloc(sizeof(DrwElement) * drwCount);
+		for (uint i = 0; i < drwCount; i++)
+		{
+			drwTable[i].index = bdl->drw1.data[i];
+			drwTable[i].isWeighted = bdl->drw1.isWeighted[i];
+		}
+		model->drwTable = drwTable;
+	}
 	
-	BEGIN_READ_SECTION("evp1");
-		uint nMatrices = READ(uint);
-		uint nWeights = READ(uint);
-		model->evpWeightedIndexSizesTable = READ_ARRAY(u8, nWeights);
-		model->evpWeightedIndexOffsetTable = READ_ARRAY(u16, nWeights);
-		model->evpMatrixTable = READ_ARRAY(mat4, nMatrices);
-		model->evpWeightedIndexTable = READ_ARRAY(WeightedIndex, 0);
-	END_READ_SECTION();
+	// Joints
+	{
+		u32 jointCount = bdl->jnt1.frames.size();
+		JointElement* joints = (JointElement*)malloc(jointCount * sizeof(JointElement));
+		for (uint i = 0; i < jointCount; i++)
+		{
+			JointElement& joint = joints[i];
+			loadFrame(bdl->jnt1.frames[i], &joint.matrix);
+			strncpy_s(joint.name, bdl->jnt1.frames[i].name.c_str(), 16);
+			joint.parent = jointParents[i];
+		}
+		model->numJoints = jointCount;
+		model->jointTable = joints;
 
-	BEGIN_READ_SECTION("shd1");
-		u16 nShaders = READ(u16);
-		model->gfxData.nShaders = nShaders;
+		uint jointTableSize = sizeof(JointElement) * jointCount;
+		model->defaultPose = (JointElement*)malloc(jointTableSize);
+		memcpy(model->defaultPose, model->jointTable, jointTableSize);
+	}
 
-		model->gfxData.vsOffsets = READ_ARRAY(uint, nShaders);
-		model->gfxData.psOffsets = READ_ARRAY(uint, nShaders);
-		uint vsTotalSize = READ(uint);
-		uint psTotalSize = READ(uint);
-		model->gfxData.vsShaders = READ_ARRAY(char, vsTotalSize);
-		model->gfxData.psShaders = READ_ARRAY(char, psTotalSize);
-	END_READ_SECTION();
+	// Envelope
+	{
+		u32 mtxCount = bdl->evp1.matrices.size();
+		u32 weightCount = bdl->evp1.weightedIndices.size();
+		u32 maxWeightedIdxs = weightCount * 8;
 
-	// Vertex, Index Buffer registration is handled on the next draw
-	BEGIN_READ_SECTION("vib1");
-		model->gfxData.nVertexIndexBuffers = READ(u16);
-		model->gfxData.vertexIndexBuffers = head;
-	END_READ_SECTION();
+		u8* sizesTable = (u8*)malloc(sizeof(u8)*weightCount);
+		u16* offsetsTable = (u16*)malloc(sizeof(u16)*weightCount);
+		mat4* mtxTable = (mat4*)malloc(sizeof(mat4)*mtxCount);
+		WeightedIndex* idxTable = (WeightedIndex*)malloc(sizeof(WeightedIndex) * maxWeightedIdxs);
 
-	BEGIN_READ_SECTION("tex1");
-		u16 nTextureResources = READ(u16);
-		model->gfxData.nTextureResources = nTextureResources;
-		model->gfxData.textureResources = READ_ARRAY(TextureResource, nTextureResources);
+		memcpy(&mtxTable[0], &bdl->evp1.matrices[0], mtxCount * 16 * sizeof(float));
 
-		u16 nTextures = READ(u16);
-		model->gfxData.nTextures = nTextures;
-		model->gfxData.textures = READ_ARRAY(TextureDesc, nTextures);
-	END_READ_SECTION();
+		u32 offset = 0;
+		for (uint i = 0; i < weightCount; i++)
+		{
+			u32 idxCount = bdl->evp1.weightedIndices[i].indices.size();
+			sizesTable[i] = idxCount;
+			offsetsTable[i] = offset;
+			for (uint j = 0; j < idxCount; j++)
+			{
+				idxTable[offset + j].weight = bdl->evp1.weightedIndices[i].weights[j];
+				idxTable[offset + j].index = bdl->evp1.weightedIndices[i].indices[j];
+			}
+			offset += idxCount;
+		}
+		ASSERT(offset <= maxWeightedIdxs);
 
-	model->gfxData.textureData = head;
+		model->evpWeightedIndexSizesTable = sizesTable;
+		model->evpWeightedIndexOffsetTable = offsetsTable;
+		model->evpMatrixTable = mtxTable;
+		model->evpWeightedIndexTable = idxTable;
+	}
+
+	// Shader HLSL
+	{
+		const u32 kMaxShaderLength = 64 * 1024;
+		u32 shaderCount = bdl->mat3.materials.size();
+		uint* vsOffsets = (uint*)malloc(sizeof(uint) * shaderCount);
+		uint* psOffsets = (uint*)malloc(sizeof(uint) * shaderCount);
+		char* vsShaders = (char*)malloc(sizeof(char) * kMaxShaderLength);
+		char* psShaders = (char*)malloc(sizeof(char) * kMaxShaderLength);
+
+		u32 vsOffset = 0;
+		u32 psOffset = 0;
+		for (uint i = 0; i < shaderCount; i++)
+		{
+			std::string vs = GenerateVS(&bdl->mat3, i);
+			std::string ps = GeneratePS(&bdl->tex1, &bdl->mat3, i);
+
+			vsOffsets[i] = vsOffset;
+			psOffsets[i] = psOffset;
+			memcpy(&vsShaders[vsOffset], vs.c_str(), vs.length() + 1);
+			memcpy(&psShaders[psOffset], ps.c_str(), ps.length() + 1);
+			vsOffset += vs.length() + 1;
+			psOffset += ps.length() + 1;
+		}
+		ASSERT(vsOffset <= kMaxShaderLength);
+		ASSERT(psOffset <= kMaxShaderLength);
+
+		model->gfxData.nShaders = shaderCount;
+		model->gfxData.vsOffsets = vsOffsets;
+		model->gfxData.psOffsets = psOffsets;
+		model->gfxData.vsShaders = vsShaders;
+		model->gfxData.psShaders = psShaders;
+	}
+
+	{
+		const u32 kMaxVertexIndexBufSize = 1024 * 1024;
+		u32 bufCount = bdl->shp1.batches.size();
+		ubyte* viBuf = (ubyte*)malloc(kMaxVertexIndexBufSize);
+		ubyte* viHead = viBuf;
+		for (uint i = 0; i < bufCount; i++)
+		{
+			memcpy(viHead, &vertexBuffers[i].vertexAttributes, sizeof(vertexBuffers[i].vertexAttributes));
+			viHead += sizeof(vertexBuffers[i].vertexAttributes);
+			memcpy(viHead, &vertexBuffers[i].vertexCount, sizeof(vertexBuffers[i].vertexCount));
+			viHead += sizeof(vertexBuffers[i].vertexCount);
+			uint vertBufSize = vertexBuffers[i].vertexCount * GC3D::GetVertexSize(vertexBuffers[i].vertexAttributes);
+			memcpy(viHead, vertexBuffers[i].vertexBuf, vertBufSize);
+			viHead += vertBufSize;
+
+			memcpy(viHead, &indexBuffers[i].indexCount, sizeof(indexBuffers[i].indexCount));
+			viHead += sizeof(indexBuffers[i].indexCount);
+			memcpy(viHead, indexBuffers[i].indexBuf, indexBuffers[i].indexCount * sizeof(u16));
+			viHead += indexBuffers[i].indexCount * sizeof(u16);
+		}
+		ASSERT(viHead - viBuf <= kMaxVertexIndexBufSize);
+		viBuf = (ubyte*) realloc(viBuf, viHead - viBuf);
+		model->gfxData.nVertexIndexBuffers = bufCount;
+		model->gfxData.vertexIndexBuffers = viBuf;
+
+		for (uint i = 0; i < bufCount; i++)
+		{
+			free(vertexBuffers[i].vertexBuf);
+			free(indexBuffers[i].indexBuf);
+		}
+		free(vertexBuffers);
+		free(indexBuffers);
+	}
+
+	{
+		u32 texCount = bdl->tex1.imageHeaders.size();
+		u32 imgCount = bdl->tex1.images.size();
+		TextureResource* texs = (TextureResource*)malloc(sizeof(TextureResource) * texCount);
+		TextureDesc* imgs = (TextureDesc*)malloc(sizeof(TextureDesc) * imgCount);
+
+		// TODO: Turn the samplers into a set (using hashing) and simplify this
+		for (uint i = 0; i < texCount; i++)
+		{
+			TextureResource& tex = texs[i];
+
+			const char* name = bdl->tex1.imageHeaders[i].name.c_str();
+			memcpy(tex.name, name, 16);
+
+			u8 magFilter = bdl->tex1.imageHeaders[i].magFilter;
+			u8 minFilter = bdl->tex1.imageHeaders[i].minFilter;
+			tex.filter = GC3D::ConvertGCTexFilter(magFilter, minFilter);
+			tex.wrapS = GC3D::ConvertGCTexWrap(bdl->tex1.imageHeaders[i].wrapS);
+			tex.wrapT = GC3D::ConvertGCTexWrap(bdl->tex1.imageHeaders[i].wrapT);
+			tex.texIndex = bdl->tex1.imageHeaders[i].imageIndex;
+		}
+
+		for (uint i = 0; i < imgCount; i++)
+		{
+			TextureDesc& img = imgs[i];
+			
+			uint gcFormat = bdl->tex1.images[i].format;
+			img.format = GC3D::ConvertGCTextureFormat(gcFormat);
+			img.width = bdl->tex1.images[i].width;
+			img.height = bdl->tex1.images[i].height;
+
+			img.numMips = bdl->tex1.images[i].sizes.size();
+
+			uint imgSize = 0;
+			for (uint j = 0; j < img.numMips; j++) { imgSize += bdl->tex1.images[i].sizes[j]; }
+			img.sizeBytes = imgSize;
+
+			img.imgData = (u8*)malloc(imgSize);
+			memcpy(img.imgData, bdl->tex1.images[i].imageData.data(), imgSize);
+		}
+
+		model->gfxData.nTextureResources = texCount;
+		model->gfxData.nTextures = imgCount;
+		model->gfxData.textureResources = texs;
+		model->gfxData.textures = imgs;
+	}
 
 	model->loadGPU = true;
 
@@ -1232,6 +1020,7 @@ RESULT GDModel::Update(GDModel* model, GDAnim::GDAnim* anim, float time)
 {
 	// Grab the root joint straight from the animation. It's parent is the identity
 	float weights[1] = {1.0f};
+	//model->jointTable[0].matrix = model->defaultPose[0].matrix;
 	model->jointTable[0].matrix = GDAnim::GetJoint(&anim, weights, 1, 0, time);
 
 	for (uint i = 1; i < model->numJoints; i++)
@@ -1239,7 +1028,8 @@ RESULT GDModel::Update(GDModel* model, GDAnim::GDAnim* anim, float time)
 		JointElement& joint = model->jointTable[i];
 
 		// Calculate joint from animation at current time
-		mat4 animMatrix = animMatrix = GDAnim::GetJoint(&anim, weights, 1, i, time);
+		//mat4 animMatrix = model->defaultPose[i].matrix;
+		mat4 animMatrix = GDAnim::GetJoint(&anim, weights, 1, i, time);
 
 		// Put in parent's frame
 		joint.matrix = model->jointTable[joint.parent].matrix * animMatrix;

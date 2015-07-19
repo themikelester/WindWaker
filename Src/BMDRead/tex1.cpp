@@ -118,7 +118,7 @@ struct TextureHeader
 };
 
 void loadAndConvertImage(FILE* f, const bmd::TextureHeader& h, long baseOffset,
-                         Image& curr);
+                         BmdImage& curr);
 
 void r5g6b5ToRgba8(u16 srcPixel, u8* dest);
 
@@ -298,7 +298,7 @@ void dumpTex1(FILE* f, Tex1& dst)
       dst.imageHeaders[i].imageIndex = it->second;
     else
     {
-      Image* curr = &dst.images[j];
+      BmdImage* curr = &dst.images[j];
       dst.imageHeaders[i].imageIndex = j;
       loadedImages[effectiveOffset] = j;
       ++j;
@@ -793,7 +793,7 @@ u8 readImage(FILE* f, int w, int h, u8 format, u8* palette, u8 paletteFormat, u8
 }
 
 void loadAndConvertImage(FILE* f, const bmd::TextureHeader& h, long baseOffset,
-                         Image& curr)
+                         BmdImage& curr)
 {
   int i;
 

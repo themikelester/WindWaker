@@ -2,7 +2,7 @@
 
 #include "Configuration.h" // Must be included first
 #include "Types.h"
-#include <Framework3\Debug.h>
+#include "Debug.h"
 #include <Framework3\Platform.h>
 
 // RESULT Enum and related functions

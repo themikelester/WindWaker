@@ -23,6 +23,9 @@
 #include "GC3D.h"
 #include "GDModel.h"
 #include "GDAnim.h"
+#include "BMDRead\bck.h"
+#include "BMDRead\bmdread.h"
+#include "BMDRead\openfile.h"
 
 //TODO: Remove HACK
 #include <fstream>
@@ -57,48 +60,56 @@ bool App::load(int argc, char** argv)
 	char* filename = argv[0];
 
 	// Load Model
-	std::ifstream file(filename, std::ios::in | std::ios::binary);
-	if(file.is_open())
+	OpenedFile* file = openFile(filename);
+	if(file)
     {
 		char fourcc[4];
-		uint version;
-		uint size;
-        file.read(fourcc, 4);
-        file.read((char*)&version, 4);
-        file.read((char*)&size, 4);
-
-		m_Blob = (ubyte*) malloc(size);
-		file.read((char*)m_Blob, size);
-
-		GDModel::Load(&m_GDModel, m_Blob);
+		fread(fourcc, 1, 4, file->f);
+		if (memcmp(fourcc, "J3D", 3) == 0)
+		{
+			fseek(file->f, 0, SEEK_SET);
+			BModel* bdl = loadBmd(file->f);
+			GDModel::Load(&m_GDModel, bdl);
+			delete bdl;
+		}
+		else if (memcmp(fourcc, "bmd1", 4) == 0)
+		{
+			WARN("bmd1 format no longer supported\n");
+			closeFile(file);
+			return false;
+		}
 	}
 	else
 	{
 		return false;
 	}
-    file.close();
+	closeFile(file);
 
 	// Load Animation
-	file.open("../../Data/Scratch/LkAnm/archive/bcks/walk.bck.blob", std::ios::in|std::ios::binary);
-	if(file.is_open())
-    {
+	filename = "../../Data/Scratch/LkAnm/archive/bcks/walk.bck";
+	file = openFile(filename);
+	if(file)
+	{
 		char fourcc[4];
-		uint version;
-		uint size;
-        file.read(fourcc, 4);
-        file.read((char*)&version, 4);
-        file.read((char*)&size, 4);
-
-		m_AnimBlob = (ubyte*) malloc(size);
-		file.read((char*)m_AnimBlob, size);
-
-		GDAnim::Load(&m_restAnim, m_AnimBlob);
+		fread(fourcc, 1, 4, file->f);
+		if (memcmp(fourcc, "J3D", 3) == 0)
+		{
+			fseek(file->f, 0, SEEK_SET);
+			Bck* bck = readBck(file->f);
+			GDAnim::Load(&m_restAnim, bck);
+			delete bck;
+		}
+		else
+		{
+			WARN("Unsupported animation format\n");
+			return false;
+		}
 	}
 	else
 	{
 		return false;
 	}
-    file.close();
+	closeFile(file);
 
 	// Load Font
 	defaultFont = renderer->addFont("../../Data/Fonts/Future.dds", "../../Data/Fonts/Future.font", linearClamp);
@@ -110,7 +121,6 @@ cleanup:
 void App::unload()
 {
 	GDModel::Unload(&m_GDModel);
-	free(m_Blob);
 }
 
 bool App::onKey(const uint key, const bool pressed)

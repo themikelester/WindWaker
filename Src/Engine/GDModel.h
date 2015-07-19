@@ -5,9 +5,6 @@
 #include "GC3D.h"
 #include "GDAnim.h"
 
-// TODO: Remove this
-#include <d3d10.h>
-
 struct TextureResource;
 struct TextureDesc;
 struct BlendMode;
@@ -19,10 +16,9 @@ struct JointElement;
 struct DrwElement;
 struct WeightedIndex;
 
+struct BModel;
+
 struct Header;
-namespace Json {
-	class Value;
-}
 
 namespace GDModel
 {	
@@ -58,21 +54,19 @@ namespace GDModel
 		char* vsShaders;
 		char* psShaders;
 	};
-
-	typedef ubyte* ModelAsset;
-
+	
 	struct GDModel
 	{
-		ModelAsset _asset;
-
 		Scenegraph* scenegraph;
-		uint* batchOffsetTable; // Batch* batch3 = _asset + batchOffsetTable[3];
+		u32 batchCount;
+		ubyte** batchPtrs;
 		
 		u16 nMaterials;
 		MaterialInfo* materials;
 		
 		u16 numJoints;
 		JointElement* jointTable;
+		JointElement* defaultPose;
 
 		DrwElement* drwTable;
 		mat4*  evpMatrixTable;
@@ -90,17 +84,14 @@ namespace GDModel
 	RESULT Update(GDModel* model, GDAnim::GDAnim* anim, float time);
 
 	RESULT Draw(Renderer* renderer, GDModel* model);
-	
-	//Given a JSON object, compile a binary blob that can be loaded with Load() and Reload()
-	RESULT Compile(const Json::Value& root, Header& hdr, char** data);
 
 	//Save our asset reference and initialize the model in the renderer
-	RESULT Load(GDModel* model, ModelAsset blob);
+	RESULT Load(GDModel* model, const BModel* bdl);
 	
 	//Unregister our old asset with the renderer. Delete our asset reference
 	RESULT Unload(GDModel* model);
 
 	//Unregister our old asset with the renderer. Save our new reference.
 	//Initialize our new asset with the renderer. The asset manager will then delete the old asset.
-	RESULT Reload(GDModel* model, ModelAsset* blob);
+	RESULT Reload(GDModel* model, ubyte* blob);
 }
