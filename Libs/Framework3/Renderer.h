@@ -85,6 +85,7 @@ enum AddressMode {
 	WRAP,
 	CLAMP,
 	BORDER,
+	MIRROR,
 };
 
 inline bool hasMipmaps(const Filter filter){ return (filter >= BILINEAR); }

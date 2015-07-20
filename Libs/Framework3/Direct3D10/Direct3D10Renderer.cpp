@@ -1736,6 +1736,7 @@ D3D10_TEXTURE_ADDRESS_MODE address_modes[] = {
 	D3D10_TEXTURE_ADDRESS_WRAP,
 	D3D10_TEXTURE_ADDRESS_CLAMP,
 	D3D10_TEXTURE_ADDRESS_BORDER,
+	D3D10_TEXTURE_ADDRESS_MIRROR,
 };
 
 SamplerStateID Direct3D10Renderer::addSamplerState(const Filter filter, const AddressMode s, const AddressMode t, const AddressMode r, const float lod, const uint maxAniso, const int compareFunc, const float *border_color){

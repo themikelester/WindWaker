@@ -153,7 +153,6 @@ namespace GC3D
 		}
 	}
 	
-	// TODO: DX has support for Mirror address mode. Add support for this in the renderer
 	AddressMode GC3D::ConvertGCTexWrap(u8 addressMode)
 	{
 	    //from gx.h:
@@ -164,7 +163,7 @@ namespace GC3D
 		{
 		case 0: return CLAMP;
 		case 1: return WRAP;
-		case 2: WARN("Address mode 'Mirror' is currently unsupported. Defaulting to 'Clamp'\n"); return CLAMP;
+		case 2: return MIRROR;
 		default: WARN("Unsupported Address mode %u. Defaulting to 'Clamp'\n", addressMode); return CLAMP;
 		}
 	}
