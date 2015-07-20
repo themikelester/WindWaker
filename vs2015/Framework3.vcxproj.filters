@@ -33,12 +33,6 @@
     <ClCompile Include="..\libs\framework3\audio\Audio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\libs\framework3\direct3d10\D3D10App.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\libs\framework3\direct3d10\Direct3D10Renderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\libs\framework3\gui\Button.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,6 +102,12 @@
     <ClCompile Include="..\libs\framework3\windows\WindowsBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Libs\Framework3\Direct3D10\D3D10App.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Libs\Framework3\Direct3D10\Direct3D10Renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\libs\framework3\BaseApp.h">
@@ -147,9 +147,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\libs\framework3\direct3d10\D3D10App.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\libs\framework3\direct3d10\Direct3D10Renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\libs\framework3\gui\Button.h">
@@ -261,6 +258,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Libs\Framework3\Debug.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Libs\Framework3\Direct3D10\Direct3D10Renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
