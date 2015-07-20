@@ -158,10 +158,10 @@ void loadFrame(const Frame& frame, mat4* matrix)
 	s = scale(frame.sx, frame.sy, frame.sz);
 
 	if (s != identity4())
-		WARN("This model is using joint scaling. This is not yet implemented!\n");
+		WARN("This model is using joint scaling. This is not yet thoroughly tested!\n");
 
-	//return t*rz*ry*rx*s; //scales seem to be local only
-	*matrix = t*rz*ry*rx;
+	// @TODO: Experiment with scale. I suspect some of the Unknowns have to do with applying local scale
+	*matrix = t*rz*ry*rx*s;
 }
 
 u16 loadAttribs(const Attributes& attribs)
