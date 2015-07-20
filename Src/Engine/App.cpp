@@ -34,6 +34,7 @@ BaseApp *app = new App();
 
 bool App::init()
 {
+	animLoaded = false;
 	return true;
 }
 
@@ -85,32 +86,31 @@ bool App::load(int argc, char** argv)
 	}
 	closeFile(file);
 
-	// Load Animation
-	animLoaded = false;
-	/*filename = "../../Data/Scratch/LkAnm/archive/bcks/walk.bck";
-	file = openFile(filename);
-	if(file)
+	// @HACK: If we're loading Link, load his walk animation
+	char* filenameWoPath = strrchr(filename, '\\') + 1;
+	if (strcmp(filenameWoPath, "cl.bdl") == 0)
 	{
-		char fourcc[4];
-		fread(fourcc, 1, 4, file->f);
-		if (memcmp(fourcc, "J3D", 3) == 0)
+		filename = "../../Data/Scratch/LkAnm/archive/bcks/walk.bck";
+		file = openFile(filename);
+		if (file)
 		{
-			fseek(file->f, 0, SEEK_SET);
-			Bck* bck = readBck(file->f);
-			GDAnim::Load(&m_restAnim, bck);
-			delete bck;
-		}
-		else
-		{
-			WARN("Unsupported animation format\n");
-			return false;
+			char fourcc[4];
+			fread(fourcc, 1, 4, file->f);
+			if (memcmp(fourcc, "J3D", 3) == 0)
+			{
+				fseek(file->f, 0, SEEK_SET);
+				Bck* bck = readBck(file->f);
+				GDAnim::Load(&m_restAnim, bck);
+				animLoaded = true;
+				delete bck;
+			}
+			else
+			{
+				WARN("Unsupported animation format\n");
+			}
+			closeFile(file);
 		}
 	}
-	else
-	{
-		return false;
-	}
-	closeFile(file);*/
 
 	// Load Font
 	defaultFont = renderer->addFont("../../Data/Fonts/Future.dds", "../../Data/Fonts/Future.font", linearClamp);
@@ -151,7 +151,7 @@ void App::drawFrame()
 {
 	const float fov = 1.0f;
 
-	float4x4 projection = toD3DProjection(perspectiveMatrixY(fov, width, height, 0.1f, 5000));
+	float4x4 projection = toD3DProjection(perspectiveMatrixY(fov, width, height, 0.1f, 50000));
 	float4x4 view = rotateXY(-wx, -wy);
 	float4x4 inv_vp_env = !(projection * view);
 	view.translate(-camPos);
