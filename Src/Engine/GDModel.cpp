@@ -1066,7 +1066,6 @@ RESULT GDModel::Draw(Renderer* renderer, GDModel* model)
 			break;
 
 		case SG_PRIM:
-			LOG("Drawing Batch %u with Material %u\n", node->index, matIndex); 
 			DrawBatch(renderer, model, node->index, matIndex);
 			break;	
 		}
