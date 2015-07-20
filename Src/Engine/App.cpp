@@ -86,7 +86,8 @@ bool App::load(int argc, char** argv)
 	closeFile(file);
 
 	// Load Animation
-	filename = "../../Data/Scratch/LkAnm/archive/bcks/walk.bck";
+	animLoaded = false;
+	/*filename = "../../Data/Scratch/LkAnm/archive/bcks/walk.bck";
 	file = openFile(filename);
 	if(file)
 	{
@@ -109,7 +110,7 @@ bool App::load(int argc, char** argv)
 	{
 		return false;
 	}
-	closeFile(file);
+	closeFile(file);*/
 
 	// Load Font
 	defaultFont = renderer->addFont("../../Data/Fonts/Future.dds", "../../Data/Fonts/Future.font", linearClamp);
@@ -163,6 +164,6 @@ void App::drawFrame()
 		renderer->setGlobalConstant4x4f("WorldViewProj", view_proj);
 	renderer->apply();
 
-	GDModel::Update(&m_GDModel, &m_restAnim, time*30);
+	GDModel::Update(&m_GDModel, animLoaded ? &m_restAnim : nullptr, time*30);
 	GDModel::Draw(renderer, &m_GDModel);
 }

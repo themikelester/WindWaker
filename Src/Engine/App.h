@@ -46,5 +46,7 @@ public:
 protected:	
 	ubyte* m_AnimBlob;
 	GDModel::GDModel m_GDModel;
+
+	bool animLoaded;
 	GDAnim::GDAnim m_restAnim;
 };

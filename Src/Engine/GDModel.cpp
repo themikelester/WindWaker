@@ -619,7 +619,7 @@ RESULT RegisterGFX(Renderer* renderer, GDModel::GDModel* model)
 		GC3D::ConvertGCVertexFormat(attributes, formatBuf);
 
 		*batchVBID = renderer->addVertexBuffer(vbSize, STATIC, vertices);
-		*batchIBID = renderer->addIndexBuffer(ibSize, 2, STATIC, indices);
+		*batchIBID = renderer->addIndexBuffer(numIndices, 2, STATIC, indices);
 		*batchVFID = renderer->addVertexFormat(formatBuf, MAX_VERTEX_ATTRIBS, shaders[0]);
 	}
 
@@ -879,7 +879,10 @@ RESULT GDModel::Load(GDModel* model, const BModel* bdl)
 		mat4* mtxTable = (mat4*)malloc(sizeof(mat4)*mtxCount);
 		WeightedIndex* idxTable = (WeightedIndex*)malloc(sizeof(WeightedIndex) * maxWeightedIdxs);
 
-		memcpy(&mtxTable[0], &bdl->evp1.matrices[0], mtxCount * 16 * sizeof(float));
+		if (mtxCount)
+		{
+			memcpy(&mtxTable[0], &bdl->evp1.matrices[0], mtxCount * 16 * sizeof(float));
+		}
 
 		u32 offset = 0;
 		for (uint i = 0; i < weightCount; i++)
@@ -1025,16 +1028,17 @@ RESULT GDModel::Update(GDModel* model, GDAnim::GDAnim* anim, float time)
 {
 	// Grab the root joint straight from the animation. It's parent is the identity
 	float weights[1] = {1.0f};
-	//model->jointTable[0].matrix = model->defaultPose[0].matrix;
-	model->jointTable[0].matrix = GDAnim::GetJoint(&anim, weights, 1, 0, time);
+	if (anim) { model->jointTable[0].matrix = GDAnim::GetJoint(&anim, weights, 1, 0, time);	}
+	else { model->jointTable[0].matrix = model->defaultPose[0].matrix; }
 
 	for (uint i = 1; i < model->numJoints; i++)
 	{
 		JointElement& joint = model->jointTable[i];
 
 		// Calculate joint from animation at current time
-		//mat4 animMatrix = model->defaultPose[i].matrix;
-		mat4 animMatrix = GDAnim::GetJoint(&anim, weights, 1, i, time);
+		mat4 animMatrix;
+		if (anim ) { animMatrix = GDAnim::GetJoint(&anim, weights, 1, i, time); }
+		else{ animMatrix = model->defaultPose[i].matrix;}	
 
 		// Put in parent's frame
 		joint.matrix = model->jointTable[joint.parent].matrix * animMatrix;
