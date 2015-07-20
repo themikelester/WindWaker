@@ -39,7 +39,7 @@ std::string getCompareString(int comp, std::string a, u8 ref)
 	float fRef = float(ref / 255.0f);
 
 	if (comp != GX_ALWAYS)
-		WARN("Alpha test functionality is untested");
+		WARN("Alpha test functionality is untested\n");
 
 	switch(comp)
 	{
@@ -52,7 +52,7 @@ std::string getCompareString(int comp, std::string a, u8 ref)
 	case GX_GEQUAL: out << a << " >= " << fRef; break;
 	case GX_ALWAYS: return "true";
 	default:
-		WARN("Invalid comparison function %u. Defaulting to 'ALWAYS'", comp);
+		WARN("Invalid comparison function %u. Defaulting to 'ALWAYS'\n", comp);
 		return "true";
 	}
 
@@ -90,7 +90,7 @@ std::string GetVertColorString(const TevOrderInfo* texMapping)
 		case GX_COLORNULL:  
 		default:
 			{
-			  WARN("GetVertColorString(): Unknown chanId 0x%x", texMapping->chanId);
+			  WARN("GetVertColorString(): Unknown chanId 0x%x\n", texMapping->chanId);
 			  return "float4(0.0f, 1.0f, 0.0f, 1.0f)";
 			}
 	}
@@ -129,7 +129,7 @@ std::string GetKonstColorString(uint konst)
 		case GX_TEV_KCSEL_K2_A:	return "konst2.aaaa";
 		case GX_TEV_KCSEL_K3_A:	return "konst3.aaaa";
 		default:
-			WARN("GetKonstColorString(): Unknown konstIndex 0x%x", konst);
+			WARN("GetKonstColorString(): Unknown konstIndex 0x%x\n", konst);
 			return "float4(0.0f, 1.0f, 0.0f, 1.0f)";
 	}
 }
@@ -163,7 +163,7 @@ std::string GetKonstAlphaString(uint konst)
 	case GX_TEV_KASEL_K2_A:	return "konst2.a";
 	case GX_TEV_KASEL_K3_A:	return "konst3.a";
 	default:
-		WARN("GetKonstAlphaString(): Unknown konstIndex 0x%x", konst);
+		WARN("GetKonstAlphaString(): Unknown konstIndex 0x%x\n", konst);
 		return "float(1.0f)";
 	}						
 }							
@@ -189,7 +189,7 @@ std::string GetColorInString(uint inputType, uint konst, const TevOrderInfo* tex
 		case GX_CC_KONST:	return GetKonstColorString(konst) + ".rgb";
 		case GX_CC_ZERO:	return "0.0f.rrr";
 		default:
-			WARN("GetColorInString(): Unknown inputType %d", (u32)inputType);
+			WARN("GetColorInString(): Unknown inputType %d\n", (u32)inputType);
 			return "0.0f.rrr";
 	}
 }
@@ -207,7 +207,7 @@ std::string GetAlphaInString(uint inputType, uint konst, const TevOrderInfo* tex
 	case GX_CA_KONST:	return GetKonstAlphaString(konst);
 	case GX_CA_ZERO:	return "0.0f";
 	default:
-		WARN("GetAlphaInString(): Unknown inputType %d", (u32)inputType);
+		WARN("GetAlphaInString(): Unknown inputType %d\n", (u32)inputType);
 			return "0.0f";
 	}
 }
@@ -224,7 +224,7 @@ std::string GetModString(uint outputRegIndex, uint bias, uint scale, uint clamp,
 	case GX_TB_SUBHALF:	 biasVal = -0.5f; break;
 	case GX_MAX_TEVBIAS: 
 	default: 
-		WARN("GetModString(): Unrecognized bias value. Defaulting to 0.0f");
+		WARN("GetModString(): Unrecognized bias value. Defaulting to 0.0f\n");
 		biasVal = 0.0f;
 	}
 
@@ -236,7 +236,7 @@ std::string GetModString(uint outputRegIndex, uint bias, uint scale, uint clamp,
 	case GX_CS_DIVIDE_2: scaleVal = 0.5f; break;
 	case GX_MAX_TEVSCALE:
 	default: 
-		WARN("GetModString(): Unrecognized scale value. Defaulting to 1.0f");
+		WARN("GetModString(): Unrecognized scale value. Defaulting to 1.0f\n");
 		scaleVal = 1.0f;
 	}
 
@@ -330,7 +330,7 @@ std::string GetColorOpString(uint op, uint bias, uint scale, uint clamp, uint ou
 		break;
 
 	default:
-		WARN("GetColorOpString(): Unsupported op %d", op);
+		WARN("GetColorOpString(): Unsupported op %d\n", op);
 		str << "ERROR! Unsupported TEV operation. Aborting\n";
 	}
 	
@@ -338,7 +338,7 @@ std::string GetColorOpString(uint op, uint bias, uint scale, uint clamp, uint ou
 	{
         //if(bias != 3 || scale != 1 || clamp != 1)
 		if(bias != 3 || scale != 0 || clamp != 1)
-          WARN("GetOpString(): Unexpected bias %d, scale %d, clamp %d for Comparison Operation", bias, scale, clamp);
+          WARN("GetOpString(): Unexpected bias %d, scale %d, clamp %d for Comparison Operation\n", bias, scale, clamp);
 	}
 
 	return str.str() + "\n";
@@ -378,7 +378,7 @@ std::string GetAlphaOpString(uint op, uint bias, uint scale, uint clamp, uint ou
 		break;
 
 	default:
-		WARN("GetColorOpString(): Unsupported op %d", op);
+		WARN("GetColorOpString(): Unsupported op %d\n", op);
 		str << "ERROR! Unsupported TEV operation. Aborting\n";
 	}
 	
@@ -386,7 +386,7 @@ std::string GetAlphaOpString(uint op, uint bias, uint scale, uint clamp, uint ou
 	{
         //if(bias != 3 || scale != 1 || clamp != 1)
 		if(bias != 3 || scale != 0 || clamp != 1)
-          WARN("GetOpString(): Unexpected bias %d, scale %d, clamp %d for Comparison Operation", bias, scale, clamp);
+          WARN("GetOpString(): Unexpected bias %d, scale %d, clamp %d for Comparison Operation\n", bias, scale, clamp);
 	}
 
 	return str.str() + "\n";
@@ -493,7 +493,7 @@ std::string GeneratePS(const Tex1* texInfo, const Mat3* matInfo, int index)
 			case RGBA8: swizzle = ""; break;
 			case DXT1: swizzle = ""; break;
 			default:
-				WARN("Unknown texture format %u. Defaulting to tap with no swizzling", 
+				WARN("Unknown texture format %u. Defaulting to tap with no swizzling\n", 
 					texFormats[tex]);
 				swizzle = "";
 			}
@@ -550,7 +550,7 @@ std::string GeneratePS(const Tex1* texInfo, const Mat3* matInfo, int index)
 		case GX_AOP_XOR:	
 		case GX_AOP_XNOR:
 		default:
-			WARN("Unsupported alpha operation %u. Defaulting to 'OR'", cmpInfo.alphaOp);
+			WARN("Unsupported alpha operation %u. Defaulting to 'OR'\n", cmpInfo.alphaOp);
 			op = " || ";
 	}
 
