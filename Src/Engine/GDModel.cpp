@@ -337,11 +337,6 @@ void loadVertexIndexBuffers(const Batch& batch, const Vtx1& vtx,
 uint RecordScenegraph( const BModel* bmodel, std::vector< Scenegraph >& scenelist, std::vector<u16>& jointParents, uint nodeIndex = 0, uint matIndex = -1, 
 	                  bool onDown = true, uint parentJoint = -1) 
 {
-	//static Json::Value sgNode = root["Inf1"]["scenegraph"];
-	//static uint nNodes = sgNode.size();
-	//static Json::Value indexToMatIndex = root["Mat3"]["indexToMatIndex"];
-	//static uint lastMatIndex = uint(-1);
-
 	// Table to convert scene node indexes into material indexes
 	const std::vector<Node>& scenegraph = bmodel->inf1.scenegraph;
 	const std::vector<int>& indexToMatIndex = bmodel->mat3.indexToMatIndex;
