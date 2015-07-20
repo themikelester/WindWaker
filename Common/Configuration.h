@@ -5,7 +5,7 @@
 	#define ENABLE_WARNINGS 1
 	#define ENABLE_LOGGING 1
 #else // RELEASE
-	#define ENABLE_ASSERTIONS 0
-	#define ENABLE_WARNINGS 0
+	#define ENABLE_ASSERTIONS 1
+	#define ENABLE_WARNINGS 1
 	#define ENABLE_LOGGING 0
 #endif
