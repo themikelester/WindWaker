@@ -87,7 +87,7 @@ namespace GC3D
 		case GX_GEQUAL:	 return GEQUAL;   
 		case GX_ALWAYS:	 return ALWAYS;   
 		default:
-			WARN("Unknown compare mode %d. Defaulting to 'ALWAYS'", gcDepthFunc);
+			WARN("Unknown compare mode %d. Defaulting to 'ALWAYS'\n", gcDepthFunc);
 			return ALWAYS;
 		}
 	}
@@ -101,7 +101,7 @@ namespace GC3D
 		case GX_CULL_FRONT: return CULL_BACK; 
 		case GX_CULL_ALL:   
 		default:
-			WARN("Unsupported cull mode %u. Defaulting to 'CULL_NONE'", gcCullMode);
+			WARN("Unsupported cull mode %u. Defaulting to 'CULL_NONE'\n", gcCullMode);
 			return CULL_NONE;
 		}
 	}
@@ -119,7 +119,7 @@ namespace GC3D
 			case GX_BL_DSTALPHA		: return DST_ALPHA;
 			case GX_BL_INVDSTALPHA	: return ONE_MINUS_DST_ALPHA;
 			default:
-				WARN("Unknown blend factor %u. Defaulting to 'ONE'", gcBlendFactor);
+				WARN("Unknown blend factor %u. Defaulting to 'ONE'\n", gcBlendFactor);
 				return ONE;
 		}
 	}
@@ -134,7 +134,7 @@ namespace GC3D
 			case GX_BM_LOGIC:
 			case GX_MAX_BLENDMODE:
 			default:
-				WARN("Unsupported blend mode %u. Defaulting to 'BM_ADD'", gcBlendOp);
+				WARN("Unsupported blend mode %u. Defaulting to 'BM_ADD'\n", gcBlendOp);
 				return BM_ADD;
 		}
 	}
@@ -149,7 +149,7 @@ namespace GC3D
 		case /*RGBA8*/ 6:	return FORMAT_RGBA8;
 		case /*DXT1 */ 14:	return FORMAT_DXT1;
 		case 0xff: //Error case, fall through to default
-		default: WARN("Unknown texture format %u. Refusing to load", format); return FORMAT_NONE;
+		default: WARN("Unknown texture format %u. Refusing to load\n", format); return FORMAT_NONE;
 		}
 	}
 	
@@ -164,8 +164,8 @@ namespace GC3D
 		{
 		case 0: return CLAMP;
 		case 1: return WRAP;
-		case 2: WARN("Address mode 'Mirror' is currently unsupported. Defaulting to 'Clamp'"); return CLAMP;
-		default: WARN("Unsupported Address mode %u. Defaulting to 'Clamp'", addressMode); return CLAMP;
+		case 2: WARN("Address mode 'Mirror' is currently unsupported. Defaulting to 'Clamp'\n"); return CLAMP;
+		default: WARN("Unsupported Address mode %u. Defaulting to 'Clamp'\n", addressMode); return CLAMP;
 		}
 	}
 	
@@ -173,7 +173,7 @@ namespace GC3D
 	Filter GC3D::ConvertGCTexFilter(u8 minFilter, u8 magFilter)
 	{
 		if (magFilter != minFilter)
-			WARN("Renderer does not support different texture filter types for Minification and Magnification. Rendering may be incorrect");
+			WARN("Renderer does not support different texture filter types for Minification and Magnification. Rendering may be incorrect\n");
 
 		//0 - nearest
 		//1 - linear
@@ -189,7 +189,7 @@ namespace GC3D
 		case 3: return LINEAR; 
 		case 4: return TRILINEAR;
 		case 5: return TRILINEAR;
-		default: WARN("Unknown filter type %u. Reverting to NEAREST", magFilter); 
+		default: WARN("Unknown filter type %u. Reverting to NEAREST\n", magFilter); 
 			return NEAREST; 
 		}
 	}
